@@ -1,27 +1,21 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Заявки</title>
-</head>
-<body>
-    <h1>Заявки</h1>
-
-    {% if tickets %}
-        <ul>
-            {% for ticket in tickets %}
-                <li>
-                    <a href="{% url 'ticket_detail' ticket.pk %}">{{ ticket.title }}</a>
-                    <div>Статус: {{ ticket.get_status_display }}</div>
-                    <div>Приоритет: {{ ticket.get_priority_display }}</div>
-                    {% if ticket.due_date %}
-                        <div>Крайний срок: {{ ticket.due_date|date:"Y-m-d" }}</div>
-                    {% endif %}
-                </li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p class="empty-state">Заявок пока нет</p>
-    {% endif %}
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}Заявки{% endblock %}
+{% block content %}
+<h1>Заявки</h1>
+{% if tickets %}
+<ul class="list-group">
+    {% for ticket in tickets %}
+    <li class="list-group-item">
+        <a href="{% url 'ticket_detail' ticket.pk %}">{{ ticket.title }}</a>
+        <div>Статус: {{ ticket.get_status_display }}</div>
+        <div>Приоритет: {{ ticket.get_priority_display }}</div>
+        {% if ticket.due_date %}
+        <div>Крайний срок: {{ ticket.due_date|date:"Y-m-d" }}</div>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="text-muted">Заявок пока нет</p>
+{% endif %}
+{% endblock %}
