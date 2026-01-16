@@ -1,27 +1,21 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ ticket.title }}</title>
-</head>
-<body>
-    <h1>{{ ticket.title }}</h1>
-    <p>{{ ticket.description }}</p>
-    <div>Статус: {{ ticket.get_status_display }}</div>
-    <div>Приоритет: {{ ticket.get_priority_display }}</div>
-    {% if ticket.due_date %}
-        <div>Крайний срок: {{ ticket.due_date|date:"Y-m-d" }}</div>
-    {% endif %}
-
-    <h2>Комментарии</h2>
-    {% if comments %}
-        <ul>
-            {% for comment in comments %}
-                <li><strong>{{ comment.author_name }}</strong>: {{ comment.message }}</li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p class="empty-state">Комментариев пока нет</p>
-    {% endif %}
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}{{ ticket.title }}{% endblock %}
+{% block content %}
+<h1>{{ ticket.title }}</h1>
+<p>{{ ticket.description }}</p>
+<div class="mb-2">Статус: {{ ticket.get_status_display }}</div>
+<div class="mb-2">Приоритет: {{ ticket.get_priority_display }}</div>
+{% if ticket.due_date %}
+<div class="mb-2">Крайний срок: {{ ticket.due_date|date:"Y-m-d" }}</div>
+{% endif %}
+<h2>Комментарии</h2>
+{% if comments %}
+<ul class="list-group">
+    {% for comment in comments %}
+    <li class="list-group-item"><strong>{{ comment.author_name }}</strong>: {{ comment.message }}</li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="text-muted">Комментариев пока нет</p>
+{% endif %}
+{% endblock %}
