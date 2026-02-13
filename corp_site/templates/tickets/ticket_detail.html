@@ -1,21 +1,74 @@
 {% extends "base.html" %}
 {% block title %}{{ ticket.title }}{% endblock %}
 {% block content %}
-<h1>{{ ticket.title }}</h1>
-<p>{{ ticket.description }}</p>
-<div class="mb-2">Статус: {{ ticket.get_status_display }}</div>
-<div class="mb-2">Приоритет: {{ ticket.get_priority_display }}</div>
-{% if ticket.due_date %}
-<div class="mb-2">Крайний срок: {{ ticket.due_date|date:"Y-m-d" }}</div>
-{% endif %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>{{ ticket.title }}</h1>
+    <div>
+        <a href="{% url 'ticket_update' ticket.pk %}" class="btn btn-outline-primary btn-sm">Редактировать</a>
+        <a href="{% url 'ticket_delete' ticket.pk %}" class="btn btn-outline-danger btn-sm">Удалить</a>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <p>{{ ticket.description }}</p>
+        <div class="row">
+            <div class="col-md-4">
+                <strong>Статус:</strong>
+                {% if ticket.status == 'new' %}
+                <span class="badge bg-primary">{{ ticket.get_status_display }}</span>
+                {% elif ticket.status == 'in_progress' %}
+                <span class="badge bg-warning text-dark">{{ ticket.get_status_display }}</span>
+                {% else %}
+                <span class="badge bg-success">{{ ticket.get_status_display }}</span>
+                {% endif %}
+            </div>
+            <div class="col-md-4">
+                <strong>Приоритет:</strong>
+                {% if ticket.priority == 3 %}
+                <span class="badge bg-danger">{{ ticket.get_priority_display }}</span>
+                {% elif ticket.priority == 2 %}
+                <span class="badge bg-warning text-dark">{{ ticket.get_priority_display }}</span>
+                {% else %}
+                <span class="badge bg-secondary">{{ ticket.get_priority_display }}</span>
+                {% endif %}
+            </div>
+            <div class="col-md-4">
+                <strong>Крайний срок:</strong> {% if ticket.due_date %}{{ ticket.due_date|date:"d.m.Y" }}{% else %}&mdash;{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
 <h2>Комментарии</h2>
 {% if comments %}
-<ul class="list-group">
+<div class="list-group mb-3">
     {% for comment in comments %}
-    <li class="list-group-item"><strong>{{ comment.author_name }}</strong>: {{ comment.message }}</li>
+    <div class="list-group-item">
+        <strong>{{ comment.author_name }}</strong>
+        <small class="text-muted">{{ comment.created_at|date:"d.m.Y H:i" }}</small>
+        <p class="mb-0 mt-1">{{ comment.message }}</p>
+    </div>
     {% endfor %}
-</ul>
+</div>
 {% else %}
 <p class="text-muted">Комментариев пока нет</p>
 {% endif %}
+
+<h3>Добавить комментарий</h3>
+<form method="post" action="{% url 'ticket_add_comment' ticket.pk %}">
+    {% csrf_token %}
+    {% for field in comment_form %}
+    <div class="mb-3">
+        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}
+        <div class="text-danger">{{ field.errors }}</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-primary">Отправить</button>
+</form>
+
+<a href="{% url 'ticket_list' %}" class="btn btn-link mt-3">Назад к списку</a>
 {% endblock %}

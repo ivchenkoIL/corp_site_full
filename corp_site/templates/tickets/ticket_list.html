@@ -1,20 +1,66 @@
 {% extends "base.html" %}
 {% block title %}Заявки{% endblock %}
 {% block content %}
-<h1>Заявки</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1>Заявки</h1>
+    <a href="{% url 'ticket_create' %}" class="btn btn-success">Создать заявку</a>
+</div>
 {% if tickets %}
-<ul class="list-group">
-    {% for ticket in tickets %}
-    <li class="list-group-item">
-        <a href="{% url 'ticket_detail' ticket.pk %}">{{ ticket.title }}</a>
-        <div>Статус: {{ ticket.get_status_display }}</div>
-        <div>Приоритет: {{ ticket.get_priority_display }}</div>
-        {% if ticket.due_date %}
-        <div>Крайний срок: {{ ticket.due_date|date:"Y-m-d" }}</div>
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Заголовок</th>
+                <th>Статус</th>
+                <th>Приоритет</th>
+                <th>Крайний срок</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ticket in tickets %}
+            <tr>
+                <td><a href="{% url 'ticket_detail' ticket.pk %}">{{ ticket.title }}</a></td>
+                <td>
+                    {% if ticket.status == 'new' %}
+                    <span class="badge bg-primary">{{ ticket.get_status_display }}</span>
+                    {% elif ticket.status == 'in_progress' %}
+                    <span class="badge bg-warning text-dark">{{ ticket.get_status_display }}</span>
+                    {% else %}
+                    <span class="badge bg-success">{{ ticket.get_status_display }}</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if ticket.priority == 3 %}
+                    <span class="badge bg-danger">{{ ticket.get_priority_display }}</span>
+                    {% elif ticket.priority == 2 %}
+                    <span class="badge bg-warning text-dark">{{ ticket.get_priority_display }}</span>
+                    {% else %}
+                    <span class="badge bg-secondary">{{ ticket.get_priority_display }}</span>
+                    {% endif %}
+                </td>
+                <td>{% if ticket.due_date %}{{ ticket.due_date|date:"d.m.Y" }}{% else %}&mdash;{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% if is_paginated %}
+<nav>
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Назад</a></li>
         {% endif %}
-    </li>
-    {% endfor %}
-</ul>
+        {% for num in page_obj.paginator.page_range %}
+        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+        </li>
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Вперед</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
 {% else %}
 <p class="text-muted">Заявок пока нет</p>
 {% endif %}

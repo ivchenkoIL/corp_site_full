@@ -1,4 +1,5 @@
 from django.db import models
+from django.urls import reverse
 
 
 class Ticket(models.Model):
@@ -36,6 +37,9 @@ class Ticket(models.Model):
 
     def __str__(self) -> str:
         return self.title
+
+    def get_absolute_url(self):
+        return reverse('ticket_detail', kwargs={'pk': self.pk})
 
 
 class Comment(models.Model):
