@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Удалить заявку{% endblock %}
+{% block content %}
+<h1>Удалить заявку</h1>
+<p>Вы уверены, что хотите удалить заявку &laquo;{{ ticket.title }}&raquo;?</p>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Удалить</button>
+    <a href="{% url 'ticket_detail' ticket.pk %}" class="btn btn-secondary">Отмена</a>
+</form>
+{% endblock %}
