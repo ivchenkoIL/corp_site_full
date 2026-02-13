@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Результаты - Party Quiz</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            color: #fff;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            overflow-x: hidden;
+        }
+        .confetti {
+            position: fixed;
+            top: -10px;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            animation: fall linear forwards;
+        }
+        @keyframes fall {
+            to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+        .results-container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        .crown { text-align: center; font-size: 4rem; margin-bottom: 0; }
+        .winner-name {
+            text-align: center;
+            font-size: 2rem;
+            font-weight: 900;
+            background: linear-gradient(90deg, #ffd32a, #ff6fd8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+        }
+        .winner-score {
+            text-align: center;
+            font-size: 1.2rem;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 30px;
+        }
+        .podium {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 8px;
+            margin-bottom: 30px;
+        }
+        .podium-place {
+            text-align: center;
+            flex: 1;
+            max-width: 140px;
+        }
+        .podium-bar {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px 12px 0 0;
+            padding: 16px 8px 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        .podium-place:nth-child(1) .podium-bar { /* 2nd place */
+            min-height: 120px;
+            background: rgba(192,192,192,0.1);
+            border-color: rgba(192,192,192,0.2);
+        }
+        .podium-place:nth-child(2) .podium-bar { /* 1st place */
+            min-height: 160px;
+            background: rgba(255,215,0,0.1);
+            border-color: rgba(255,215,0,0.2);
+        }
+        .podium-place:nth-child(3) .podium-bar { /* 3rd place */
+            min-height: 90px;
+            background: rgba(205,127,50,0.1);
+            border-color: rgba(205,127,50,0.2);
+        }
+        .podium-rank {
+            font-size: 1.6rem;
+            font-weight: 900;
+            margin-bottom: 4px;
+        }
+        .podium-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 2px;
+        }
+        .podium-score {
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.5);
+        }
+        .rest-list {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+        .rest-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .rest-row:last-child { border-bottom: none; }
+        .rest-rank { color: rgba(255,255,255,0.4); font-weight: 700; width: 30px; }
+        .rest-name { font-weight: 600; flex: 1; }
+        .rest-score { color: #ff6fd8; font-weight: 800; }
+        .btn-glow {
+            background: linear-gradient(135deg, #ff6fd8, #3813c2);
+            border: none;
+            color: #fff;
+            font-weight: 700;
+            font-size: 1.1rem;
+            padding: 14px 32px;
+            border-radius: 50px;
+            transition: all 0.3s;
+            width: 100%;
+            text-decoration: none;
+            display: block;
+            text-align: center;
+        }
+        .btn-glow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(255,111,216,0.4);
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="results-container">
+        {% if players %}
+        <div class="crown">&#128081;</div>
+        <div class="winner-name">{{ players.0.name }}</div>
+        <div class="winner-score">{{ players.0.score }} &#1086;&#1095;&#1082;&#1086;&#1074;</div>
+
+        {% if players|length >= 2 %}
+        <div class="podium">
+            {% if players|length >= 2 %}
+            <div class="podium-place">
+                <div class="podium-bar">
+                    <div class="podium-rank" style="color:silver">2</div>
+                    <div class="podium-name">{{ players.1.name }}</div>
+                    <div class="podium-score">{{ players.1.score }}</div>
+                </div>
+            </div>
+            {% endif %}
+            <div class="podium-place">
+                <div class="podium-bar">
+                    <div class="podium-rank" style="color:gold">1</div>
+                    <div class="podium-name">{{ players.0.name }}</div>
+                    <div class="podium-score">{{ players.0.score }}</div>
+                </div>
+            </div>
+            {% if players|length >= 3 %}
+            <div class="podium-place">
+                <div class="podium-bar">
+                    <div class="podium-rank" style="color:#cd7f32">3</div>
+                    <div class="podium-name">{{ players.2.name }}</div>
+                    <div class="podium-score">{{ players.2.score }}</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if players|length > 3 %}
+        <div class="rest-list">
+            {% for p in players %}
+            {% if forloop.counter > 3 %}
+            <div class="rest-row">
+                <span class="rest-rank">{{ forloop.counter }}</span>
+                <span class="rest-name">{{ p.name }}</span>
+                <span class="rest-score">{{ p.score }}</span>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% endif %}
+
+        <a href="/game/" class="btn-glow">&#127881; &#1053;&#1086;&#1074;&#1072;&#1103; &#1080;&#1075;&#1088;&#1072;</a>
+    </div>
+
+    <script>
+        // Confetti!
+        const colors = ['#ff6fd8','#3813c2','#ffd32a','#2ed573','#ff4757','#3742fa'];
+        for(let i = 0; i < 60; i++) {
+            const c = document.createElement('div');
+            c.className = 'confetti';
+            c.style.left = Math.random() * 100 + 'vw';
+            c.style.background = colors[Math.floor(Math.random() * colors.length)];
+            c.style.animationDuration = (2 + Math.random() * 3) + 's';
+            c.style.animationDelay = (Math.random() * 3) + 's';
+            c.style.width = (6 + Math.random() * 8) + 'px';
+            c.style.height = (6 + Math.random() * 8) + 'px';
+            document.body.appendChild(c);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,392 @@
+[
+  {
+    "model": "game.question",
+    "pk": 1,
+    "fields": {
+      "text": "В каком году вышел первый фильм \"Матрица\"?",
+      "option_a": "1997",
+      "option_b": "1999",
+      "option_c": "2001",
+      "option_d": "1995",
+      "correct": "b",
+      "category": "Кино"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 2,
+    "fields": {
+      "text": "Какая планета Солнечной системы самая большая?",
+      "option_a": "Сатурн",
+      "option_b": "Нептун",
+      "option_c": "Юпитер",
+      "option_d": "Уран",
+      "correct": "c",
+      "category": "Наука"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 3,
+    "fields": {
+      "text": "Кто написал \"Мастер и Маргарита\"?",
+      "option_a": "Достоевский",
+      "option_b": "Толстой",
+      "option_c": "Чехов",
+      "option_d": "Булгаков",
+      "correct": "d",
+      "category": "Литература"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 4,
+    "fields": {
+      "text": "Сколько клавиш на стандартном пианино?",
+      "option_a": "76",
+      "option_b": "88",
+      "option_c": "92",
+      "option_d": "84",
+      "correct": "b",
+      "category": "Музыка"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 5,
+    "fields": {
+      "text": "Какой химический элемент обозначается символом Fe?",
+      "option_a": "Фтор",
+      "option_b": "Франций",
+      "option_c": "Железо",
+      "option_d": "Фосфор",
+      "correct": "c",
+      "category": "Наука"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 6,
+    "fields": {
+      "text": "В каком городе находится Колизей?",
+      "option_a": "Афины",
+      "option_b": "Рим",
+      "option_c": "Париж",
+      "option_d": "Барселона",
+      "correct": "b",
+      "category": "География"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 7,
+    "fields": {
+      "text": "Кто сыграл Джека в фильме \"Титаник\"?",
+      "option_a": "Брэд Питт",
+      "option_b": "Джонни Депп",
+      "option_c": "Леонардо ДиКаприо",
+      "option_d": "Мэтт Деймон",
+      "correct": "c",
+      "category": "Кино"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 8,
+    "fields": {
+      "text": "Какое животное является символом WWF (Всемирного фонда дикой природы)?",
+      "option_a": "Тигр",
+      "option_b": "Панда",
+      "option_c": "Белый медведь",
+      "option_d": "Слон",
+      "correct": "b",
+      "category": "Общие знания"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 9,
+    "fields": {
+      "text": "Сколько костей в теле взрослого человека?",
+      "option_a": "186",
+      "option_b": "206",
+      "option_c": "226",
+      "option_d": "196",
+      "correct": "b",
+      "category": "Наука"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 10,
+    "fields": {
+      "text": "Какая страна подарила США Статую Свободы?",
+      "option_a": "Великобритания",
+      "option_b": "Испания",
+      "option_c": "Франция",
+      "option_d": "Италия",
+      "correct": "c",
+      "category": "История"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 11,
+    "fields": {
+      "text": "Как называется самая длинная река в мире?",
+      "option_a": "Амазонка",
+      "option_b": "Нил",
+      "option_c": "Миссисипи",
+      "option_d": "Янцзы",
+      "correct": "b",
+      "category": "География"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 12,
+    "fields": {
+      "text": "В каком году пала Берлинская стена?",
+      "option_a": "1987",
+      "option_b": "1991",
+      "option_c": "1989",
+      "option_d": "1990",
+      "correct": "c",
+      "category": "История"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 13,
+    "fields": {
+      "text": "Какой газ составляет основную часть атмосферы Земли?",
+      "option_a": "Кислород",
+      "option_b": "Углекислый газ",
+      "option_c": "Азот",
+      "option_d": "Водород",
+      "correct": "c",
+      "category": "Наука"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 14,
+    "fields": {
+      "text": "Кто нарисовал \"Мону Лизу\"?",
+      "option_a": "Микеланджело",
+      "option_b": "Рафаэль",
+      "option_c": "Леонардо да Винчи",
+      "option_d": "Сальвадор Дали",
+      "correct": "c",
+      "category": "Искусство"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 15,
+    "fields": {
+      "text": "Столица Австралии — это...",
+      "option_a": "Сидней",
+      "option_b": "Мельбурн",
+      "option_c": "Канберра",
+      "option_d": "Брисбен",
+      "correct": "c",
+      "category": "География"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 16,
+    "fields": {
+      "text": "Сколько сердец у осьминога?",
+      "option_a": "1",
+      "option_b": "2",
+      "option_c": "3",
+      "option_d": "4",
+      "correct": "c",
+      "category": "Наука"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 17,
+    "fields": {
+      "text": "Какой фильм получил первый Оскар за лучший фильм?",
+      "option_a": "Крылья",
+      "option_b": "Унесённые ветром",
+      "option_c": "Метрополис",
+      "option_d": "Джаз-певец",
+      "correct": "a",
+      "category": "Кино"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 18,
+    "fields": {
+      "text": "Как называется валюта Японии?",
+      "option_a": "Юань",
+      "option_b": "Вон",
+      "option_c": "Иена",
+      "option_d": "Бат",
+      "correct": "c",
+      "category": "Общие знания"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 19,
+    "fields": {
+      "text": "Кто основал компанию Tesla?",
+      "option_a": "Илон Маск",
+      "option_b": "Мартин Эберхард и Марк Тарпеннинг",
+      "option_c": "Стив Джобс",
+      "option_d": "Джефф Безос",
+      "correct": "b",
+      "category": "Технологии"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 20,
+    "fields": {
+      "text": "Какое самое глубокое озеро в мире?",
+      "option_a": "Каспийское море",
+      "option_b": "Танганьика",
+      "option_c": "Байкал",
+      "option_d": "Виктория",
+      "correct": "c",
+      "category": "География"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 21,
+    "fields": {
+      "text": "Сколько цветов в радуге?",
+      "option_a": "5",
+      "option_b": "6",
+      "option_c": "7",
+      "option_d": "8",
+      "correct": "c",
+      "category": "Общие знания"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 22,
+    "fields": {
+      "text": "Кто написал \"Войну и мир\"?",
+      "option_a": "Пушкин",
+      "option_b": "Толстой",
+      "option_c": "Гоголь",
+      "option_d": "Тургенев",
+      "correct": "b",
+      "category": "Литература"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 23,
+    "fields": {
+      "text": "Какой элемент периодической таблицы имеет атомный номер 1?",
+      "option_a": "Гелий",
+      "option_b": "Литий",
+      "option_c": "Водород",
+      "option_d": "Углерод",
+      "correct": "c",
+      "category": "Наука"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 24,
+    "fields": {
+      "text": "В какой стране изобрели пиццу?",
+      "option_a": "Греция",
+      "option_b": "Франция",
+      "option_c": "США",
+      "option_d": "Италия",
+      "correct": "d",
+      "category": "Общие знания"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 25,
+    "fields": {
+      "text": "Как называется самый большой океан на Земле?",
+      "option_a": "Атлантический",
+      "option_b": "Индийский",
+      "option_c": "Тихий",
+      "option_d": "Северный Ледовитый",
+      "correct": "c",
+      "category": "География"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 26,
+    "fields": {
+      "text": "Кто режиссёр фильма \"Начало\" (Inception)?",
+      "option_a": "Стивен Спилберг",
+      "option_b": "Кристофер Нолан",
+      "option_c": "Джеймс Кэмерон",
+      "option_d": "Квентин Тарантино",
+      "correct": "b",
+      "category": "Кино"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 27,
+    "fields": {
+      "text": "Какая кость в человеческом теле самая маленькая?",
+      "option_a": "Молоточек",
+      "option_b": "Наковальня",
+      "option_c": "Стремечко",
+      "option_d": "Коленная чашечка",
+      "correct": "c",
+      "category": "Наука"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 28,
+    "fields": {
+      "text": "В каком году человек впервые высадился на Луну?",
+      "option_a": "1965",
+      "option_b": "1969",
+      "option_c": "1971",
+      "option_d": "1967",
+      "correct": "b",
+      "category": "История"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 29,
+    "fields": {
+      "text": "Какое животное самое быстрое на суше?",
+      "option_a": "Лев",
+      "option_b": "Антилопа",
+      "option_c": "Гепард",
+      "option_d": "Газель",
+      "correct": "c",
+      "category": "Наука"
+    }
+  },
+  {
+    "model": "game.question",
+    "pk": 30,
+    "fields": {
+      "text": "Сколько минут в сутках?",
+      "option_a": "1240",
+      "option_b": "1440",
+      "option_c": "1340",
+      "option_d": "1540",
+      "correct": "b",
+      "category": "Общие знания"
+    }
+  }
+]

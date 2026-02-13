@@ -9,7 +9,7 @@ SECRET_KEY = 'django-insecure-0akmnmx&v2%w2%1kl^+y4i5(!m_u^n*g)6t5efi8y6i4uaetmw
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -24,6 +24,7 @@ INSTALLED_APPS = [
 
     # Local apps
     'tickets.apps.TicketsConfig',
+    'game.apps.GameConfig',
 ]
 
 MIDDLEWARE = [

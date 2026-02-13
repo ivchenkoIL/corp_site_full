@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Лобби - Party Quiz</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            color: #fff;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+        .card-glass {
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 20px;
+            padding: 2rem;
+        }
+        .room-code {
+            font-size: 3.5rem;
+            font-weight: 900;
+            letter-spacing: 12px;
+            text-align: center;
+            background: linear-gradient(90deg, #ff6fd8, #3813c2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            user-select: all;
+        }
+        .code-label {
+            text-align: center;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
+        .player-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 50px;
+            padding: 10px 20px;
+            margin: 4px;
+            font-weight: 600;
+            font-size: 1.05rem;
+            transition: all 0.3s;
+        }
+        .player-chip .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #2ed573;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .btn-glow {
+            background: linear-gradient(135deg, #ff6fd8, #3813c2);
+            border: none;
+            color: #fff;
+            font-weight: 700;
+            font-size: 1.2rem;
+            padding: 14px 40px;
+            border-radius: 50px;
+            transition: all 0.3s;
+            width: 100%;
+        }
+        .btn-glow:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(255,111,216,0.4);
+            color: #fff;
+        }
+        .btn-glow:disabled {
+            opacity: 0.5;
+            transform: none;
+            box-shadow: none;
+        }
+        .waiting-text {
+            text-align: center;
+            color: rgba(255,255,255,0.5);
+            font-size: 1.1rem;
+        }
+        .error-msg {
+            color: #ff4757;
+            text-align: center;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container d-flex align-items-center justify-content-center" style="min-height:100vh">
+        <div class="w-100" style="max-width: 500px;">
+            <p class="code-label">КОД КОМНАТЫ</p>
+            <div class="room-code" id="room-code">{{ room.code }}</div>
+            <p class="text-center mt-1 mb-4" style="color:rgba(255,255,255,0.4); font-size:0.85rem;">
+                Скажите друзьям этот код!
+            </p>
+
+            <div class="card-glass mb-4">
+                <h5 class="text-center mb-3" style="color:rgba(255,255,255,0.7);">Игроки в комнате:</h5>
+                <div class="text-center" id="players-list">
+                    <span class="player-chip"><span class="dot"></span> {{ player.name }}</span>
+                </div>
+            </div>
+
+            {% if is_host %}
+            <button class="btn btn-glow" id="start-btn" onclick="startGame()">
+                Начать игру!
+            </button>
+            <div class="error-msg" id="start-error"></div>
+            {% else %}
+            <p class="waiting-text" id="waiting-msg">Ждём, пока хост начнёт игру...</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        const ROOM_CODE = '{{ room.code }}';
+
+        function getCookie(name) {
+            let v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+            return v ? v[2] : null;
+        }
+
+        async function pollLobby() {
+            try {
+                const resp = await fetch('/game/api/state/' + ROOM_CODE + '/');
+                const data = await resp.json();
+
+                if (data.phase === 'playing' || data.phase === 'question' || data.phase === 'reveal') {
+                    window.location.href = '/game/play/' + ROOM_CODE + '/';
+                    return;
+                }
+
+                // Update player list
+                const container = document.getElementById('players-list');
+                container.innerHTML = data.players.map(p =>
+                    '<span class="player-chip"><span class="dot"></span> ' + p.name + '</span>'
+                ).join('');
+
+            } catch(e) {}
+            setTimeout(pollLobby, 1500);
+        }
+
+        async function startGame() {
+            const btn = document.getElementById('start-btn');
+            btn.disabled = true;
+            btn.textContent = 'Запуск...';
+            try {
+                const resp = await fetch('/game/api/start/' + ROOM_CODE + '/', {
+                    method: 'POST',
+                    headers: {'X-CSRFToken': getCookie('csrftoken')}
+                });
+                const data = await resp.json();
+                if (data.error) {
+                    document.getElementById('start-error').textContent = data.error;
+                    btn.disabled = false;
+                    btn.textContent = 'Начать игру!';
+                    return;
+                }
+                window.location.href = '/game/play/' + ROOM_CODE + '/';
+            } catch(e) {
+                document.getElementById('start-error').textContent = 'Ошибка сети';
+                btn.disabled = false;
+                btn.textContent = 'Начать игру!';
+            }
+        }
+
+        pollLobby();
+    </script>
+</body>
+</html>
