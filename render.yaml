@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: corp-site
+    runtime: python
+    buildCommand: "./bin/build.sh"
+    startCommand: "cd corp_site && gunicorn corp_site.wsgi:application --bind 0.0.0.0:$PORT"
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: "3.11.6"
