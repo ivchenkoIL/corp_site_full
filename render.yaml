@@ -3,7 +3,7 @@ services:
     name: corp-site
     runtime: python
     buildCommand: "./bin/build.sh"
-    startCommand: "cd corp_site && gunicorn corp_site.wsgi:application"
+    startCommand: "cd corp_site && gunicorn corp_site.wsgi:application --bind 0.0.0.0:$PORT"
     envVars:
       - key: DEBUG
         value: "False"
