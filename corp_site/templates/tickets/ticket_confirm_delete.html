@@ -1,11 +1,33 @@
 {% extends "base.html" %}
 {% block title %}Удалить заявку{% endblock %}
 {% block content %}
-<h1>Удалить заявку</h1>
-<p>Вы уверены, что хотите удалить заявку &laquo;{{ ticket.title }}&raquo;?</p>
-<form method="post">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-danger">Удалить</button>
-    <a href="{% url 'ticket_detail' ticket.pk %}" class="btn btn-secondary">Отмена</a>
-</form>
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h4 class="mb-0 text-danger">
+                    <i class="bi bi-exclamation-triangle"></i> Удалить заявку
+                </h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-circle"></i>
+                    Вы уверены, что хотите удалить заявку &laquo;{{ ticket.title }}&raquo;?
+                </div>
+                <p class="text-muted">Это действие нельзя отменить. Все комментарии к заявке также будут удалены.</p>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash"></i> Удалить
+                        </button>
+                        <a href="{% url 'ticket_detail' ticket.pk %}" class="btn btn-secondary">
+                            <i class="bi bi-x-lg"></i> Отмена
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

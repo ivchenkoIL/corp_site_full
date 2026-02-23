@@ -11,6 +11,31 @@ class TicketListView(ListView):
     template_name = "tickets/ticket_list.html"
     paginate_by = 10
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        status = self.request.GET.get("status")
+        priority = self.request.GET.get("priority")
+        if status:
+            queryset = queryset.filter(status=status)
+        if priority:
+            queryset = queryset.filter(priority=priority)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["current_status"] = self.request.GET.get("status", "")
+        context["current_priority"] = self.request.GET.get("priority", "")
+        context["status_choices"] = Ticket.Status.choices
+        context["priority_choices"] = Ticket.Priority.choices
+        all_tickets = Ticket.objects.all()
+        context["total_count"] = all_tickets.count()
+        context["new_count"] = all_tickets.filter(status=Ticket.Status.NEW).count()
+        context["in_progress_count"] = all_tickets.filter(
+            status=Ticket.Status.IN_PROGRESS
+        ).count()
+        context["done_count"] = all_tickets.filter(status=Ticket.Status.DONE).count()
+        return context
+
 
 class TicketDetailView(DetailView):
     model = Ticket
