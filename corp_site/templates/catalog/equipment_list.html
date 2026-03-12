@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Оборудование — СпецМонтаж{% endblock %}
+
+{% block content %}
+<h1 class="fw-bold mb-2">Каталог оборудования</h1>
+<p class="text-muted mb-4">Мы предлагаем широкий ассортимент оборудования для обеспечения безопасности объектов любого масштаба.</p>
+
+<div class="row g-4">
+    {% for cat in categories %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 border-0 shadow-sm card-hover">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="icon-circle-sm me-3">
+                        <i class="bi {{ cat.icon }} fs-3 text-primary"></i>
+                    </div>
+                    <div>
+                        <h5 class="card-title fw-bold mb-0">{{ cat.name }}</h5>
+                        {% if cat.short_name %}
+                        <span class="badge bg-primary bg-opacity-10 text-primary">{{ cat.short_name }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <p class="card-text text-muted">{{ cat.description }}</p>
+                <a href="{% url 'equipment_detail' cat.slug %}" class="btn btn-outline-primary btn-sm">
+                    Подробнее <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info">Каталог оборудования пока пуст.</div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

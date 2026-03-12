@@ -3,18 +3,76 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}Corp Site{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}СпецМонтаж — Системы безопасности{% endblock %}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="{% static 'css/style.css' %}" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
         <div class="container">
-            <a class="navbar-brand" href="{% url 'ticket_list' %}">Corp Site</a>
+            <a class="navbar-brand fw-bold" href="{% url 'index' %}">
+                <i class="bi bi-shield-lock me-2"></i>СпецМонтаж
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="mainNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'index' %}">Главная</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'equipment_list' %}">Оборудование</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'services' %}">Услуги</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'contacts' %}">Контакты</a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </nav>
-    <div class="container">
-        {% block content %}
-        {% endblock %}
-    </div>
+
+    {% block hero %}{% endblock %}
+
+    <main class="py-5">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer class="bg-dark text-light py-4 mt-auto">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <h6 class="fw-bold"><i class="bi bi-shield-lock me-2"></i>СпецМонтаж</h6>
+                    <p class="text-secondary small">Продажа, проектирование, монтаж и обслуживание систем безопасности.</p>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h6 class="fw-bold">Навигация</h6>
+                    <ul class="list-unstyled small">
+                        <li><a href="{% url 'equipment_list' %}" class="text-secondary text-decoration-none">Оборудование</a></li>
+                        <li><a href="{% url 'services' %}" class="text-secondary text-decoration-none">Услуги</a></li>
+                        <li><a href="{% url 'contacts' %}" class="text-secondary text-decoration-none">Контакты</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <h6 class="fw-bold">Контакты</h6>
+                    <ul class="list-unstyled small text-secondary">
+                        <li><i class="bi bi-telephone me-1"></i> +7 (XXX) XXX-XX-XX</li>
+                        <li><i class="bi bi-envelope me-1"></i> info@specmontazh.ru</li>
+                    </ul>
+                </div>
+            </div>
+            <hr class="border-secondary">
+            <p class="text-center text-secondary small mb-0">&copy; 2026 СпецМонтаж. Все права защищены.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

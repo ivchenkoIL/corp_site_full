@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Заявка отправлена — СпецМонтаж{% endblock %}
+
+{% block content %}
+<div class="text-center py-5">
+    <i class="bi bi-check-circle text-success" style="font-size: 4rem;"></i>
+    <h2 class="fw-bold mt-3">Заявка успешно отправлена!</h2>
+    <p class="text-muted mb-4">Наши специалисты свяжутся с вами в ближайшее время.</p>
+    <a href="{% url 'index' %}" class="btn btn-primary">
+        <i class="bi bi-house me-2"></i>Вернуться на главную
+    </a>
+</div>
+{% endblock %}
