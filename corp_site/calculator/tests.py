@@ -12,26 +12,33 @@ class CableMaterialsViewTests(TestCase):
         """6 TFortis, 150 м, 1 опора между ними."""
         response = self.client.get('/calculator/')
         results = response.context['results']
-        # 5 пролётов × 150 м = 750 м
         self.assertEqual(results['sip_length_raw'], 750)
-        # с запасом 5%: ceil(750 * 1.05) = 788
-        self.assertEqual(results['sip_length'], 788)
-        # анкерные: 2 крайних + 4×2 промежуточных = 10
+        self.assertEqual(results['sip_length'], 788)  # ceil(750 * 1.05)
         self.assertEqual(results['anchor_clamps'], 10)
-        # поддерживающие: 5 опор
         self.assertEqual(results['support_clamps'], 5)
-        # кронштейн L-300: 5 опор
         self.assertEqual(results['bracket_l300'], 5)
-        # ЗОИ: 6 × 2 = 12
-        self.assertEqual(results['zoi_count'], 12)
-        # ВВГнг: 6 × 8 = 48
-        self.assertEqual(results['vvg_total'], 48)
-        # бандажная лента: 5 × 2 = 10
-        self.assertEqual(results['band_tape_meters'], 10)
-        # скрепы: 5 × 4 = 20
-        self.assertEqual(results['band_buckles'], 20)
-        # фасадные: 6 × 2 = 12
-        self.assertEqual(results['facade_mounts'], 12)
+        self.assertEqual(results['zoi_count'], 12)  # 6 × 2
+        self.assertEqual(results['vvg_total'], 48)  # 6 × 8
+        self.assertEqual(results['band_tape_meters'], 50)
+        self.assertEqual(results['band_buckles'], 30)
+        self.assertEqual(results['insulating_caps'], 4)  # 2 жилы × 2 конца
+
+    def test_excel_export(self):
+        response = self.client.get('/calculator/', {
+            'num_forts': 6,
+            'distance': 150,
+            'supports_per_span': 1,
+            'sip_slack_percent': 5,
+            'zoi_per_fort': 2,
+            'vvg_length_per_fort': 8,
+            'export': 'excel',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response['Content-Type'],
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        self.assertIn('materials_sip.xlsx', response['Content-Disposition'])
 
     def test_custom_parameters(self):
         response = self.client.get('/calculator/', {

@@ -36,14 +36,17 @@
     <div class="col-md-7">
         {% if results %}
         <div class="card">
-            <div class="card-header bg-success text-white">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Результаты расчёта</h5>
+                <a href="?{{ request.GET.urlencode }}&export=excel" class="btn btn-light btn-sm">
+                    Скачать Excel
+                </a>
             </div>
             <div class="card-body">
                 <h6>Схема трассы</h6>
                 <p class="text-muted">
                     {{ form.num_forts.value }} TFortis, {{ results.num_spans }} пролётов по {{ form.distance.value }} м,
-                    {{ results.total_supports }} промежуточных опор
+                    {{ results.total_supports }} промежуточных опор, СИП двухжильный
                 </p>
 
                 <table class="table table-bordered table-striped">
@@ -58,11 +61,11 @@
                             <th colspan="2" class="table-secondary">Кабельная продукция</th>
                         </tr>
                         <tr>
-                            <td>Кабель СИП (без запаса)</td>
+                            <td>Кабель СИП двухжильный (без запаса)</td>
                             <td class="text-end">{{ results.sip_length_raw }} м</td>
                         </tr>
                         <tr class="table-info">
-                            <td><strong>Кабель СИП (с запасом {{ results.sip_slack_percent }}% на провис)</strong></td>
+                            <td><strong>Кабель СИП двухжильный (с запасом {{ results.sip_slack_percent }}% на провис)</strong></td>
                             <td class="text-end"><strong>{{ results.sip_length }} м</strong></td>
                         </tr>
                         <tr class="table-info">
@@ -98,16 +101,12 @@
                             <td class="text-end">{{ results.bracket_l300 }} шт.</td>
                         </tr>
                         <tr>
-                            <td>Бандажная лента (для крепления на опорах)</td>
+                            <td>Бандажная лента</td>
                             <td class="text-end">{{ results.band_tape_meters }} м</td>
                         </tr>
                         <tr>
                             <td>Скрепы для бандажной ленты</td>
                             <td class="text-end">{{ results.band_buckles }} шт.</td>
-                        </tr>
-                        <tr>
-                            <td>Фасадные крепления (ввод в здание)</td>
-                            <td class="text-end">{{ results.facade_mounts }} шт.</td>
                         </tr>
                     </tbody>
                 </table>
