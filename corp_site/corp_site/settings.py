@@ -26,6 +26,7 @@ INSTALLED_APPS = [
 
     # Local apps
     'tickets.apps.TicketsConfig',
+    'calculator.apps.CalculatorConfig',
 ]
 
 MIDDLEWARE = [

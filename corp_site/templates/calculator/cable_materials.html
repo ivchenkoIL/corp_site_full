@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Калькулятор материалов СИП{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Калькулятор материалов для прокладки СИП</h2>
+
+<div class="row">
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Исходные данные</h5>
+            </div>
+            <div class="card-body">
+                <form method="get">
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}
+                        <div class="invalid-feedback d-block">
+                            {% for error in field.errors %}{{ error }}{% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-primary w-100">Рассчитать</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        {% if results %}
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Результаты расчёта</h5>
+            </div>
+            <div class="card-body">
+                <h6>Схема трассы</h6>
+                <p class="text-muted">
+                    {{ form.num_forts.value }} фортов, {{ results.num_spans }} пролётов по {{ form.distance.value }} м,
+                    {{ results.total_supports }} промежуточных опор
+                </p>
+
+                <table class="table table-bordered table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Материал</th>
+                            <th class="text-end">Количество</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Кабель СИП (длина без запаса)</td>
+                            <td class="text-end">{{ results.sip_length_raw }} м</td>
+                        </tr>
+                        <tr class="table-info">
+                            <td><strong>Кабель СИП (с запасом {{ form.sip_slack_percent.value }}%)</strong></td>
+                            <td class="text-end"><strong>{{ results.sip_length }} м</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Анкерные (проходные) зажимы</td>
+                            <td class="text-end">{{ results.anchor_clamps }} шт.</td>
+                        </tr>
+                        <tr>
+                            <td>Поддерживающие зажимы</td>
+                            <td class="text-end">{{ results.support_clamps }} шт.</td>
+                        </tr>
+                        <tr>
+                            <td>ЗОИ (зажим ответвительный изолированный)</td>
+                            <td class="text-end">{{ results.zoi_count }} шт.</td>
+                        </tr>
+                        <tr class="table-info">
+                            <td><strong>Кабель ВВГнг 3&times;2,5</strong> (по {{ results.vvg_length_per_fort }} м на форт)</td>
+                            <td class="text-end"><strong>{{ results.vvg_total }} м</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

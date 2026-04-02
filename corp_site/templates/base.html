@@ -10,6 +10,10 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
         <div class="container">
             <a class="navbar-brand" href="{% url 'ticket_list' %}">Corp Site</a>
+            <div class="navbar-nav">
+                <a class="nav-link" href="{% url 'ticket_list' %}">Заявки</a>
+                <a class="nav-link" href="{% url 'cable_materials' %}">Калькулятор СИП</a>
+            </div>
         </div>
     </nav>
     <div class="container">
