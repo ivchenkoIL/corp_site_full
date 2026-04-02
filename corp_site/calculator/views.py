@@ -66,6 +66,9 @@ class CableMaterialsView(FormView):
         # (для ответвления на ввод в здание)
         zoi_count = num_forts
 
+        # Кронштейн (вылет) L-300 — по 1 на каждую промежуточную опору
+        bracket_l300 = total_supports
+
         # Кабель ВВГнг 3×2,5 — для ввода в каждый форт
         vvg_total = num_forts * vvg_length_per_fort
 
@@ -76,6 +79,7 @@ class CableMaterialsView(FormView):
             'sip_length': sip_length,
             'anchor_clamps': anchor_clamps,
             'support_clamps': support_clamps,
+            'bracket_l300': bracket_l300,
             'zoi_count': zoi_count,
             'vvg_total': vvg_total,
             'vvg_length_per_fort': vvg_length_per_fort,

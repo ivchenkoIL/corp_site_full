@@ -20,6 +20,8 @@ class CableMaterialsViewTests(TestCase):
         self.assertEqual(results['anchor_clamps'], 6)
         # поддерживающие: 3 опоры
         self.assertEqual(results['support_clamps'], 3)
+        # кронштейн L-300: 3 опоры
+        self.assertEqual(results['bracket_l300'], 3)
         # ЗОИ: 4
         self.assertEqual(results['zoi_count'], 4)
         # ВВГнг: 4 × 15 = 60
@@ -38,5 +40,6 @@ class CableMaterialsViewTests(TestCase):
         self.assertEqual(results['sip_length'], 210)  # ceil(200*1.05)
         self.assertEqual(results['anchor_clamps'], 4)  # 2 + 1*2
         self.assertEqual(results['support_clamps'], 4)  # 2 spans × 2
+        self.assertEqual(results['bracket_l300'], 4)  # 2 spans × 2
         self.assertEqual(results['zoi_count'], 3)
         self.assertEqual(results['vvg_total'], 60)  # 3 × 20
