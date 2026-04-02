@@ -8,24 +8,30 @@ class CableMaterialsViewTests(TestCase):
         self.assertContains(response, 'Калькулятор материалов')
         self.assertIn('results', response.context)
 
-    def test_default_calculation(self):
-        """4 форта, 150 м, 1 опора между фортами."""
+    def test_default_calculation_6_forts(self):
+        """6 TFortis, 150 м, 1 опора между ними."""
         response = self.client.get('/calculator/')
         results = response.context['results']
-        # 3 пролёта × 150 м = 450 м
-        self.assertEqual(results['sip_length_raw'], 450)
-        # с запасом 3%: ceil(450 * 1.03) = 464
-        self.assertEqual(results['sip_length'], 464)
-        # анкерные: 2 крайних + 2×2 промежуточных = 6
-        self.assertEqual(results['anchor_clamps'], 6)
-        # поддерживающие: 3 опоры
-        self.assertEqual(results['support_clamps'], 3)
-        # кронштейн L-300: 3 опоры
-        self.assertEqual(results['bracket_l300'], 3)
-        # ЗОИ: 4
-        self.assertEqual(results['zoi_count'], 4)
-        # ВВГнг: 4 × 15 = 60
-        self.assertEqual(results['vvg_total'], 60)
+        # 5 пролётов × 150 м = 750 м
+        self.assertEqual(results['sip_length_raw'], 750)
+        # с запасом 5%: ceil(750 * 1.05) = 788
+        self.assertEqual(results['sip_length'], 788)
+        # анкерные: 2 крайних + 4×2 промежуточных = 10
+        self.assertEqual(results['anchor_clamps'], 10)
+        # поддерживающие: 5 опор
+        self.assertEqual(results['support_clamps'], 5)
+        # кронштейн L-300: 5 опор
+        self.assertEqual(results['bracket_l300'], 5)
+        # ЗОИ: 6 × 2 = 12
+        self.assertEqual(results['zoi_count'], 12)
+        # ВВГнг: 6 × 8 = 48
+        self.assertEqual(results['vvg_total'], 48)
+        # бандажная лента: 5 × 2 = 10
+        self.assertEqual(results['band_tape_meters'], 10)
+        # скрепы: 5 × 4 = 20
+        self.assertEqual(results['band_buckles'], 20)
+        # фасадные: 6 × 2 = 12
+        self.assertEqual(results['facade_mounts'], 12)
 
     def test_custom_parameters(self):
         response = self.client.get('/calculator/', {
@@ -33,13 +39,14 @@ class CableMaterialsViewTests(TestCase):
             'distance': 100,
             'supports_per_span': 2,
             'sip_slack_percent': 5,
-            'vvg_length_per_fort': 20,
+            'zoi_per_fort': 2,
+            'vvg_length_per_fort': 10,
         })
         results = response.context['results']
         self.assertEqual(results['sip_length_raw'], 200)
-        self.assertEqual(results['sip_length'], 210)  # ceil(200*1.05)
-        self.assertEqual(results['anchor_clamps'], 4)  # 2 + 1*2
-        self.assertEqual(results['support_clamps'], 4)  # 2 spans × 2
-        self.assertEqual(results['bracket_l300'], 4)  # 2 spans × 2
-        self.assertEqual(results['zoi_count'], 3)
-        self.assertEqual(results['vvg_total'], 60)  # 3 × 20
+        self.assertEqual(results['sip_length'], 210)
+        self.assertEqual(results['anchor_clamps'], 4)
+        self.assertEqual(results['support_clamps'], 4)
+        self.assertEqual(results['bracket_l300'], 4)
+        self.assertEqual(results['zoi_count'], 6)
+        self.assertEqual(results['vvg_total'], 30)
