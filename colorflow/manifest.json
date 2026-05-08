@@ -1,0 +1,21 @@
+{
+  "name": "ColorFlow — Drawing PWA",
+  "short_name": "ColorFlow",
+  "description": "Браузерная разукрашка-рисовалка с поддержкой слоёв, кистей, сенсорного ввода и работой offline.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0e0e16",
+  "theme_color": "#6366f1",
+  "lang": "ru",
+  "categories": ["productivity", "graphics", "art"],
+  "icons": [
+    {
+      "src": "./assets/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>ColorFlow — PWA Drawing</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0e0e16" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f4ff" media="(prefers-color-scheme: light)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="ColorFlow — браузерная разукрашка-рисовалка с поддержкой слоёв, кистей и сенсорного ввода.">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/svg+xml" href="./assets/icons/icon.svg">
+<link rel="apple-touch-icon" href="./assets/icons/icon-180.png">
+<link rel="stylesheet" href="./css/styles.css">
+</head>
+<body data-theme="auto">
+<div id="app" class="app">
+
+  <!-- Top bar -->
+  <header class="topbar glass" role="banner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">ColorFlow</span>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost" id="btn-undo" aria-label="Отменить" title="Отменить">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14l-4-4 4-4M5 10h8a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="btn btn-ghost" id="btn-redo" aria-label="Повторить" title="Повторить">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 14l4-4-4-4M19 10h-8a5 5 0 0 0 0 10h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="btn btn-ghost" id="btn-clear" aria-label="Очистить холст" title="Очистить">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="btn btn-ghost" id="btn-theme" aria-label="Переключить тему" title="Тема">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="btn btn-primary" id="btn-export" aria-label="Экспорт PNG" title="Экспорт">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>PNG</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Canvas stage -->
+  <main class="stage" id="stage" role="main">
+    <div class="canvas-wrap" id="canvas-wrap">
+      <canvas id="canvas" width="1080" height="1080" aria-label="Холст для рисования"></canvas>
+    </div>
+    <div class="hint" id="hint">Рисуй пальцем, стилусом или мышью · pinch для масштаба</div>
+  </main>
+
+  <!-- Bottom toolbar (mobile) / sidebar (desktop) -->
+  <aside class="dock glass" id="dock" role="toolbar" aria-label="Инструменты">
+    <div class="tools">
+      <button class="tool active" data-tool="brush" aria-label="Кисть" title="Кисть">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21l4-1 11-11a2.83 2.83 0 0 0-4-4L3 16v5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="tool" data-tool="eraser" aria-label="Ластик" title="Ластик">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l8 4 10-10-8-8L3 13v4zM10 21l11-11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+
+    <div class="sliders">
+      <label class="slider">
+        <span>Размер</span>
+        <input id="size" type="range" min="1" max="120" value="14" step="1">
+        <output id="size-out">14</output>
+      </label>
+      <label class="slider">
+        <span>Прозр.</span>
+        <input id="opacity" type="range" min="5" max="100" value="100" step="1">
+        <output id="opacity-out">100</output>
+      </label>
+    </div>
+
+    <div class="palette" id="palette" aria-label="Палитра"></div>
+
+    <div class="color-picker">
+      <label class="cp-row">
+        <span>HEX</span>
+        <input id="hex" type="text" value="#6366f1" inputmode="text" autocomplete="off" spellcheck="false" maxlength="7">
+        <span class="swatch" id="current-swatch" style="background:#6366f1"></span>
+      </label>
+    </div>
+  </aside>
+
+</div>
+
+<script src="./js/storage.js" defer></script>
+<script src="./js/canvas.js" defer></script>
+<script src="./js/ui.js" defer></script>
+<script src="./js/app.js" defer></script>
+</body>
+</html>
