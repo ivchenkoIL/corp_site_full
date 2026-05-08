@@ -101,6 +101,11 @@
       this.bindZoomReset();
       this.bindTolerance();
       this.bindDockCollapse();
+      this.bindSymmetry();
+      this.bindTemplates();
+      this.bindMagicFill();
+      this.bindTimelapse();
+      this.bindGallery();
       this.setColor(this.recent[0] || '#6366f1');
 
       engine.on('change', () => {
@@ -462,6 +467,217 @@
       a.remove();
     },
   };
+
+  // ---------------- Symmetry / mandala ----------------
+  Object.assign(UI, {
+    bindSymmetry() {
+      const dlg = $('#dlg-symmetry');
+      const axes = $('#sym-axes'), axesOut = $('#sym-axes-out');
+      const mx = $('#sym-mx'), my = $('#sym-my');
+      const btn = $('#btn-symmetry');
+      const apply = () => {
+        axesOut.textContent = axes.value;
+        this.engine.setSymmetry({ axes: +axes.value, mirrorX: mx.checked, mirrorY: my.checked });
+        const active = +axes.value > 1 || mx.checked || my.checked;
+        btn.classList.toggle('active', active);
+      };
+      btn.addEventListener('click', () => {
+        if (typeof dlg.showModal === 'function') dlg.showModal();
+      });
+      axes.addEventListener('input', apply);
+      mx.addEventListener('change', apply);
+      my.addEventListener('change', apply);
+      apply();
+    },
+
+    // ---------------- Templates ----------------
+    bindTemplates() {
+      const dlg = $('#dlg-templates');
+      const grid = $('#template-grid');
+      $('#btn-templates').addEventListener('click', async () => {
+        if (!grid.dataset.loaded) {
+          await this._loadTemplateGrid(grid);
+          grid.dataset.loaded = '1';
+        }
+        if (typeof dlg.showModal === 'function') dlg.showModal();
+      });
+    },
+
+    async _loadTemplateGrid(grid) {
+      grid.innerHTML = '<p class="cf-hint">Загрузка…</p>';
+      try {
+        const res = await fetch('./assets/templates/index.json');
+        const list = await res.json();
+        grid.innerHTML = '';
+        for (const t of list) {
+          const card = document.createElement('button');
+          card.type = 'button';
+          card.className = 'template-card';
+          card.innerHTML = `<div class="thumb" style="background-image:url('${t.src}')"></div><div class="name">${escapeHtml(t.name)}</div>`;
+          card.addEventListener('click', async () => {
+            $('#dlg-templates').close();
+            await this._importTemplate(t);
+          });
+          grid.appendChild(card);
+        }
+      } catch (err) {
+        grid.innerHTML = `<p class="cf-hint">Не удалось загрузить шаблоны: ${escapeHtml(err.message || err)}</p>`;
+      }
+    },
+
+    async _importTemplate(t) {
+      try {
+        const res = await fetch(t.src);
+        const svgText = await res.text();
+        const blob = new Blob([svgText], { type: 'image/svg+xml' });
+        // Reuse engine.importImage; it accepts Blob (URL.createObjectURL works)
+        // but doesn't pull a name from it — patch via a wrapping File-like object.
+        const file = new File([blob], `${t.id}.svg`, { type: 'image/svg+xml' });
+        await this.engine.importImage(file);
+      } catch (err) {
+        alert('Не удалось загрузить шаблон: ' + (err?.message || err));
+      }
+    },
+
+    // ---------------- AI Magic Fill (mock) ----------------
+    bindMagicFill() {
+      const btn = $('#btn-magic');
+      btn.addEventListener('click', async () => {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        btn.classList.add('busy');
+        const orig = btn.title;
+        btn.title = 'Идёт волшебство…';
+        try {
+          await this.engine.magicFill();
+        } finally {
+          btn.disabled = false;
+          btn.classList.remove('busy');
+          btn.title = orig;
+        }
+      });
+    },
+
+    // ---------------- Timelapse ----------------
+    bindTimelapse() {
+      const btn = $('#btn-timelapse');
+      const ind = $('#rec-indicator');
+      const cnt = $('#rec-count');
+      let frameCount = 0;
+      btn.addEventListener('click', async () => {
+        if (this.engine.isTimelapseRecording()) {
+          btn.disabled = true;
+          ind.hidden = true;
+          btn.classList.remove('recording');
+          const blob = await this.engine.stopTimelapse({ fps: 24 });
+          btn.disabled = false;
+          if (!blob) {
+            alert('Кадров недостаточно для рендеринга.');
+            return;
+          }
+          const ext = blob.type.includes('mp4') ? 'mp4' : (blob.type.includes('webm') ? 'webm' : 'png');
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `colorflow-timelapse-${Date.now()}.${ext}`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+        } else {
+          this.engine.startTimelapse({ intervalMs: 1500, maxFrames: 240 });
+          btn.classList.add('recording');
+          ind.hidden = false;
+          frameCount = 0;
+          cnt.textContent = '0';
+          this.engine.on('stroke-commit', () => {
+            if (!this.engine.isTimelapseRecording()) return;
+            frameCount = this.engine.timelapse?.frames.length || frameCount;
+            cnt.textContent = String(frameCount);
+          });
+        }
+      });
+    },
+
+    // ---------------- Gallery (localStorage mock) ----------------
+    bindGallery() {
+      const dlg = $('#dlg-gallery');
+      const grid = $('#gallery-grid');
+      const refresh = () => {
+        const items = window.CFStorage.get('gallery', []);
+        grid.innerHTML = '';
+        if (!items.length) {
+          grid.innerHTML = '<p class="cf-hint">Галерея пуста. Сохраните рисунок, чтобы он появился здесь.</p>';
+          return;
+        }
+        items.forEach((it, idx) => {
+          const card = document.createElement('div');
+          card.className = 'gallery-card';
+          card.innerHTML = `
+            <div class="thumb" style="background-image:url('${it.thumb}')"></div>
+            <div class="row">
+              <span class="name">${new Date(it.savedAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}</span>
+            </div>
+            <div class="row">
+              <button data-act="download">Скачать</button>
+              <button data-act="share">Поделиться</button>
+              <button data-act="delete">×</button>
+            </div>
+          `;
+          card.querySelector('[data-act="download"]').addEventListener('click', () => downloadDataUrl(it.full, `colorflow-${it.savedAt}.png`));
+          card.querySelector('[data-act="share"]').addEventListener('click', async () => {
+            try {
+              const blob = await (await fetch(it.full)).blob();
+              const file = new File([blob], `colorflow-${it.savedAt}.png`, { type: 'image/png' });
+              if (navigator.canShare?.({ files: [file] })) {
+                await navigator.share({ files: [file], title: 'ColorFlow' });
+              } else {
+                downloadDataUrl(it.full, `colorflow-${it.savedAt}.png`);
+              }
+            } catch { /* user cancelled or share unsupported */ }
+          });
+          card.querySelector('[data-act="delete"]').addEventListener('click', () => {
+            if (!confirm('Удалить из галереи?')) return;
+            const arr = window.CFStorage.get('gallery', []);
+            arr.splice(idx, 1);
+            window.CFStorage.set('gallery', arr);
+            refresh();
+          });
+          grid.appendChild(card);
+        });
+      };
+
+      $('#btn-gallery').addEventListener('click', () => {
+        refresh();
+        if (typeof dlg.showModal === 'function') dlg.showModal();
+      });
+      $('#btn-gallery-save').addEventListener('click', () => {
+        const full = this.engine.toDataURL('image/png');
+        // Smaller thumb to keep localStorage usage in check.
+        const tw = 240;
+        const c = document.createElement('canvas');
+        c.width = tw; c.height = tw;
+        const cx = c.getContext('2d');
+        cx.drawImage(this.engine.canvas, 0, 0, tw, tw);
+        const thumb = c.toDataURL('image/jpeg', 0.7);
+        const arr = window.CFStorage.get('gallery', []);
+        arr.unshift({ savedAt: Date.now(), thumb, full });
+        // Cap at 12 entries — full PNGs can be large, localStorage ~5MB.
+        while (arr.length > 12) arr.pop();
+        window.CFStorage.set('gallery', arr);
+        refresh();
+      });
+    },
+  });
+
+  function downloadDataUrl(url, filename) {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
 
   window.CFUI = UI;
 })();

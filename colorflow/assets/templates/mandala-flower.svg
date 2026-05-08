@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" fill="none" stroke="#1a1a2e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="540" cy="540" r="60"/>
+  <circle cx="540" cy="540" r="180"/>
+  <circle cx="540" cy="540" r="320"/>
+  <circle cx="540" cy="540" r="450"/>
+  <g>
+    <g transform="translate(540 540)">
+      <g><path d="M0,-60 Q40,-150 0,-300 Q-40,-150 0,-60 Z"/></g>
+      <g transform="rotate(45)"><path d="M0,-60 Q40,-150 0,-300 Q-40,-150 0,-60 Z"/></g>
+      <g transform="rotate(90)"><path d="M0,-60 Q40,-150 0,-300 Q-40,-150 0,-60 Z"/></g>
+      <g transform="rotate(135)"><path d="M0,-60 Q40,-150 0,-300 Q-40,-150 0,-60 Z"/></g>
+      <g transform="rotate(180)"><path d="M0,-60 Q40,-150 0,-300 Q-40,-150 0,-60 Z"/></g>
+      <g transform="rotate(225)"><path d="M0,-60 Q40,-150 0,-300 Q-40,-150 0,-60 Z"/></g>
+      <g transform="rotate(270)"><path d="M0,-60 Q40,-150 0,-300 Q-40,-150 0,-60 Z"/></g>
+      <g transform="rotate(315)"><path d="M0,-60 Q40,-150 0,-300 Q-40,-150 0,-60 Z"/></g>
+    </g>
+    <g transform="translate(540 540)">
+      <g transform="rotate(22.5)"><path d="M0,-180 Q60,-260 0,-440 Q-60,-260 0,-180 Z"/></g>
+      <g transform="rotate(67.5)"><path d="M0,-180 Q60,-260 0,-440 Q-60,-260 0,-180 Z"/></g>
+      <g transform="rotate(112.5)"><path d="M0,-180 Q60,-260 0,-440 Q-60,-260 0,-180 Z"/></g>
+      <g transform="rotate(157.5)"><path d="M0,-180 Q60,-260 0,-440 Q-60,-260 0,-180 Z"/></g>
+      <g transform="rotate(202.5)"><path d="M0,-180 Q60,-260 0,-440 Q-60,-260 0,-180 Z"/></g>
+      <g transform="rotate(247.5)"><path d="M0,-180 Q60,-260 0,-440 Q-60,-260 0,-180 Z"/></g>
+      <g transform="rotate(292.5)"><path d="M0,-180 Q60,-260 0,-440 Q-60,-260 0,-180 Z"/></g>
+      <g transform="rotate(337.5)"><path d="M0,-180 Q60,-260 0,-440 Q-60,-260 0,-180 Z"/></g>
+    </g>
+  </g>
+</svg>

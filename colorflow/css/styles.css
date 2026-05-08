@@ -630,6 +630,137 @@ button, input {
   .dock-collapse { display: block; }
 }
 
+/* Modals (HTML <dialog>) */
+.cf-dialog {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--fg);
+  max-width: min(640px, 92vw);
+  max-height: min(80dvh, 720px);
+  border-radius: var(--radius);
+}
+.cf-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+}
+.cf-dialog-body {
+  background: var(--panel);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid var(--panel-stroke);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: grid;
+  gap: 10px;
+  box-shadow: var(--shadow-out);
+  max-height: inherit;
+  overflow: auto;
+}
+.cf-dialog-body h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+}
+.cf-hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--fg-mute);
+}
+.cf-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.template-grid, .gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 4px 0;
+}
+.template-card, .gallery-card {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.template-card:hover, .gallery-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-1);
+}
+.template-card .thumb, .gallery-card .thumb {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 6px;
+  background: white;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.template-card .name, .gallery-card .name {
+  font-size: 12px;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.gallery-card .row {
+  display: flex;
+  gap: 4px;
+  justify-content: space-between;
+  align-items: center;
+}
+.gallery-card button {
+  padding: 2px 6px;
+  font-size: 11px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fg-mute);
+  cursor: pointer;
+}
+.gallery-card button:hover { color: var(--fg); background: var(--hover); }
+
+/* Recording indicator (timelapse). */
+.rec-indicator {
+  position: absolute;
+  top: 12px;
+  right: 80px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 4;
+}
+.rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: rec-pulse 1.2s ease-in-out infinite;
+}
+@keyframes rec-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+#btn-timelapse.recording { color: #ef4444; }
+#btn-timelapse.recording svg circle:last-child { fill: #ef4444; }
+#btn-symmetry.active { color: var(--accent-1); }
+
 /* Respect user's motion preference: cut all decorative animation. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

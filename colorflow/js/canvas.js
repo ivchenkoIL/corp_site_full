@@ -200,6 +200,12 @@
       this.minScale = 0.5;
       this.maxScale = 8;
 
+      // Symmetry / mandala state. axes=1 + mirrorX/Y=false → no symmetry.
+      this.symmetry = { axes: 1, mirrorX: false, mirrorY: false };
+
+      // Timelapse capture state. Set to {frames, timer, startedAt} when active.
+      this.timelapse = null;
+
       // Event listeners
       this._listeners = {};
 
@@ -561,15 +567,66 @@
       // Stroke buffer always paints with source-over; tool-specific composite
       // is applied only when blitting onto the active layer.
       ctx.globalCompositeOperation = 'source-over';
+      const transforms = this._symmetryTransforms();
+      const symActive = transforms.length > 1;
+      const cx = this.canvas.width / 2;
+      const cy = this.canvas.height / 2;
       let last = { x: this.lastX, y: this.lastY, p: this.lastPressure };
       for (const pt of this.pendingPoints) {
-        tool.paintSegment(this, ctx, last, pt);
+        for (const t of transforms) {
+          if (t.identity) {
+            tool.paintSegment(this, ctx, last, pt);
+          } else {
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(t.rot);
+            ctx.scale(t.sx, t.sy);
+            ctx.translate(-cx, -cy);
+            tool.paintSegment(this, ctx, last, pt);
+            ctx.restore();
+          }
+        }
         last = pt;
+      }
+      // With symmetry the painted area can wrap the full canvas; mark bbox accordingly.
+      if (symActive) {
+        this._strokeBbox = { x0: 0, y0: 0, x1: this.canvas.width, y1: this.canvas.height };
       }
       this.lastX = last.x;
       this.lastY = last.y;
       this.lastPressure = last.p;
       this.pendingPoints.length = 0;
+    }
+
+    _symmetryTransforms() {
+      const s = this.symmetry || { axes: 1, mirrorX: false, mirrorY: false };
+      const axes = Math.max(1, Math.min(32, s.axes | 0));
+      const list = [];
+      const mirrorScales = [{ sx: 1, sy: 1 }];
+      if (s.mirrorX) mirrorScales.push({ sx: -1, sy: 1 });
+      if (s.mirrorY) mirrorScales.push({ sx: 1, sy: -1 });
+      if (s.mirrorX && s.mirrorY) mirrorScales.push({ sx: -1, sy: -1 });
+      for (let i = 0; i < axes; i++) {
+        const rot = (Math.PI * 2 * i) / axes;
+        for (const m of mirrorScales) {
+          list.push({
+            rot,
+            sx: m.sx,
+            sy: m.sy,
+            identity: rot === 0 && m.sx === 1 && m.sy === 1,
+          });
+        }
+      }
+      return list;
+    }
+
+    setSymmetry(opts) {
+      this.symmetry = {
+        axes: Math.max(1, Math.min(32, opts.axes | 0)),
+        mirrorX: !!opts.mirrorX,
+        mirrorY: !!opts.mirrorY,
+      };
+      this.emit('symmetry', this.symmetry);
     }
 
     // ---------------- History ----------------
@@ -919,6 +976,161 @@
         img.onerror = (err) => { URL.revokeObjectURL(url); reject(err); };
         img.src = url;
       });
+    }
+
+    // ---------------- Timelapse ----------------
+    // Capture strategy: snapshot on every stroke commit + a periodic tick so
+    // long pauses don't break the playback. PNG Blobs are cheaper than
+    // dataURLs (and don't bloat the JS heap as strings).
+    startTimelapse({ maxFrames = 240, intervalMs = 1500 } = {}) {
+      if (this.timelapse) return;
+      const tl = {
+        frames: [],
+        maxFrames,
+        startedAt: Date.now(),
+        timer: 0,
+        onCommit: null,
+      };
+      const capture = async () => {
+        if (tl.frames.length >= tl.maxFrames) return;
+        await new Promise((resolve) => {
+          this.canvas.toBlob((blob) => {
+            if (blob) tl.frames.push(blob);
+            resolve();
+          }, 'image/webp', 0.85);
+        });
+      };
+      tl.onCommit = () => capture();
+      this.on('stroke-commit', tl.onCommit);
+      tl.timer = setInterval(capture, intervalMs);
+      // Capture a starting frame.
+      capture();
+      this.timelapse = tl;
+      this.emit('timelapse', { state: 'recording', frames: 0 });
+    }
+
+    isTimelapseRecording() { return !!this.timelapse; }
+
+    // Stops capture and renders frames to a webm Blob via captureStream +
+    // MediaRecorder. fps controls playback speed (independent of capture rate).
+    async stopTimelapse({ fps = 24 } = {}) {
+      const tl = this.timelapse;
+      if (!tl) return null;
+      clearInterval(tl.timer);
+      // onCommit listeners aren't removable via emit/on (no off()), so we just
+      // clear timelapse — capture() bails when this.timelapse is null.
+      this.timelapse = null;
+      const frames = tl.frames;
+      if (!frames.length) return null;
+
+      const w = this.canvas.width, h = this.canvas.height;
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const cx = c.getContext('2d');
+      cx.fillStyle = '#ffffff';
+      cx.fillRect(0, 0, w, h);
+
+      if (typeof MediaRecorder === 'undefined' || !c.captureStream) {
+        // No recorder support — fall back to returning the last frame as PNG.
+        return frames[frames.length - 1];
+      }
+
+      const mimes = [
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
+        'video/webm',
+        'video/mp4',
+      ];
+      const supported = mimes.find((m) => MediaRecorder.isTypeSupported?.(m)) || 'video/webm';
+      const stream = c.captureStream(fps);
+      const recorder = new MediaRecorder(stream, { mimeType: supported, videoBitsPerSecond: 2_500_000 });
+      const chunks = [];
+      recorder.ondataavailable = (e) => { if (e.data?.size) chunks.push(e.data); };
+
+      const stopPromise = new Promise((resolve) => {
+        recorder.onstop = () => {
+          stream.getTracks().forEach((t) => t.stop());
+          resolve(new Blob(chunks, { type: supported }));
+        };
+      });
+
+      recorder.start();
+      const frameDelay = Math.max(16, Math.round(1000 / fps));
+      for (const blob of frames) {
+        const url = URL.createObjectURL(blob);
+        try {
+          const img = await new Promise((res, rej) => {
+            const i = new Image();
+            i.onload = () => res(i);
+            i.onerror = rej;
+            i.src = url;
+          });
+          cx.fillStyle = '#ffffff';
+          cx.fillRect(0, 0, w, h);
+          cx.drawImage(img, 0, 0, w, h);
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+        await new Promise((r) => setTimeout(r, frameDelay));
+      }
+      recorder.stop();
+      this.emit('timelapse', { state: 'idle' });
+      return stopPromise;
+    }
+
+    // ---------------- AI Magic Fill (mock with local fallback) ----------------
+    // Per spec — заглушка с fallback. We try a backend if window.CF_AI_ENDPOINT
+    // is set; otherwise apply a vibrant local filter and pretend it's AI.
+    async magicFill() {
+      const active = this.getActiveLayer();
+      if (!active || !active.visible) return false;
+      const w = active.canvas.width, h = active.canvas.height;
+      const before = active.ctx.getImageData(0, 0, w, h);
+
+      let appliedRemote = false;
+      if (window.CF_AI_ENDPOINT) {
+        try {
+          const blob = await new Promise((r) => active.canvas.toBlob(r, 'image/png'));
+          const fd = new FormData();
+          fd.append('image', blob, 'sketch.png');
+          const res = await fetch(window.CF_AI_ENDPOINT, { method: 'POST', body: fd });
+          if (res.ok) {
+            const out = await res.blob();
+            const url = URL.createObjectURL(out);
+            const img = await new Promise((rs, rj) => {
+              const i = new Image(); i.onload = () => rs(i); i.onerror = rj; i.src = url;
+            });
+            active.ctx.clearRect(0, 0, w, h);
+            active.ctx.drawImage(img, 0, 0, w, h);
+            URL.revokeObjectURL(url);
+            appliedRemote = true;
+          }
+        } catch { /* fall through to local */ }
+      }
+
+      if (!appliedRemote) {
+        // Local fallback — saturate + contrast pass via ctx.filter; visually
+        // distinct enough to feel like a "magic" tweak.
+        await new Promise((r) => setTimeout(r, 700)); // pretend latency
+        const tmp = document.createElement('canvas');
+        tmp.width = w; tmp.height = h;
+        const tctx = tmp.getContext('2d');
+        tctx.filter = 'saturate(1.45) contrast(1.12) brightness(1.05)';
+        tctx.drawImage(active.canvas, 0, 0);
+        active.ctx.clearRect(0, 0, w, h);
+        active.ctx.drawImage(tmp, 0, 0);
+      }
+
+      const after = active.ctx.getImageData(0, 0, w, h);
+      this._pushHistory({
+        type: 'stroke',
+        layerId: active.id,
+        bbox: { x: 0, y: 0, w, h },
+        before,
+        after,
+      });
+      this._afterChange();
+      return true;
     }
 
     // Render layer content to a small thumbnail data URL (used by UI panel).

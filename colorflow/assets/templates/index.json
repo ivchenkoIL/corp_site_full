@@ -1,0 +1,7 @@
+[
+  { "id": "mandala-flower", "name": "Мандала-цветок", "category": "Мандала", "src": "./assets/templates/mandala-flower.svg" },
+  { "id": "geometric",      "name": "Геометрия",      "category": "Узоры",   "src": "./assets/templates/geometric.svg" },
+  { "id": "cat",            "name": "Кот",            "category": "Животные","src": "./assets/templates/cat.svg" },
+  { "id": "butterfly",      "name": "Бабочка",        "category": "Животные","src": "./assets/templates/butterfly.svg" },
+  { "id": "house",          "name": "Домик",          "category": "Сцены",   "src": "./assets/templates/house.svg" }
+]
