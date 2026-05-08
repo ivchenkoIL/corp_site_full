@@ -24,6 +24,13 @@
       this.layer.height = CANVAS_SIZE;
       this.lctx = this.layer.getContext('2d');
 
+      // Pre-stroke snapshot (regular canvas, not ImageData). drawImage from this
+      // is GPU-fast — used every frame instead of putImageData(history[...]).
+      this.base = document.createElement('canvas');
+      this.base.width = CANVAS_SIZE;
+      this.base.height = CANVAS_SIZE;
+      this.bctx = this.base.getContext('2d');
+
       // History (Step 1: simple full-image snapshots, capped).
       this.history = [];
       this.future = [];
@@ -47,6 +54,7 @@
       this._raf = 0;
 
       this._bind();
+      this._setupCursor();
     }
 
     fillBackground(color) {
@@ -65,6 +73,40 @@
       c.addEventListener('pointerleave', this._onUp.bind(this));
       // Block context menu on long-press.
       c.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
+
+    _setupCursor() {
+      const wrap = this.canvas.parentElement;
+      if (!wrap) return;
+      const el = document.createElement('div');
+      el.className = 'cursor-preview';
+      el.setAttribute('aria-hidden', 'true');
+      wrap.appendChild(el);
+      this.cursorEl = el;
+
+      this.canvas.addEventListener('pointerenter', (e) => {
+        if (e.pointerType !== 'touch') el.classList.add('visible');
+      });
+      this.canvas.addEventListener('pointerleave', () => {
+        el.classList.remove('visible');
+      });
+    }
+
+    _updateCursor(e) {
+      const el = this.cursorEl;
+      if (!el) return;
+      if (e.pointerType === 'touch') {
+        el.classList.remove('visible');
+        return;
+      }
+      const rect = this.canvas.getBoundingClientRect();
+      // size in CSS px = canvas size * (display ratio).
+      const cssSize = this.size * (rect.width / this.canvas.width);
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      el.style.transform = `translate(${x - cssSize / 2}px, ${y - cssSize / 2}px)`;
+      el.style.width = `${cssSize}px`;
+      el.style.height = `${cssSize}px`;
     }
 
     _toLocal(e) {
@@ -95,12 +137,18 @@
       // Reset offscreen layer for fresh stroke.
       this.lctx.clearRect(0, 0, this.layer.width, this.layer.height);
 
+      // Snapshot pre-stroke canvas into a regular canvas (drawImage source).
+      // Avoids ~4.6 MB putImageData copies per preview frame.
+      this.bctx.clearRect(0, 0, this.base.width, this.base.height);
+      this.bctx.drawImage(this.canvas, 0, 0);
+
       this._scheduleRender();
 
       if (navigator.vibrate) navigator.vibrate(2);
     }
 
     _onMove(e) {
+      this._updateCursor(e);
       if (e.pointerId !== this.activePointerId) return;
       e.preventDefault();
       // Use coalesced events when available — smoother strokes on mobile.
@@ -121,9 +169,9 @@
       if (e.pointerId !== this.activePointerId) return;
       // Flush any pending points before commit.
       this._renderStroke();
-      // Reset canvas to last snapshot, then composite layer once.
-      const last = this.history[this.history.length - 1];
-      if (last) this.ctx.putImageData(last, 0, 0);
+      // Reset canvas to pre-stroke base, then composite layer once for final commit.
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.ctx.drawImage(this.base, 0, 0);
       this._blitLayer();
       this.lctx.clearRect(0, 0, this.layer.width, this.layer.height);
 
@@ -136,13 +184,11 @@
     // tool-specific blending (used both for live preview and final commit).
     _blitLayer() {
       this.ctx.save();
-      if (this.tool === 'eraser') {
-        this.ctx.globalCompositeOperation = 'destination-out';
-        this.ctx.globalAlpha = 1;
-      } else {
-        this.ctx.globalCompositeOperation = 'source-over';
-        this.ctx.globalAlpha = this.opacity;
-      }
+      // Opacity slider drives both brush alpha and eraser strength
+      // (destination-out + alpha = partial erase per pass).
+      this.ctx.globalAlpha = this.opacity;
+      this.ctx.globalCompositeOperation =
+        this.tool === 'eraser' ? 'destination-out' : 'source-over';
       this.ctx.drawImage(this.layer, 0, 0);
       this.ctx.restore();
     }
@@ -188,11 +234,10 @@
 
     // Composite current image with active stroke layer (preview while drawing).
     _composite() {
-      // Avoid double-stacking the layer between frames: reset to the last
-      // committed snapshot, then blit the current stroke layer once.
-      const last = this.history[this.history.length - 1];
-      if (!last) return;
-      this.ctx.putImageData(last, 0, 0);
+      // Avoid double-stacking the layer between frames: reset to the pre-stroke
+      // base canvas (GPU drawImage, not putImageData), then blit the layer once.
+      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.ctx.drawImage(this.base, 0, 0);
       this._blitLayer();
     }
 
@@ -232,7 +277,24 @@
     // ---------------- Setters ----------------
     setTool(t) { this.tool = t; }
     setColor(c) { this.color = c; }
-    setSize(s) { this.size = +s; }
+    setSize(s) {
+      this.size = +s;
+      // Resize the cursor ring in place if it's currently visible.
+      const el = this.cursorEl;
+      if (!el || !el.classList.contains('visible')) return;
+      const rect = this.canvas.getBoundingClientRect();
+      const cssSize = this.size * (rect.width / this.canvas.width);
+      // Preserve current centre by adjusting transform.
+      const m = el.style.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/);
+      const prevSize = parseFloat(el.style.width) || cssSize;
+      if (m) {
+        const cx = parseFloat(m[1]) + prevSize / 2;
+        const cy = parseFloat(m[2]) + prevSize / 2;
+        el.style.transform = `translate(${cx - cssSize / 2}px, ${cy - cssSize / 2}px)`;
+      }
+      el.style.width = `${cssSize}px`;
+      el.style.height = `${cssSize}px`;
+    }
     setOpacity(o) { this.opacity = Math.max(0, Math.min(1, +o)); }
 
     // ---------------- Export ----------------

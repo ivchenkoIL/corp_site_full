@@ -213,10 +213,27 @@ button, input {
   width: 100%;
   height: 100%;
   touch-action: none;
-  cursor: crosshair;
+  cursor: none;
   background: white;
   border-radius: var(--radius);
 }
+
+/* Brush size preview ring (pointer/pen only — hidden on touch). */
+.cursor-preview {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  border: 1.5px solid rgba(99, 102, 241, 0.85);
+  background: rgba(99, 102, 241, 0.12);
+  border-radius: 50%;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  will-change: transform, width, height;
+  z-index: 1;
+}
+
+.cursor-preview.visible { opacity: 1; }
 
 .hint {
   position: absolute;
