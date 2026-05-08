@@ -3,17 +3,67 @@
 (function () {
   'use strict';
 
-  const PRESETS = [
-    '#000000', '#ffffff', '#6366f1', '#8b5cf6', '#ec4899',
-    '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16',
-    '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9',
-    '#3b82f6', '#a855f7', '#f43f5e', '#78350f', '#9ca3af',
-  ];
+  const PALETTES = {
+    pastel: ['#fce7f3', '#fbcfe8', '#fecaca', '#fed7aa', '#fef3c7', '#d9f99d',
+             '#a7f3d0', '#bae6fd', '#c7d2fe', '#e9d5ff', '#fef9c3', '#ffe4e6'],
+    neon:   ['#ff00ff', '#00ffff', '#39ff14', '#ff073a', '#fffb00', '#ff5f1f',
+             '#bc13fe', '#1f51ff', '#cfff04', '#fe019a', '#04d9ff', '#ffaa00'],
+    earth:  ['#3e2723', '#5d4037', '#795548', '#8d6e63', '#a1887f', '#bcaaa4',
+             '#6d4c41', '#4e342e', '#33691e', '#827717', '#9e9d24', '#bf360c'],
+    mono:   ['#000000', '#1f1f1f', '#3a3a3a', '#555555', '#707070', '#8b8b8b',
+             '#a6a6a6', '#c1c1c1', '#dcdcdc', '#f5f5f5', '#ffffff', '#cccccc'],
+  };
 
   function $(sel, root = document) { return root.querySelector(sel); }
   function $$(sel, root = document) { return Array.from(root.querySelectorAll(sel)); }
 
   function isHex(v) { return /^#([0-9a-fA-F]{6})$/.test(v); }
+
+  // ---- Color conversions ----
+  function hexToRgb(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+    if (!m) return { r: 0, g: 0, b: 0 };
+    const n = parseInt(m[1], 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+  function rgbToHex(r, g, b) {
+    const h = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+    return '#' + h(r) + h(g) + h(b);
+  }
+  function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    let h = 0, s = 0; const l = (max + min) / 2;
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+    return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+  }
+  function hslToRgb(h, s, l) {
+    h /= 360; s /= 100; l /= 100;
+    if (s === 0) { const v = Math.round(l * 255); return { r: v, g: v, b: v }; }
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    const hue2rgb = (t) => {
+      if (t < 0) t += 1; if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+    return {
+      r: Math.round(hue2rgb(h + 1 / 3) * 255),
+      g: Math.round(hue2rgb(h) * 255),
+      b: Math.round(hue2rgb(h - 1 / 3) * 255),
+    };
+  }
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, (c) => ({
@@ -35,23 +85,37 @@
       this.theme = window.CFStorage.get('theme', 'auto');
       document.body.dataset.theme = this.theme;
 
+      this.activePalette = window.CFStorage.get('palette', 'recent');
+
+      this.bindPaletteTabs();
       this.renderPalette();
       this.bindTools();
       this.bindSliders();
       this.bindTopbar();
+      this.bindExportMenu();
       this.bindHexInput();
+      this.bindRgbInput();
+      this.bindHslSliders();
       this.bindLayers();
+      this.bindImport();
+      this.bindZoomReset();
+      this.bindTolerance();
       this.setColor(this.recent[0] || '#6366f1');
 
-      // Re-render layer panel + undo/redo state when engine state changes.
       engine.on('change', () => {
         this.renderLayers();
         this.updateUndoRedo();
       });
       engine.on('stroke-commit', () => {
-        // Just refresh thumbnails of affected layer + update history buttons.
         this.renderLayers();
         this.updateUndoRedo();
+      });
+      // Eyedropper sets engine.color directly; reflect in UI inputs + revert tool.
+      engine.on('color-picked', ({ color }) => {
+        this.setColor(color, { skipEngine: true });
+        const t = engine.tool;
+        $$('.tool').forEach(b => b.classList.toggle('active', b.dataset.tool === t));
+        this.updateToolOnly();
       });
       this.renderLayers();
       this.updateUndoRedo();
@@ -60,9 +124,8 @@
     renderPalette() {
       const root = $('#palette');
       root.innerHTML = '';
-      // recent first
-      const all = [...this.recent, ...PRESETS.filter(c => !this.recent.includes(c))];
-      all.slice(0, 24).forEach((c) => {
+      const colors = this.activePalette === 'recent' ? this.recent : PALETTES[this.activePalette] || [];
+      colors.slice(0, 24).forEach((c) => {
         const sw = document.createElement('button');
         sw.type = 'button';
         sw.className = 'swatch';
@@ -75,6 +138,18 @@
       this.markActiveSwatch();
     },
 
+    bindPaletteTabs() {
+      $$('#palette-tabs button').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.palette === this.activePalette);
+        btn.addEventListener('click', () => {
+          this.activePalette = btn.dataset.palette;
+          window.CFStorage.set('palette', this.activePalette);
+          $$('#palette-tabs button').forEach(b => b.classList.toggle('active', b === btn));
+          this.renderPalette();
+        });
+      });
+    },
+
     markActiveSwatch() {
       $$('.swatch', $('#palette')).forEach((el) => {
         el.classList.toggle('active', el.dataset.color?.toLowerCase() === this.engine.color.toLowerCase());
@@ -82,13 +157,22 @@
     },
 
     bindTools() {
-      $$('.tool').forEach((btn) => {
+      $$('.tool[data-tool]').forEach((btn) => {
         btn.addEventListener('click', () => {
-          $$('.tool').forEach(b => b.classList.remove('active'));
+          $$('.tool[data-tool]').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           this.engine.setTool(btn.dataset.tool);
+          this.updateToolOnly();
           if (navigator.vibrate) navigator.vibrate(4);
         });
+      });
+    },
+
+    // Show/hide tool-specific control rows based on the active tool.
+    updateToolOnly() {
+      const t = this.engine.tool;
+      $$('.tool-only').forEach((el) => {
+        el.hidden = el.dataset.toolOnly !== t;
       });
     },
 
@@ -116,7 +200,7 @@
         if (confirm('Очистить активный слой?')) this.engine.clear();
       });
       $('#btn-theme').addEventListener('click', () => this.cycleTheme());
-      $('#btn-export').addEventListener('click', () => this.exportPNG());
+      // Export button is wired by bindExportMenu.
     },
 
     updateUndoRedo() {
@@ -220,21 +304,122 @@
       });
     },
 
-    setColor(c) {
+    bindRgbInput() {
+      const rgb = $('#rgb');
+      rgb.addEventListener('change', () => {
+        const m = rgb.value.match(/(\d{1,3})\s*[,\s]\s*(\d{1,3})\s*[,\s]\s*(\d{1,3})/);
+        if (!m) return this.syncColorInputs();
+        const r = +m[1], g = +m[2], b = +m[3];
+        if ([r, g, b].some(v => v < 0 || v > 255)) return this.syncColorInputs();
+        this.setColor(rgbToHex(r, g, b));
+      });
+    },
+
+    bindHslSliders() {
+      const ids = ['hsl-h', 'hsl-s', 'hsl-l'];
+      const els = ids.map(id => $('#' + id));
+      const outs = ids.map(id => $('#' + id + '-out'));
+      const apply = () => {
+        const [h, s, l] = els.map(e => +e.value);
+        outs[0].textContent = h;
+        outs[1].textContent = s;
+        outs[2].textContent = l;
+        const { r, g, b } = hslToRgb(h, s, l);
+        this.setColor(rgbToHex(r, g, b));
+      };
+      els.forEach(el => {
+        el.addEventListener('input', apply);
+      });
+    },
+
+    bindImport() {
+      const input = $('#import-file');
+      if (!input) return;
+      input.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+          await this.engine.importImage(file);
+          if (navigator.vibrate) navigator.vibrate(8);
+        } catch (err) {
+          alert('Не удалось импортировать изображение: ' + (err?.message || err));
+        } finally {
+          input.value = '';
+        }
+      });
+    },
+
+    bindZoomReset() {
+      const btn = $('#btn-zoom-reset');
+      if (!btn) return;
+      btn.addEventListener('click', () => this.engine.resetTransform());
+      this.engine.on('transform', () => this._refreshZoomLabel());
+      this._refreshZoomLabel();
+    },
+
+    _refreshZoomLabel() {
+      const btn = $('#btn-zoom-reset');
+      const s = this.engine.scale || 1;
+      if (Math.abs(s - 1) < 0.01 && Math.abs(this.engine.tx) < 1 && Math.abs(this.engine.ty) < 1) {
+        btn.hidden = true;
+      } else {
+        btn.hidden = false;
+        btn.textContent = `${Math.round(s * 100)}%`;
+      }
+    },
+
+    bindTolerance() {
+      const t = $('#tolerance'), out = $('#tolerance-out');
+      if (!t) return;
+      t.addEventListener('input', () => {
+        out.textContent = t.value;
+        this.engine.setFillTolerance(t.value);
+      });
+      this.engine.setFillTolerance(t.value);
+    },
+
+    bindExportMenu() {
+      const menu = $('.export-menu');
+      $$('.export-menu-item').forEach((b) => {
+        b.addEventListener('click', () => {
+          const fmt = b.dataset.export;
+          this.exportImage(fmt);
+          menu.removeAttribute('open');
+        });
+      });
+      // Close menu on outside click.
+      document.addEventListener('click', (e) => {
+        if (!menu.contains(e.target)) menu.removeAttribute('open');
+      });
+    },
+
+    setColor(c, opts = {}) {
       if (!isHex(c)) return;
-      this.engine.setColor(c);
-      $('#hex').value = c;
-      $('#current-swatch').style.background = c;
+      if (!opts.skipEngine) this.engine.setColor(c);
+      this.syncColorInputs(c);
 
       // Update recent (max 10).
       this.recent = [c, ...this.recent.filter(x => x.toLowerCase() !== c.toLowerCase())].slice(0, 10);
       window.CFStorage.set('recent', this.recent);
-      this.renderPalette();
-      // Auto-switch back to brush if eraser was active.
-      if (this.engine.tool === 'eraser') {
+      if (this.activePalette === 'recent') this.renderPalette();
+      // If user picks a color while eraser was active, swap back to brush.
+      if (!opts.skipEngine && this.engine.tool === 'eraser') {
         const brushBtn = document.querySelector('.tool[data-tool="brush"]');
         brushBtn?.click();
       }
+    },
+
+    syncColorInputs(c) {
+      c = c || this.engine.color;
+      const { r, g, b } = hexToRgb(c);
+      const hsl = rgbToHsl(r, g, b);
+      $('#hex').value = c;
+      $('#current-swatch').style.background = c;
+      $('#rgb').value = `${r}, ${g}, ${b}`;
+      $('#hsl-h').value = hsl.h; $('#hsl-h-out').textContent = hsl.h;
+      $('#hsl-s').value = hsl.s; $('#hsl-s-out').textContent = hsl.s;
+      $('#hsl-l').value = hsl.l; $('#hsl-l-out').textContent = hsl.l;
+      this.markActiveSwatch();
     },
 
     cycleTheme() {
@@ -245,11 +430,14 @@
       window.CFStorage.set('theme', this.theme);
     },
 
-    exportPNG() {
-      const url = this.engine.toDataURL('image/png');
+    exportImage(fmt = 'png') {
+      const mime = fmt === 'jpg' ? 'image/jpeg' : 'image/png';
+      const ext = fmt === 'jpg' ? 'jpg' : 'png';
+      const quality = fmt === 'jpg' ? 0.92 : undefined;
+      const url = this.engine.toDataURL(mime, quality);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `colorflow-${Date.now()}.png`;
+      a.download = `colorflow-${Date.now()}.${ext}`;
       document.body.appendChild(a);
       a.click();
       a.remove();

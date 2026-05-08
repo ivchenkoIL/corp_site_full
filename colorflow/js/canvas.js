@@ -16,6 +16,99 @@
 
   let layerSeq = 0;
 
+  // Tool dispatch table — each tool drives stroke painting + commit composite.
+  // brush:  pressure-varying width, normal alpha blend
+  // pencil: stamp-based with graphite jitter (low alpha dots along path)
+  // marker: fixed-width strokes, multiply-blend on commit (alcohol marker feel)
+  // eraser: source-over into the buffer; destination-out on commit
+  const TOOLS = {
+    brush: {
+      blitComposite: 'source-over',
+      blitAlphaScale: 1,
+      paintSegment(engine, ctx, last, pt) {
+        const w = Math.max(0.5, engine.size * (0.5 + pt.p * 0.7));
+        ctx.lineWidth = w;
+        ctx.strokeStyle = engine.color;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        const mx = (last.x + pt.x) / 2, my = (last.y + pt.y) / 2;
+        ctx.moveTo(last.x, last.y);
+        ctx.quadraticCurveTo(last.x, last.y, mx, my);
+        ctx.lineTo(pt.x, pt.y);
+        ctx.stroke();
+      },
+    },
+    pencil: {
+      blitComposite: 'source-over',
+      blitAlphaScale: 1,
+      paintSegment(engine, ctx, last, pt) {
+        // Stamp dots along the segment with slight radius/alpha jitter so the
+        // stroke has graphite-like texture rather than a perfectly smooth line.
+        const dist = Math.hypot(pt.x - last.x, pt.y - last.y);
+        const step = Math.max(1, engine.size * 0.18);
+        const steps = Math.max(1, Math.ceil(dist / step));
+        ctx.fillStyle = engine.color;
+        for (let i = 1; i <= steps; i++) {
+          const t = i / steps;
+          const x = last.x + (pt.x - last.x) * t;
+          const y = last.y + (pt.y - last.y) * t;
+          const r = Math.max(0.5, engine.size * (0.32 + Math.random() * 0.13));
+          const a = 0.18 + pt.p * 0.45 + (Math.random() - 0.5) * 0.06;
+          ctx.globalAlpha = Math.max(0.05, Math.min(1, a));
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      },
+    },
+    marker: {
+      blitComposite: 'multiply',
+      blitAlphaScale: 0.7,
+      paintSegment(engine, ctx, last, pt) {
+        ctx.lineWidth = engine.size;
+        ctx.strokeStyle = engine.color;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        const mx = (last.x + pt.x) / 2, my = (last.y + pt.y) / 2;
+        ctx.moveTo(last.x, last.y);
+        ctx.quadraticCurveTo(last.x, last.y, mx, my);
+        ctx.lineTo(pt.x, pt.y);
+        ctx.stroke();
+      },
+    },
+    eraser: {
+      blitComposite: 'destination-out',
+      blitAlphaScale: 1,
+      paintSegment(engine, ctx, last, pt) {
+        const w = Math.max(0.5, engine.size * (0.5 + pt.p * 0.7));
+        ctx.lineWidth = w;
+        ctx.strokeStyle = '#000000'; // anything opaque; color is irrelevant
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        const mx = (last.x + pt.x) / 2, my = (last.y + pt.y) / 2;
+        ctx.moveTo(last.x, last.y);
+        ctx.quadraticCurveTo(last.x, last.y, mx, my);
+        ctx.lineTo(pt.x, pt.y);
+        ctx.stroke();
+      },
+    },
+  };
+
+  function hexToRgb(hex) {
+    const m = /^#?([0-9a-f]{6})$/i.exec(hex);
+    if (!m) return { r: 0, g: 0, b: 0 };
+    const n = parseInt(m[1], 16);
+    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+  }
+  function rgbToHex(r, g, b) {
+    const h = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+    return '#' + h(r) + h(g) + h(b);
+  }
+
   class Layer {
     constructor(name, w, h) {
       this.id = `l_${++layerSeq}`;
@@ -85,8 +178,10 @@
       this.color = '#6366f1';
       this.size = 14;
       this.opacity = 1;
+      this.fillTolerance = 32; // 0..255 per channel for flood fill
+      this._prevTool = 'brush'; // restored after eyedropper sample
 
-      // Pointer state
+      // Pointer state (single-pointer drawing)
       this.activePointerId = null;
       this.lastX = 0;
       this.lastY = 0;
@@ -94,6 +189,16 @@
       this.pendingPoints = [];
       this._raf = 0;
       this._strokeBbox = null;
+
+      // Multi-pointer transform (pinch zoom + 2-finger pan)
+      this._pointers = new Map(); // pointerId -> {clientX, clientY}
+      this._transformActive = false;
+      this._transformStart = null;
+      this.scale = 1;
+      this.tx = 0;
+      this.ty = 0;
+      this.minScale = 0.5;
+      this.maxScale = 8;
 
       // Event listeners
       this._listeners = {};
@@ -238,10 +343,10 @@
 
       this.tctx.clearRect(0, 0, this.temp.width, this.temp.height);
       this.tctx.drawImage(this.layerBefore, 0, 0);
+      const tool = TOOLS[this.tool] || TOOLS.brush;
       this.tctx.save();
-      this.tctx.globalAlpha = this.opacity;
-      this.tctx.globalCompositeOperation =
-        this.tool === 'eraser' ? 'destination-out' : 'source-over';
+      this.tctx.globalAlpha = this.opacity * tool.blitAlphaScale;
+      this.tctx.globalCompositeOperation = tool.blitComposite;
       this.tctx.drawImage(this.strokeBuf, 0, 0);
       this.tctx.restore();
 
@@ -314,15 +419,38 @@
     }
 
     _onDown(e) {
+      this._pointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+
+      // Two or more pointers → switch into pinch/pan transform mode.
+      if (this._pointers.size >= 2) {
+        if (this.activePointerId !== null) this._cancelStroke();
+        this._beginTransform();
+        e.preventDefault();
+        return;
+      }
+
       if (this.activePointerId !== null) return;
       const active = this.getActiveLayer();
-      if (!active || !active.visible) return; // can't draw on hidden layer
+      if (!active || !active.visible) return;
+
+      const p = this._toLocal(e);
+
+      // Click-only tools: don't start a stroke.
+      if (this.tool === 'eyedropper') {
+        this._eyedrop(p.x, p.y);
+        e.preventDefault();
+        return;
+      }
+      if (this.tool === 'fill') {
+        this._floodFill(p.x, p.y);
+        e.preventDefault();
+        return;
+      }
 
       this.activePointerId = e.pointerId;
       this.canvas.setPointerCapture?.(e.pointerId);
       e.preventDefault();
 
-      const p = this._toLocal(e);
       this.lastX = p.x;
       this.lastY = p.y;
       this.lastPressure = p.p;
@@ -341,6 +469,14 @@
 
     _onMove(e) {
       this._updateCursor(e);
+      if (this._pointers.has(e.pointerId)) {
+        this._pointers.set(e.pointerId, { clientX: e.clientX, clientY: e.clientY });
+      }
+      if (this._transformActive) {
+        this._updateTransform();
+        e.preventDefault();
+        return;
+      }
       if (e.pointerId !== this.activePointerId) return;
       e.preventDefault();
       const events = e.getCoalescedEvents ? e.getCoalescedEvents() : null;
@@ -354,15 +490,20 @@
     }
 
     _onUp(e) {
+      this._pointers.delete(e.pointerId);
+      if (this._transformActive && this._pointers.size < 2) {
+        this._endTransform();
+        return;
+      }
       if (e.pointerId !== this.activePointerId) return;
       this._renderStroke();
 
       const active = this.getActiveLayer();
+      const tool = TOOLS[this.tool] || TOOLS.brush;
       // Commit stroke into the active layer (not the visible canvas).
       active.ctx.save();
-      active.ctx.globalAlpha = this.opacity;
-      active.ctx.globalCompositeOperation =
-        this.tool === 'eraser' ? 'destination-out' : 'source-over';
+      active.ctx.globalAlpha = this.opacity * tool.blitAlphaScale;
+      active.ctx.globalCompositeOperation = tool.blitComposite;
       active.ctx.drawImage(this.strokeBuf, 0, 0);
       active.ctx.restore();
 
@@ -414,26 +555,20 @@
 
     _renderStroke() {
       if (!this.pendingPoints.length) return;
+      const tool = TOOLS[this.tool];
+      if (!tool) { this.pendingPoints.length = 0; return; }
       const ctx = this.sctx;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
+      // Stroke buffer always paints with source-over; tool-specific composite
+      // is applied only when blitting onto the active layer.
       ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = (this.tool === 'eraser') ? '#000000' : this.color;
-
+      let last = { x: this.lastX, y: this.lastY, p: this.lastPressure };
       for (const pt of this.pendingPoints) {
-        const w = Math.max(0.5, this.size * (0.5 + pt.p * 0.7));
-        ctx.lineWidth = w;
-        ctx.beginPath();
-        const mx = (this.lastX + pt.x) / 2;
-        const my = (this.lastY + pt.y) / 2;
-        ctx.moveTo(this.lastX, this.lastY);
-        ctx.quadraticCurveTo(this.lastX, this.lastY, mx, my);
-        ctx.lineTo(pt.x, pt.y);
-        ctx.stroke();
-        this.lastX = pt.x;
-        this.lastY = pt.y;
-        this.lastPressure = pt.p;
+        tool.paintSegment(this, ctx, last, pt);
+        last = pt;
       }
+      this.lastX = last.x;
+      this.lastY = last.y;
+      this.lastPressure = last.p;
       this.pendingPoints.length = 0;
     }
 
@@ -558,7 +693,12 @@
     }
 
     // ---------------- Setters ----------------
-    setTool(t) { this.tool = t; }
+    setTool(t) {
+      // Remember the previous drawing tool so eyedropper can restore it.
+      if (this.tool !== 'eyedropper' && t === 'eyedropper') this._prevTool = this.tool;
+      this.tool = t;
+    }
+    setFillTolerance(n) { this.fillTolerance = Math.max(0, Math.min(255, +n)); }
     setColor(c) { this.color = c; }
     setSize(s) {
       this.size = +s;
@@ -582,6 +722,203 @@
     toDataURL(type = 'image/png', quality) {
       // Visible canvas is kept up-to-date by _renderFull after every commit.
       return this.canvas.toDataURL(type, quality);
+    }
+
+    // ---------------- Transform (pinch-zoom + 2-finger pan) ----------------
+    _beginTransform() {
+      const pts = [...this._pointers.values()];
+      if (pts.length < 2) return;
+      const cx = (pts[0].clientX + pts[1].clientX) / 2;
+      const cy = (pts[0].clientY + pts[1].clientY) / 2;
+      const dist = Math.hypot(pts[0].clientX - pts[1].clientX, pts[0].clientY - pts[1].clientY);
+      this._transformActive = true;
+      this._transformStart = {
+        cx, cy, dist,
+        scale: this.scale,
+        tx: this.tx,
+        ty: this.ty,
+      };
+    }
+
+    _updateTransform() {
+      const pts = [...this._pointers.values()];
+      if (pts.length < 2 || !this._transformStart) return;
+      const cx = (pts[0].clientX + pts[1].clientX) / 2;
+      const cy = (pts[0].clientY + pts[1].clientY) / 2;
+      const dist = Math.hypot(pts[0].clientX - pts[1].clientX, pts[0].clientY - pts[1].clientY);
+      const ts = this._transformStart;
+      const scale = Math.max(this.minScale, Math.min(this.maxScale, ts.scale * (dist / ts.dist)));
+      this.scale = scale;
+      this.tx = ts.tx + (cx - ts.cx);
+      this.ty = ts.ty + (cy - ts.cy);
+      this._applyTransform();
+    }
+
+    _endTransform() {
+      this._transformActive = false;
+      this._transformStart = null;
+    }
+
+    _applyTransform() {
+      const wrap = this.canvas.parentElement;
+      if (!wrap) return;
+      wrap.style.transform = `translate(${this.tx}px, ${this.ty}px) scale(${this.scale})`;
+      this.emit('transform', { scale: this.scale, tx: this.tx, ty: this.ty });
+    }
+
+    resetTransform() {
+      this.scale = 1;
+      this.tx = 0;
+      this.ty = 0;
+      this._applyTransform();
+    }
+
+    _cancelStroke() {
+      this.activePointerId = null;
+      this.pendingPoints.length = 0;
+      this.sctx.clearRect(0, 0, this.strokeBuf.width, this.strokeBuf.height);
+      this._strokeBbox = null;
+      // Restore canvas to last fully composited state.
+      this._renderFull();
+    }
+
+    // ---------------- Eyedropper ----------------
+    _eyedrop(x, y) {
+      const px = Math.max(0, Math.min(this.canvas.width - 1, Math.floor(x)));
+      const py = Math.max(0, Math.min(this.canvas.height - 1, Math.floor(y)));
+      // Sample from the visible composite canvas (what the user sees).
+      const data = this.ctx.getImageData(px, py, 1, 1).data;
+      // Skip fully transparent → no useful color.
+      if (data[3] === 0) return;
+      const hex = rgbToHex(data[0], data[1], data[2]);
+      this.color = hex;
+      // Auto-restore previously used drawing tool.
+      if (this._prevTool && this._prevTool !== 'eyedropper') this.tool = this._prevTool;
+      this.emit('color-picked', { color: hex });
+      this.emit('change');
+    }
+
+    // ---------------- Flood fill ----------------
+    _floodFill(x, y) {
+      const layer = this.getActiveLayer();
+      if (!layer || !layer.visible) return;
+      const w = layer.canvas.width, h = layer.canvas.height;
+      x = Math.floor(x); y = Math.floor(y);
+      if (x < 0 || y < 0 || x >= w || y >= h) return;
+
+      const before = layer.ctx.getImageData(0, 0, w, h);
+      // Work on a copy so we keep `before` clean for history.
+      const img = new ImageData(new Uint8ClampedArray(before.data), w, h);
+      const data = img.data;
+      const start = (y * w + x) * 4;
+      const tR = data[start], tG = data[start + 1], tB = data[start + 2], tA = data[start + 3];
+
+      const { r: fR, g: fG, b: fB } = hexToRgb(this.color);
+      const fA = Math.round(this.opacity * 255);
+
+      const tol = this.fillTolerance;
+      let bx0 = w, by0 = h, bx1 = 0, by1 = 0;
+      let changed = false;
+
+      const visited = new Uint8Array(w * h);
+      // Iterative span-stack flood fill (low memory, no recursion).
+      const stack = [x, y];
+      while (stack.length) {
+        const py = stack.pop();
+        const px = stack.pop();
+        if (px < 0 || py < 0 || px >= w || py >= h) continue;
+        const v = py * w + px;
+        if (visited[v]) continue;
+        const i = v * 4;
+        if (Math.abs(data[i] - tR) > tol ||
+            Math.abs(data[i + 1] - tG) > tol ||
+            Math.abs(data[i + 2] - tB) > tol ||
+            Math.abs(data[i + 3] - tA) > tol) continue;
+        visited[v] = 1;
+        changed = true;
+
+        // Source-over alpha blending (fill is painted ON TOP of existing pixel).
+        const srcA = fA / 255;
+        const dstA = data[i + 3] / 255;
+        const outA = srcA + dstA * (1 - srcA);
+        if (outA > 0) {
+          data[i] = Math.round((fR * srcA + data[i] * dstA * (1 - srcA)) / outA);
+          data[i + 1] = Math.round((fG * srcA + data[i + 1] * dstA * (1 - srcA)) / outA);
+          data[i + 2] = Math.round((fB * srcA + data[i + 2] * dstA * (1 - srcA)) / outA);
+        }
+        data[i + 3] = Math.round(outA * 255);
+
+        if (px < bx0) bx0 = px;
+        if (py < by0) by0 = py;
+        if (px > bx1) bx1 = px;
+        if (py > by1) by1 = py;
+
+        stack.push(px + 1, py);
+        stack.push(px - 1, py);
+        stack.push(px, py + 1);
+        stack.push(px, py - 1);
+      }
+
+      if (!changed) return;
+
+      layer.ctx.putImageData(img, 0, 0);
+
+      const bbox = { x: bx0, y: by0, w: bx1 - bx0 + 1, h: by1 - by0 + 1 };
+      // Crop `before` to bbox to keep history entry small.
+      const beforeCrop = this._extractBbox(before, bbox);
+      const afterCrop = layer.ctx.getImageData(bbox.x, bbox.y, bbox.w, bbox.h);
+      this._pushHistory({ type: 'stroke', layerId: layer.id, bbox, before: beforeCrop, after: afterCrop });
+      this._afterChange();
+    }
+
+    _extractBbox(img, bbox) {
+      const tmp = document.createElement('canvas');
+      tmp.width = img.width;
+      tmp.height = img.height;
+      const tctx = tmp.getContext('2d');
+      tctx.putImageData(img, 0, 0);
+      return tctx.getImageData(bbox.x, bbox.y, bbox.w, bbox.h);
+    }
+
+    // ---------------- Image import ----------------
+    importImage(file) {
+      return new Promise((resolve, reject) => {
+        if (!file) return reject(new Error('no file'));
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          // Fit image inside canvas keeping aspect ratio.
+          const cw = this.canvas.width, ch = this.canvas.height;
+          const scale = Math.min(cw / img.width, ch / img.height);
+          const w = img.width * scale, h = img.height * scale;
+          const dx = (cw - w) / 2, dy = (ch - h) / 2;
+          // Create the layer first (records to history), then paint into it.
+          const layer = this.addLayer();
+          if (!layer) return reject(new Error('addLayer failed'));
+          layer.name = file.name?.replace(/\.[^.]+$/, '').slice(0, 32) || 'Импорт';
+          layer.ctx.drawImage(img, dx, dy, w, h);
+          // Refresh history snapshot of the just-added layer so undo restores
+          // the painted content, not the empty layer.
+          // (Simplest: append a stroke-history entry covering the painted bbox.)
+          const bbox = {
+            x: Math.max(0, Math.floor(dx)),
+            y: Math.max(0, Math.floor(dy)),
+            w: Math.min(cw, Math.ceil(w)),
+            h: Math.min(ch, Math.ceil(h)),
+          };
+          if (bbox.w > 0 && bbox.h > 0) {
+            // 'before' = empty (transparent)
+            const before = layer.ctx.createImageData(bbox.w, bbox.h);
+            const after = layer.ctx.getImageData(bbox.x, bbox.y, bbox.w, bbox.h);
+            this._pushHistory({ type: 'stroke', layerId: layer.id, bbox, before, after });
+          }
+          this._afterChange();
+          resolve(layer);
+        };
+        img.onerror = (err) => { URL.revokeObjectURL(url); reject(err); };
+        img.src = url;
+      });
     }
 
     // Render layer content to a small thumbnail data URL (used by UI panel).

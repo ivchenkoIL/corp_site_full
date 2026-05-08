@@ -401,6 +401,129 @@ button, input {
   flex: 0 0 auto;
 }
 
+.color-picker > * + * { margin-top: 6px; }
+
+/* Palette tabs */
+.palette-tabs {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+  padding: 2px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+}
+
+.palette-tabs button {
+  flex: 1 1 auto;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-mute);
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.palette-tabs button.active {
+  background: var(--grad);
+  color: white;
+}
+
+/* HSL */
+.hsl-details summary {
+  font-size: 12px;
+  color: var(--fg-mute);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  list-style: none;
+  user-select: none;
+}
+
+.hsl-details summary::-webkit-details-marker { display: none; }
+.hsl-details summary::before { content: "▸ "; transition: transform 0.15s ease; display: inline-block; }
+.hsl-details[open] summary::before { transform: rotate(90deg); }
+
+.hsl-details .hsl-grid {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.hsl-slider input[type="range"] { background: linear-gradient(90deg, var(--accent-1), var(--accent-2)); }
+
+.hsl-slider.hsl-h input[type="range"] {
+  background: linear-gradient(90deg, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%);
+}
+
+/* Tool icon for file import (label wraps an input) */
+.tool-import { cursor: pointer; }
+.tool-import input { display: none; }
+
+/* Tool-specific control rows (e.g. tolerance for fill). */
+.tool-only[hidden] { display: none !important; }
+
+/* Export menu (HTML <details>) */
+.export-menu {
+  position: relative;
+}
+.export-menu summary {
+  list-style: none;
+}
+.export-menu summary::-webkit-details-marker { display: none; }
+.export-menu summary::marker { display: none; }
+.export-menu[open] summary { box-shadow: 0 0 0 2px var(--accent-1); }
+.export-menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid var(--panel-stroke);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  z-index: 20;
+  box-shadow: var(--shadow-out);
+}
+.export-menu-item {
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--fg);
+  cursor: pointer;
+}
+.export-menu-item:hover { background: var(--hover); }
+
+/* Zoom reset chip */
+.zoom-reset {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-stroke);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 4;
+}
+
+.canvas-wrap {
+  /* Allow CSS transform from JS pinch-zoom — origin matters for pinch math. */
+  transform-origin: center;
+  transition: none;
+}
+
 /* ---------- Layers panel ---------- */
 .layers {
   display: grid;

@@ -37,10 +37,16 @@
       <button class="btn btn-ghost" id="btn-theme" aria-label="Переключить тему" title="Тема">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <button class="btn btn-primary" id="btn-export" aria-label="Экспорт PNG" title="Экспорт">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span>PNG</span>
-      </button>
+      <details class="export-menu">
+        <summary class="btn btn-primary" aria-label="Экспорт" title="Экспорт">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Экспорт</span>
+        </summary>
+        <div class="export-menu-list">
+          <button class="export-menu-item" data-export="png">PNG (с прозрачностью)</button>
+          <button class="export-menu-item" data-export="jpg">JPG (меньше размер)</button>
+        </div>
+      </details>
     </div>
   </header>
 
@@ -50,6 +56,7 @@
       <canvas id="canvas" width="1080" height="1080" aria-label="Холст для рисования"></canvas>
     </div>
     <div class="hint" id="hint">Рисуй пальцем, стилусом или мышью · pinch для масштаба</div>
+    <button class="zoom-reset glass" id="btn-zoom-reset" hidden aria-label="Сбросить масштаб" title="100%">100%</button>
   </main>
 
   <!-- Bottom toolbar (mobile) / sidebar (desktop) -->
@@ -58,9 +65,25 @@
       <button class="tool active" data-tool="brush" aria-label="Кисть" title="Кисть">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21l4-1 11-11a2.83 2.83 0 0 0-4-4L3 16v5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
+      <button class="tool" data-tool="pencil" aria-label="Карандаш" title="Карандаш">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4l6 6L8 22H2v-6L14 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="tool" data-tool="marker" aria-label="Маркер" title="Маркер">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4l-2 2-12 12-3 4 4-3 12-12 2-2-1-1zm-3 3l1 1m-9 9l1 1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="tool" data-tool="fill" aria-label="Заливка" title="Заливка">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l8 8m-8 8l-2-2 9-9 7 7-7 7-7-7z M19 16c0 2-1 3-1 3s-1-1-1-3a1 1 0 0 1 2 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
       <button class="tool" data-tool="eraser" aria-label="Ластик" title="Ластик">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l8 4 10-10-8-8L3 13v4zM10 21l11-11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
+      <button class="tool" data-tool="eyedropper" aria-label="Пипетка" title="Пипетка">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3l7 7-3 3-2-2-7 7-3 1 1-3 7-7-2-2 2-2zm-9 14l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <label class="tool tool-import" title="Импорт фото" aria-label="Импорт фото">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l4-4 5 5 3-3 6 6M3 4h18v18H3zM8 9a2 2 0 1 0 0 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <input type="file" id="import-file" accept="image/*" hidden>
+      </label>
     </div>
 
     <div class="sliders">
@@ -76,6 +99,19 @@
       </label>
     </div>
 
+    <label class="slider tool-only" data-tool-only="fill" hidden>
+      <span>Tolerance</span>
+      <input id="tolerance" type="range" min="0" max="128" value="32" step="1">
+      <output id="tolerance-out">32</output>
+    </label>
+
+    <div class="palette-tabs" id="palette-tabs" role="tablist">
+      <button role="tab" data-palette="recent" class="active">Недавние</button>
+      <button role="tab" data-palette="pastel">Пастель</button>
+      <button role="tab" data-palette="neon">Неон</button>
+      <button role="tab" data-palette="earth">Земля</button>
+      <button role="tab" data-palette="mono">Моно</button>
+    </div>
     <div class="palette" id="palette" aria-label="Палитра"></div>
 
     <div class="color-picker">
@@ -84,6 +120,18 @@
         <input id="hex" type="text" value="#6366f1" inputmode="text" autocomplete="off" spellcheck="false" maxlength="7">
         <span class="swatch" id="current-swatch" style="background:#6366f1"></span>
       </label>
+      <label class="cp-row">
+        <span>RGB</span>
+        <input id="rgb" type="text" value="99, 102, 241" inputmode="text" autocomplete="off" spellcheck="false">
+      </label>
+      <details class="hsl-details">
+        <summary>HSL</summary>
+        <div class="hsl-grid">
+          <label class="slider hsl-slider hsl-h"><span>H</span><input id="hsl-h" type="range" min="0" max="360" value="237"><output id="hsl-h-out">237</output></label>
+          <label class="slider hsl-slider hsl-s"><span>S</span><input id="hsl-s" type="range" min="0" max="100" value="84"><output id="hsl-s-out">84</output></label>
+          <label class="slider hsl-slider hsl-l"><span>L</span><input id="hsl-l" type="range" min="0" max="100" value="67"><output id="hsl-l-out">67</output></label>
+        </div>
+      </details>
     </div>
 
     <section class="layers" aria-label="Слои">
