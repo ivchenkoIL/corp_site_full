@@ -85,6 +85,41 @@
         <span class="swatch" id="current-swatch" style="background:#6366f1"></span>
       </label>
     </div>
+
+    <section class="layers" aria-label="Слои">
+      <header class="layers-head">
+        <h3>Слои</h3>
+        <button class="btn btn-ghost btn-sm" id="btn-layer-add" aria-label="Добавить слой" title="Добавить слой">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </header>
+      <div class="layer-active-controls" id="layer-active-controls">
+        <label class="slider">
+          <span>Слой</span>
+          <input id="layer-opacity" type="range" min="0" max="100" value="100" step="1">
+          <output id="layer-opacity-out">100</output>
+        </label>
+        <label class="cp-row">
+          <span>Blend</span>
+          <select id="layer-blend">
+            <option value="source-over">Норма</option>
+            <option value="multiply">Multiply</option>
+            <option value="screen">Screen</option>
+            <option value="overlay">Overlay</option>
+            <option value="darken">Darken</option>
+            <option value="lighten">Lighten</option>
+            <option value="color-dodge">Dodge</option>
+            <option value="color-burn">Burn</option>
+            <option value="difference">Difference</option>
+            <option value="hue">Hue</option>
+            <option value="saturation">Saturation</option>
+            <option value="color">Color</option>
+            <option value="luminosity">Luminosity</option>
+          </select>
+        </label>
+      </div>
+      <ul class="layer-list" id="layer-list" role="list"></ul>
+    </section>
   </aside>
 
 </div>

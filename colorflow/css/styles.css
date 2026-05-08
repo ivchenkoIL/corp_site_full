@@ -401,6 +401,162 @@ button, input {
   flex: 0 0 auto;
 }
 
+/* ---------- Layers panel ---------- */
+.layers {
+  display: grid;
+  gap: 8px;
+}
+
+.layers-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 2px;
+}
+
+.layers-head h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--fg-mute);
+}
+
+.btn-sm {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 8px;
+  border-radius: 8px;
+}
+
+.btn-sm svg { width: 16px; height: 16px; }
+
+.layer-active-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.layer-active-controls .slider {
+  grid-template-columns: 36px 1fr 36px;
+}
+
+.layer-active-controls select {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  /* Fallback chevron for cross-browser select arrow */
+  appearance: auto;
+}
+
+.layer-active-controls .cp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--fg-mute);
+}
+
+.layer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column-reverse; /* topmost layer on top of UI */
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  padding: 4px;
+}
+
+.layer-row {
+  display: grid;
+  grid-template-columns: 32px 40px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.layer-row:hover { background: var(--hover); }
+
+.layer-row.active {
+  background: var(--hover);
+  border-color: var(--accent-1);
+}
+
+.layer-row .layer-vis {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-mute);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+}
+
+.layer-row .layer-vis.hidden { color: rgba(127, 127, 127, 0.5); }
+.layer-row .layer-vis svg { width: 16px; height: 16px; }
+.layer-row .layer-vis:hover { background: var(--hover); }
+
+.layer-row .layer-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  background: white;
+  border: 1px solid var(--border);
+  background-size: cover;
+  background-position: center;
+  flex: 0 0 auto;
+}
+
+.layer-row .layer-name {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--fg);
+}
+
+.layer-row .layer-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.layer-row .layer-actions button {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-mute);
+  cursor: pointer;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+}
+
+.layer-row .layer-actions button:hover { background: var(--hover); color: var(--fg); }
+.layer-row .layer-actions button:disabled { opacity: 0.3; cursor: not-allowed; }
+.layer-row .layer-actions svg { width: 14px; height: 14px; }
+
 /* ---------- Tablet / Desktop layout ---------- */
 @media (min-width: 900px) {
   :root { --dock-h: 0px; }
