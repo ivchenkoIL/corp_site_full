@@ -403,13 +403,23 @@
         el.classList.remove('visible');
         return;
       }
-      const rect = this.canvas.getBoundingClientRect();
-      const cssSize = this.size * (rect.width / this.canvas.width);
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-      el.style.transform = `translate(${x - cssSize / 2}px, ${y - cssSize / 2}px)`;
-      el.style.width = `${cssSize}px`;
-      el.style.height = `${cssSize}px`;
+      // Coalesce rapid pointermove events (120Hz stylus) into a single rAF
+      // update — getBoundingClientRect forces layout, so calling it 120/sec
+      // visibly tanks fps while drawing.
+      this._cursorPending = { x: e.clientX, y: e.clientY };
+      if (this._cursorRaf) return;
+      this._cursorRaf = requestAnimationFrame(() => {
+        this._cursorRaf = 0;
+        const p = this._cursorPending;
+        if (!p) return;
+        const rect = this.canvas.getBoundingClientRect();
+        const cssSize = this.size * (rect.width / this.canvas.width);
+        const x = p.x - rect.left;
+        const y = p.y - rect.top;
+        el.style.transform = `translate(${x - cssSize / 2}px, ${y - cssSize / 2}px)`;
+        el.style.width = `${cssSize}px`;
+        el.style.height = `${cssSize}px`;
+      });
     }
 
     _toLocal(e) {
@@ -631,6 +641,12 @@
 
     // ---------------- History ----------------
     _pushHistory(entry) {
+      // Bitmap-changing entries invalidate the affected layer's thumb cache.
+      if (entry.type === 'stroke' || entry.type === 'clear') {
+        this._invalidateLayerThumb(entry.layerId);
+      } else if (entry.type === 'layer-add' && entry.layerData) {
+        this._invalidateLayerThumb(entry.layerData.id);
+      }
       this.history.push(entry);
       while (this.history.length > MAX_HISTORY) this.history.shift();
       this._pruneByBytes();
@@ -689,12 +705,14 @@
           const layer = this.layers.find(l => l.id === entry.layerId);
           if (!layer) return;
           layer.ctx.putImageData(dir === 'undo' ? entry.before : entry.after, entry.bbox.x, entry.bbox.y);
+          this._invalidateLayerThumb(layer.id);
           break;
         }
         case 'clear': {
           const layer = this.layers.find(l => l.id === entry.layerId);
           if (!layer) return;
           layer.ctx.putImageData(dir === 'undo' ? entry.before : entry.after, 0, 0);
+          this._invalidateLayerThumb(layer.id);
           break;
         }
         case 'layer-add': {
@@ -1134,9 +1152,15 @@
     }
 
     // Render layer content to a small thumbnail data URL (used by UI panel).
+    // Results are cached per (layerId, size); invalidated when the layer's
+    // bitmap changes (stroke commit / clear / import / undo / redo / restore).
     getLayerThumbnail(id, size = 48) {
+      this._thumbCache ??= new Map();
       const layer = this.layers.find(l => l.id === id);
       if (!layer) return '';
+      const key = `${id}:${size}:${layer._dirtyTick || 0}`;
+      const cached = this._thumbCache.get(key);
+      if (cached) return cached;
       const c = document.createElement('canvas');
       c.width = size;
       c.height = size;
@@ -1150,7 +1174,19 @@
         if ((x + y) & 1) cx.fillRect(x * t, y * t, t, t);
       }
       cx.drawImage(layer.canvas, 0, 0, size, size);
-      return c.toDataURL('image/png');
+      const url = c.toDataURL('image/png');
+      // Cap cache size to avoid leaks when sizes vary a lot.
+      if (this._thumbCache.size > 64) this._thumbCache.clear();
+      this._thumbCache.set(key, url);
+      return url;
+    }
+
+    // Invalidate the thumbnail cache for a single layer (called from places
+    // that mutate a layer's bitmap so the next render fetches a fresh thumb).
+    _invalidateLayerThumb(layerId) {
+      const layer = this.layers.find(l => l.id === layerId);
+      if (!layer) return;
+      layer._dirtyTick = (layer._dirtyTick || 0) + 1;
     }
   }
 

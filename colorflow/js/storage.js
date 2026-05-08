@@ -111,6 +111,8 @@
         // Restored history is fresh — old undo stack is invalidated.
         engine.history = [];
         engine.future = [];
+        // Drop any thumbnail cache from the previous scene.
+        engine._thumbCache?.clear?.();
         engine.scale = data.scale || 1;
         engine.tx = data.tx || 0;
         engine.ty = data.ty || 0;

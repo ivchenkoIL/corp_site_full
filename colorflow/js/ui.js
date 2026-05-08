@@ -624,15 +624,18 @@
               <button data-act="delete">×</button>
             </div>
           `;
-          card.querySelector('[data-act="download"]').addEventListener('click', () => downloadDataUrl(it.full, `colorflow-${it.savedAt}.png`));
+          // Pick extension from the data URL's mime so legacy entries keep working.
+          const ext = /^data:image\/jpeg/i.test(it.full) ? 'jpg' : 'png';
+          const filename = `colorflow-${it.savedAt}.${ext}`;
+          card.querySelector('[data-act="download"]').addEventListener('click', () => downloadDataUrl(it.full, filename));
           card.querySelector('[data-act="share"]').addEventListener('click', async () => {
             try {
               const blob = await (await fetch(it.full)).blob();
-              const file = new File([blob], `colorflow-${it.savedAt}.png`, { type: 'image/png' });
+              const file = new File([blob], filename, { type: blob.type });
               if (navigator.canShare?.({ files: [file] })) {
                 await navigator.share({ files: [file], title: 'ColorFlow' });
               } else {
-                downloadDataUrl(it.full, `colorflow-${it.savedAt}.png`);
+                downloadDataUrl(it.full, filename);
               }
             } catch { /* user cancelled or share unsupported */ }
           });
@@ -652,19 +655,33 @@
         if (typeof dlg.showModal === 'function') dlg.showModal();
       });
       $('#btn-gallery-save').addEventListener('click', () => {
-        const full = this.engine.toDataURL('image/png');
-        // Smaller thumb to keep localStorage usage in check.
+        // localStorage is ~5 MB total per origin. Use JPEG (q=0.85) for the
+        // "full" copy so a single save doesn't gobble the budget. Quota
+        // exceptions are caught and reported instead of failing silently.
+        const full = this.engine.toDataURL('image/jpeg', 0.85);
         const tw = 240;
         const c = document.createElement('canvas');
         c.width = tw; c.height = tw;
         const cx = c.getContext('2d');
         cx.drawImage(this.engine.canvas, 0, 0, tw, tw);
-        const thumb = c.toDataURL('image/jpeg', 0.7);
+        const thumb = c.toDataURL('image/jpeg', 0.6);
         const arr = window.CFStorage.get('gallery', []);
         arr.unshift({ savedAt: Date.now(), thumb, full });
-        // Cap at 12 entries — full PNGs can be large, localStorage ~5MB.
         while (arr.length > 12) arr.pop();
-        window.CFStorage.set('gallery', arr);
+        try {
+          // Direct localStorage to surface quota errors (CFStorage swallows them).
+          localStorage.setItem('colorflow:gallery', JSON.stringify(arr));
+        } catch (err) {
+          // QuotaExceededError or storage disabled — drop oldest entries.
+          while (arr.length > 1) {
+            arr.pop();
+            try {
+              localStorage.setItem('colorflow:gallery', JSON.stringify(arr));
+              alert('Места в галерее не хватало — удалены старые записи.');
+              break;
+            } catch { /* keep trimming */ }
+          }
+        }
         refresh();
       });
     },

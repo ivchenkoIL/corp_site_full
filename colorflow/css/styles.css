@@ -229,11 +229,15 @@ button, input {
   border-radius: 50%;
   opacity: 0;
   transition: opacity 0.15s ease;
-  will-change: transform, width, height;
   z-index: 1;
 }
 
-.cursor-preview.visible { opacity: 1; }
+/* Promote to its own compositor layer only while visible. Keeping this on
+   permanently wastes GPU memory and pins a layer the browser cannot reuse. */
+.cursor-preview.visible {
+  opacity: 1;
+  will-change: transform, width, height;
+}
 
 .hint {
   position: absolute;
