@@ -54,11 +54,55 @@
   function registerServiceWorker() {
     if (!('serviceWorker' in navigator)) return;
     // Defer to the load event so SW install doesn't compete with first paint.
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch((err) => {
+    window.addEventListener('load', async () => {
+      let reg;
+      try {
+        reg = await navigator.serviceWorker.register('./sw.js');
+      } catch (err) {
         console.warn('SW register failed', err);
+        return;
+      }
+
+      const showUpdateToastIfWaiting = () => {
+        if (reg.waiting && navigator.serviceWorker.controller) showUpdateToast(reg);
+      };
+      // Already-waiting SW (e.g. user reloaded with the toast still pending).
+      showUpdateToastIfWaiting();
+      // New SW detected → wait for it to become 'installed' alongside the active one.
+      reg.addEventListener('updatefound', () => {
+        const sw = reg.installing;
+        if (!sw) return;
+        sw.addEventListener('statechange', () => {
+          if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+            showUpdateToast(reg);
+          }
+        });
+      });
+      // Reload once the new SW takes control. Guard against the boot reload
+      // that fires when the page hasn't been controlled yet.
+      let reloading = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (reloading) return;
+        reloading = true;
+        location.reload();
       });
     });
+  }
+
+  function showUpdateToast(reg) {
+    const toast = document.getElementById('update-toast');
+    if (!toast) return;
+    if (toast.dataset.shown === '1') return;
+    toast.dataset.shown = '1';
+    toast.hidden = false;
+    const btn = toast.querySelector('[data-act="update"]');
+    const dismiss = toast.querySelector('[data-act="dismiss"]');
+    btn?.addEventListener('click', () => {
+      btn.disabled = true;
+      reg.waiting?.postMessage('skipWaiting');
+      // controllerchange listener (above) will reload once the new SW takes over.
+    }, { once: true });
+    dismiss?.addEventListener('click', () => { toast.hidden = true; }, { once: true });
   }
 
   function bindInstallPrompt() {

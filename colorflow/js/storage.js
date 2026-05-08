@@ -128,14 +128,25 @@
     // Wire engine events → debounced auto-save.
     bindAutoSave(engine, ms = 1500) {
       let timer = 0;
+      let askedToPersist = false;
+      const flush = async () => {
+        try {
+          const snap = await this._serializeScene(engine);
+          await this._putScene(snap);
+          // After the first successful save, ask the browser to keep our
+          // IndexedDB durable — protects user work from quota eviction.
+          if (!askedToPersist && navigator.storage?.persist) {
+            askedToPersist = true;
+            try {
+              const persisted = await navigator.storage.persisted();
+              if (!persisted) await navigator.storage.persist();
+            } catch { /* ignore — best-effort */ }
+          }
+        } catch (err) { console.warn('autosave failed', err); }
+      };
       const schedule = () => {
         clearTimeout(timer);
-        timer = setTimeout(async () => {
-          try {
-            const snap = await this._serializeScene(engine);
-            await this._putScene(snap);
-          } catch (err) { console.warn('autosave failed', err); }
-        }, ms);
+        timer = setTimeout(flush, ms);
       };
       engine.on('change', schedule);
       engine.on('stroke-commit', schedule);

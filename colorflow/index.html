@@ -12,7 +12,17 @@
 <meta name="description" content="ColorFlow — браузерная разукрашка-рисовалка с поддержкой слоёв, кистей и сенсорного ввода.">
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" type="image/svg+xml" href="./assets/icons/icon.svg">
-<link rel="apple-touch-icon" href="./assets/icons/icon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./assets/icons/icon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./assets/icons/icon-180.png">
+<!-- iOS PWA launch screens. iOS picks the first matching media query; falls back
+     to manifest background_color when no match. -->
+<link rel="apple-touch-startup-image" href="./assets/icons/splash-750x1334.png"
+      media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)">
+<link rel="apple-touch-startup-image" href="./assets/icons/splash-1170x2532.png"
+      media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)">
+<link rel="apple-touch-startup-image" href="./assets/icons/splash-2048x2732.png"
+      media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)">
 <link rel="stylesheet" href="./css/styles.css">
 </head>
 <body data-theme="auto">
@@ -62,10 +72,16 @@
     <div class="hint" id="hint">Рисуй пальцем, стилусом или мышью · pinch для масштаба</div>
     <button class="zoom-reset glass" id="btn-zoom-reset" hidden aria-label="Сбросить масштаб" title="100%">100%</button>
     <div class="online-status glass" id="online-status" hidden aria-live="polite">Офлайн</div>
+    <div class="toast glass" id="update-toast" role="status" aria-live="polite" hidden>
+      <span>Доступна новая версия</span>
+      <button class="btn btn-primary btn-sm" data-act="update">Обновить</button>
+      <button class="btn btn-ghost btn-sm" data-act="dismiss" aria-label="Скрыть">✕</button>
+    </div>
   </main>
 
   <!-- Bottom toolbar (mobile) / sidebar (desktop) -->
   <aside class="dock glass" id="dock" role="toolbar" aria-label="Инструменты">
+    <button class="dock-collapse" id="btn-dock-collapse" aria-label="Свернуть панель" title="Свернуть/развернуть"></button>
     <div class="tools">
       <button class="tool active" data-tool="brush" aria-label="Кисть" title="Кисть">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21l4-1 11-11a2.83 2.83 0 0 0-4-4L3 16v5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>

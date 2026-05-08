@@ -100,6 +100,7 @@
       this.bindImport();
       this.bindZoomReset();
       this.bindTolerance();
+      this.bindDockCollapse();
       this.setColor(this.recent[0] || '#6366f1');
 
       engine.on('change', () => {
@@ -376,6 +377,24 @@
         this.engine.setFillTolerance(t.value);
       });
       this.engine.setFillTolerance(t.value);
+    },
+
+    bindDockCollapse() {
+      const dock = $('#dock');
+      const btn = $('#btn-dock-collapse');
+      if (!dock || !btn) return;
+      const apply = (collapsed) => {
+        dock.classList.toggle('collapsed', collapsed);
+        btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        btn.title = collapsed ? 'Развернуть панель' : 'Свернуть панель';
+      };
+      apply(window.CFStorage.get('dockCollapsed', false));
+      btn.addEventListener('click', () => {
+        const next = !dock.classList.contains('collapsed');
+        apply(next);
+        window.CFStorage.set('dockCollapsed', next);
+        if (navigator.vibrate) navigator.vibrate(4);
+      });
     },
 
     bindExportMenu() {
