@@ -1,0 +1,40 @@
+name: Deploy ColorFlow to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'colorflow/**'
+      - '.github/workflows/colorflow-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, queueing trailing changes.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # Publish only the colorflow directory, so the PWA lives at /index.html
+          # of the deployed site (root of the GH Pages domain).
+          path: ./colorflow
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

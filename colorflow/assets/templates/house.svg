@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" fill="none" stroke="#1a1a2e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Ground -->
+  <line x1="60" y1="900" x2="1020" y2="900"/>
+  <!-- House body -->
+  <rect x="220" y="500" width="640" height="400"/>
+  <!-- Roof -->
+  <polygon points="180,500 540,220 900,500"/>
+  <!-- Chimney -->
+  <rect x="720" y="280" width="60" height="120"/>
+  <!-- Door -->
+  <rect x="480" y="700" width="120" height="200"/>
+  <circle cx="580" cy="800" r="6"/>
+  <!-- Windows -->
+  <rect x="280" y="580" width="120" height="120"/>
+  <line x1="340" y1="580" x2="340" y2="700"/>
+  <line x1="280" y1="640" x2="400" y2="640"/>
+  <rect x="680" y="580" width="120" height="120"/>
+  <line x1="740" y1="580" x2="740" y2="700"/>
+  <line x1="680" y1="640" x2="800" y2="640"/>
+  <!-- Sun -->
+  <circle cx="900" cy="180" r="60"/>
+  <line x1="900" y1="60" x2="900" y2="100"/>
+  <line x1="900" y1="260" x2="900" y2="300"/>
+  <line x1="780" y1="180" x2="820" y2="180"/>
+  <line x1="980" y1="180" x2="1020" y2="180"/>
+  <line x1="820" y1="100" x2="850" y2="130"/>
+  <line x1="950" y1="230" x2="980" y2="260"/>
+  <!-- Tree -->
+  <line x1="120" y1="900" x2="120" y2="700"/>
+  <circle cx="120" cy="640" r="80"/>
+  <circle cx="80" cy="660" r="50"/>
+  <circle cx="160" cy="660" r="50"/>
+</svg>

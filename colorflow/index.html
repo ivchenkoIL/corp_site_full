@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>ColorFlow — PWA Drawing</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0e0e16" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f4ff" media="(prefers-color-scheme: light)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="description" content="ColorFlow — браузерная разукрашка-рисовалка с поддержкой слоёв, кистей и сенсорного ввода.">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/svg+xml" href="./assets/icons/icon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./assets/icons/icon-512.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./assets/icons/icon-180.png">
+<!-- iOS PWA launch screens. iOS picks the first matching media query; falls back
+     to manifest background_color when no match. -->
+<link rel="apple-touch-startup-image" href="./assets/icons/splash-750x1334.png"
+      media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)">
+<link rel="apple-touch-startup-image" href="./assets/icons/splash-1170x2532.png"
+      media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)">
+<link rel="apple-touch-startup-image" href="./assets/icons/splash-2048x2732.png"
+      media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)">
+<link rel="stylesheet" href="./css/styles.css">
+</head>
+<body data-theme="auto">
+<div id="app" class="app">
+
+  <!-- Top bar -->
+  <header class="topbar glass" role="banner">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">ColorFlow</span>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost" id="btn-install" hidden aria-label="Установить приложение" title="Установить">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Установить</span>
+      </button>
+      <button class="btn btn-ghost" id="btn-undo" aria-label="Отменить" title="Отменить">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14l-4-4 4-4M5 10h8a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="btn btn-ghost" id="btn-redo" aria-label="Повторить" title="Повторить">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 14l4-4-4-4M19 10h-8a5 5 0 0 0 0 10h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="btn btn-ghost" id="btn-clear" aria-label="Очистить холст" title="Очистить">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="btn btn-ghost" id="btn-symmetry" aria-label="Симметрия" title="Симметрия">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="btn btn-ghost" id="btn-templates" aria-label="Шаблоны" title="Шаблоны">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="4" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="4" y="13" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="13" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+      </button>
+      <button class="btn btn-ghost" id="btn-magic" aria-label="Magic Fill" title="Magic Fill ✨">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+      <button class="btn btn-ghost" id="btn-timelapse" aria-label="Timelapse" title="Timelapse">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>
+      </button>
+      <button class="btn btn-ghost" id="btn-gallery" aria-label="Галерея" title="Галерея">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 16l5-5 5 5 3-3 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="9" r="2" fill="currentColor"/></svg>
+      </button>
+      <button class="btn btn-ghost" id="btn-theme" aria-label="Переключить тему" title="Тема">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <details class="export-menu">
+        <summary class="btn btn-primary" aria-label="Экспорт" title="Экспорт">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Экспорт</span>
+        </summary>
+        <div class="export-menu-list">
+          <button class="export-menu-item" data-export="png">PNG (с прозрачностью)</button>
+          <button class="export-menu-item" data-export="jpg">JPG (меньше размер)</button>
+        </div>
+      </details>
+    </div>
+  </header>
+
+  <!-- Canvas stage -->
+  <main class="stage" id="stage" role="main">
+    <div class="canvas-wrap" id="canvas-wrap">
+      <canvas id="canvas" width="1080" height="1080" aria-label="Холст для рисования"></canvas>
+    </div>
+    <div class="hint" id="hint">Рисуй пальцем, стилусом или мышью · pinch для масштаба</div>
+    <button class="zoom-reset glass" id="btn-zoom-reset" hidden aria-label="Сбросить масштаб" title="100%">100%</button>
+    <div class="online-status glass" id="online-status" hidden aria-live="polite">Офлайн</div>
+    <div class="toast glass" id="update-toast" role="status" aria-live="polite" hidden>
+      <span>Доступна новая версия</span>
+      <button class="btn btn-primary btn-sm" data-act="update">Обновить</button>
+      <button class="btn btn-ghost btn-sm" data-act="dismiss" aria-label="Скрыть">✕</button>
+    </div>
+    <div class="rec-indicator glass" id="rec-indicator" hidden>
+      <span class="rec-dot"></span>
+      <span>REC</span>
+      <span id="rec-count">0</span>
+    </div>
+  </main>
+
+  <!-- Modals -->
+  <dialog class="cf-dialog" id="dlg-symmetry" aria-label="Симметрия">
+    <form method="dialog" class="cf-dialog-body">
+      <h3>Симметрия / мандала</h3>
+      <label class="slider"><span>Осей</span>
+        <input id="sym-axes" type="range" min="1" max="32" value="1" step="1">
+        <output id="sym-axes-out">1</output>
+      </label>
+      <label class="cp-row"><span>Зеркало X</span><input id="sym-mx" type="checkbox"></label>
+      <label class="cp-row"><span>Зеркало Y</span><input id="sym-my" type="checkbox"></label>
+      <p class="cf-hint">При 1 оси и без зеркал — симметрия выключена.</p>
+      <menu class="cf-actions">
+        <button value="cancel" class="btn btn-ghost">Закрыть</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog class="cf-dialog" id="dlg-templates" aria-label="Шаблоны">
+    <form method="dialog" class="cf-dialog-body">
+      <h3>Шаблоны для раскрашивания</h3>
+      <p class="cf-hint">Шаблон загрузится как новый слой поверх текущей сцены.</p>
+      <div class="template-grid" id="template-grid"></div>
+      <menu class="cf-actions">
+        <button value="cancel" class="btn btn-ghost">Закрыть</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog class="cf-dialog" id="dlg-gallery" aria-label="Галерея">
+    <form method="dialog" class="cf-dialog-body">
+      <h3>Галерея</h3>
+      <p class="cf-hint">Снимки хранятся локально в этом браузере.</p>
+      <button type="button" class="btn btn-primary" id="btn-gallery-save">Сохранить текущий рисунок</button>
+      <div class="gallery-grid" id="gallery-grid"></div>
+      <menu class="cf-actions">
+        <button value="cancel" class="btn btn-ghost">Закрыть</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <!-- Bottom toolbar (mobile) / sidebar (desktop) -->
+  <aside class="dock glass" id="dock" role="toolbar" aria-label="Инструменты">
+    <button class="dock-collapse" id="btn-dock-collapse" aria-label="Свернуть панель" title="Свернуть/развернуть"></button>
+    <div class="tools">
+      <button class="tool active" data-tool="brush" aria-label="Кисть" title="Кисть">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21l4-1 11-11a2.83 2.83 0 0 0-4-4L3 16v5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="tool" data-tool="pencil" aria-label="Карандаш" title="Карандаш">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4l6 6L8 22H2v-6L14 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="tool" data-tool="marker" aria-label="Маркер" title="Маркер">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4l-2 2-12 12-3 4 4-3 12-12 2-2-1-1zm-3 3l1 1m-9 9l1 1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="tool" data-tool="fill" aria-label="Заливка" title="Заливка">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l8 8m-8 8l-2-2 9-9 7 7-7 7-7-7z M19 16c0 2-1 3-1 3s-1-1-1-3a1 1 0 0 1 2 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="tool" data-tool="eraser" aria-label="Ластик" title="Ластик">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l8 4 10-10-8-8L3 13v4zM10 21l11-11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="tool" data-tool="eyedropper" aria-label="Пипетка" title="Пипетка">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3l7 7-3 3-2-2-7 7-3 1 1-3 7-7-2-2 2-2zm-9 14l3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <label class="tool tool-import" title="Импорт фото" aria-label="Импорт фото">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l4-4 5 5 3-3 6 6M3 4h18v18H3zM8 9a2 2 0 1 0 0 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <input type="file" id="import-file" accept="image/*" hidden>
+      </label>
+    </div>
+
+    <div class="sliders">
+      <label class="slider">
+        <span>Размер</span>
+        <input id="size" type="range" min="1" max="120" value="14" step="1">
+        <output id="size-out">14</output>
+      </label>
+      <label class="slider">
+        <span>Прозр.</span>
+        <input id="opacity" type="range" min="5" max="100" value="100" step="1">
+        <output id="opacity-out">100</output>
+      </label>
+    </div>
+
+    <label class="slider tool-only" data-tool-only="fill" hidden>
+      <span>Tolerance</span>
+      <input id="tolerance" type="range" min="0" max="128" value="32" step="1">
+      <output id="tolerance-out">32</output>
+    </label>
+
+    <div class="palette-tabs" id="palette-tabs" role="tablist">
+      <button role="tab" data-palette="recent" class="active">Недавние</button>
+      <button role="tab" data-palette="pastel">Пастель</button>
+      <button role="tab" data-palette="neon">Неон</button>
+      <button role="tab" data-palette="earth">Земля</button>
+      <button role="tab" data-palette="mono">Моно</button>
+    </div>
+    <div class="palette" id="palette" aria-label="Палитра"></div>
+
+    <div class="color-picker">
+      <label class="cp-row">
+        <span>HEX</span>
+        <input id="hex" type="text" value="#6366f1" inputmode="text" autocomplete="off" spellcheck="false" maxlength="7">
+        <span class="swatch" id="current-swatch" style="background:#6366f1"></span>
+      </label>
+      <label class="cp-row">
+        <span>RGB</span>
+        <input id="rgb" type="text" value="99, 102, 241" inputmode="text" autocomplete="off" spellcheck="false">
+      </label>
+      <details class="hsl-details">
+        <summary>HSL</summary>
+        <div class="hsl-grid">
+          <label class="slider hsl-slider hsl-h"><span>H</span><input id="hsl-h" type="range" min="0" max="360" value="237"><output id="hsl-h-out">237</output></label>
+          <label class="slider hsl-slider hsl-s"><span>S</span><input id="hsl-s" type="range" min="0" max="100" value="84"><output id="hsl-s-out">84</output></label>
+          <label class="slider hsl-slider hsl-l"><span>L</span><input id="hsl-l" type="range" min="0" max="100" value="67"><output id="hsl-l-out">67</output></label>
+        </div>
+      </details>
+    </div>
+
+    <section class="layers" aria-label="Слои">
+      <header class="layers-head">
+        <h3>Слои</h3>
+        <button class="btn btn-ghost btn-sm" id="btn-layer-add" aria-label="Добавить слой" title="Добавить слой">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </header>
+      <div class="layer-active-controls" id="layer-active-controls">
+        <label class="slider">
+          <span>Слой</span>
+          <input id="layer-opacity" type="range" min="0" max="100" value="100" step="1">
+          <output id="layer-opacity-out">100</output>
+        </label>
+        <label class="cp-row">
+          <span>Blend</span>
+          <select id="layer-blend">
+            <option value="source-over">Норма</option>
+            <option value="multiply">Multiply</option>
+            <option value="screen">Screen</option>
+            <option value="overlay">Overlay</option>
+            <option value="darken">Darken</option>
+            <option value="lighten">Lighten</option>
+            <option value="color-dodge">Dodge</option>
+            <option value="color-burn">Burn</option>
+            <option value="difference">Difference</option>
+            <option value="hue">Hue</option>
+            <option value="saturation">Saturation</option>
+            <option value="color">Color</option>
+            <option value="luminosity">Luminosity</option>
+          </select>
+        </label>
+      </div>
+      <ul class="layer-list" id="layer-list" role="list"></ul>
+    </section>
+  </aside>
+
+</div>
+
+<script src="./js/storage.js" defer></script>
+<script src="./js/canvas.js" defer></script>
+<script src="./js/ui.js" defer></script>
+<script src="./js/app.js" defer></script>
+</body>
+</html>

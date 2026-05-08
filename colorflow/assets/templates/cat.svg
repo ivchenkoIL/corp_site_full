@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" fill="none" stroke="#1a1a2e" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Head -->
+  <path d="M340 460 Q310 360 380 300 L 460 380 Q540 340 620 380 L 700 300 Q770 360 740 460 Q780 540 740 620 Q620 720 540 720 Q460 720 340 620 Q300 540 340 460 Z"/>
+  <!-- Inner ears -->
+  <path d="M390 360 L 430 410 L 460 380 Z"/>
+  <path d="M620 380 L 650 410 L 690 360 Z"/>
+  <!-- Eyes -->
+  <ellipse cx="450" cy="500" rx="22" ry="32"/>
+  <ellipse cx="630" cy="500" rx="22" ry="32"/>
+  <circle cx="450" cy="500" r="6" fill="#1a1a2e" stroke="none"/>
+  <circle cx="630" cy="500" r="6" fill="#1a1a2e" stroke="none"/>
+  <!-- Nose / mouth -->
+  <path d="M520 580 Q540 600 560 580 L 540 600 Z"/>
+  <path d="M540 600 Q540 630 510 640"/>
+  <path d="M540 600 Q540 630 570 640"/>
+  <!-- Whiskers -->
+  <path d="M340 590 L 460 600 M340 620 L 460 615"/>
+  <path d="M740 590 L 620 600 M740 620 L 620 615"/>
+  <!-- Body -->
+  <path d="M380 720 Q360 820 420 880 L 660 880 Q720 820 700 720"/>
+  <!-- Tail -->
+  <path d="M700 800 Q820 760 800 660 Q780 600 740 620"/>
+</svg>
