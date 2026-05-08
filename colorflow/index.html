@@ -25,6 +25,10 @@
       <span class="brand-name">ColorFlow</span>
     </div>
     <div class="topbar-actions">
+      <button class="btn btn-ghost" id="btn-install" hidden aria-label="Установить приложение" title="Установить">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Установить</span>
+      </button>
       <button class="btn btn-ghost" id="btn-undo" aria-label="Отменить" title="Отменить">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14l-4-4 4-4M5 10h8a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
@@ -57,6 +61,7 @@
     </div>
     <div class="hint" id="hint">Рисуй пальцем, стилусом или мышью · pinch для масштаба</div>
     <button class="zoom-reset glass" id="btn-zoom-reset" hidden aria-label="Сбросить масштаб" title="100%">100%</button>
+    <div class="online-status glass" id="online-status" hidden aria-live="polite">Офлайн</div>
   </main>
 
   <!-- Bottom toolbar (mobile) / sidebar (desktop) -->

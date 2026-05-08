@@ -34,6 +34,65 @@
         engine.redo();
       }
     });
+
+    registerServiceWorker();
+    bindInstallPrompt();
+    bindOnlineIndicator();
+
+    // Restore previously saved scene (best effort, runs after engine is up).
+    if (window.CFStorage?.loadScene) {
+      window.CFStorage.loadScene(engine).then((restored) => {
+        if (restored && navigator.vibrate) navigator.vibrate(6);
+      });
+    }
+    // Persist scene on stroke commit / layer change (debounced inside storage).
+    if (window.CFStorage?.bindAutoSave) {
+      window.CFStorage.bindAutoSave(engine);
+    }
+  }
+
+  function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    // Defer to the load event so SW install doesn't compete with first paint.
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch((err) => {
+        console.warn('SW register failed', err);
+      });
+    });
+  }
+
+  function bindInstallPrompt() {
+    let deferred = null;
+    const btn = document.getElementById('btn-install');
+    if (!btn) return;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferred = e;
+      btn.hidden = false;
+    });
+    btn.addEventListener('click', async () => {
+      if (!deferred) return;
+      btn.hidden = true;
+      deferred.prompt();
+      await deferred.userChoice;
+      deferred = null;
+    });
+    window.addEventListener('appinstalled', () => {
+      btn.hidden = true;
+      deferred = null;
+    });
+  }
+
+  function bindOnlineIndicator() {
+    const el = document.getElementById('online-status');
+    if (!el) return;
+    const update = () => {
+      el.hidden = navigator.onLine;
+      el.textContent = navigator.onLine ? '' : 'Офлайн';
+    };
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    update();
   }
 
   if (document.readyState === 'loading') {
