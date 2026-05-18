@@ -1,7 +1,7 @@
 // ColorFlow service worker — app-shell cache + stale-while-revalidate.
 // Bump APP_VERSION whenever you ship breaking changes to invalidate clients.
 
-const APP_VERSION = 'cf-v4';
+const APP_VERSION = 'cf-v5';
 const SHELL = [
   './',
   './index.html',
@@ -21,6 +21,10 @@ const SHELL = [
   './assets/templates/butterfly.svg',
   './assets/templates/geometric.svg',
   './assets/templates/house.svg',
+  './assets/tutorials/index.json',
+  './assets/tutorials/star.svg',
+  './assets/tutorials/heart.svg',
+  './assets/tutorials/fish.svg',
 ];
 
 self.addEventListener('install', (event) => {

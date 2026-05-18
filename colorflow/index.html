@@ -54,6 +54,9 @@
       <button class="btn btn-ghost" id="btn-templates" aria-label="Шаблоны" title="Шаблоны">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="4" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="4" y="13" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="13" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/></svg>
       </button>
+      <button class="btn btn-ghost" id="btn-tutorial" aria-label="Урок одной линией" title="Урок одной линией">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18c2-6 6-10 10-10 4 0 6 4 6 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="4" cy="18" r="2" fill="currentColor"/></svg>
+      </button>
       <button class="btn btn-ghost" id="btn-magic" aria-label="Magic Fill" title="Magic Fill ✨">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
@@ -126,6 +129,35 @@
       </menu>
     </form>
   </dialog>
+
+  <dialog class="cf-dialog" id="dlg-tutorial" aria-label="Уроки одной линией">
+    <form method="dialog" class="cf-dialog-body">
+      <h3>Урок: рисунок одной линией</h3>
+      <p class="cf-hint">Выбери сюжет. На холст ляжет полупрозрачный контур — обведи его одним непрерывным движением, не отрывая руку.</p>
+      <div class="template-grid" id="tutorial-grid"></div>
+      <menu class="cf-actions">
+        <button value="cancel" class="btn btn-ghost">Закрыть</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <!-- Floating tutorial panel — appears after picking a tutorial. Shows the
+       animated path preview that draws itself + step-by-step instructions. -->
+  <aside class="tutorial-panel glass" id="tutorial-panel" hidden aria-label="Подсказка к уроку">
+    <header class="tutorial-head">
+      <h4 id="tutorial-name">—</h4>
+      <button type="button" class="tutorial-close" id="tutorial-close" aria-label="Закрыть подсказку">✕</button>
+    </header>
+    <div class="tutorial-anim" id="tutorial-anim" aria-hidden="true"></div>
+    <p class="tutorial-step-text" id="tutorial-step-text">—</p>
+    <footer class="tutorial-foot">
+      <span class="tutorial-step-counter" id="tutorial-step-counter">Шаг 1 из 1</span>
+      <div>
+        <button type="button" class="btn btn-ghost btn-sm" id="tutorial-prev">‹ Назад</button>
+        <button type="button" class="btn btn-primary btn-sm" id="tutorial-next">Дальше ›</button>
+      </div>
+    </footer>
+  </aside>
 
   <dialog class="cf-dialog" id="dlg-gallery" aria-label="Галерея">
     <form method="dialog" class="cf-dialog-body">

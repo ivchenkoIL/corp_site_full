@@ -765,6 +765,96 @@ button, input {
 #btn-timelapse.recording svg circle:last-child { fill: #ef4444; }
 #btn-symmetry.active { color: var(--accent-1); }
 
+/* Tutorial panel — floats over the stage while a one-line lesson is active. */
+.tutorial-panel {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  width: min(280px, calc(100vw - 24px));
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius);
+  z-index: 30;
+  box-shadow: var(--shadow-out);
+  animation: tutorial-rise 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes tutorial-rise {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.tutorial-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tutorial-head h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+.tutorial-close {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--fg-mute);
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.tutorial-close:hover { background: var(--hover); color: var(--fg); }
+.tutorial-anim {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.tutorial-anim svg {
+  width: 88%;
+  height: 88%;
+}
+.tutorial-anim path {
+  stroke: var(--accent-1);
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: tutorial-trace 3.5s linear infinite;
+}
+@keyframes tutorial-trace {
+  0%   { stroke-dashoffset: 100; }
+  70%  { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+.tutorial-step-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--fg);
+}
+.tutorial-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tutorial-step-counter {
+  font-size: 11px;
+  color: var(--fg-mute);
+  font-weight: 600;
+}
+.tutorial-foot > div { display: flex; gap: 4px; }
+
+#btn-tutorial.active { color: var(--accent-1); }
+
 /* Respect user's motion preference: cut all decorative animation. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

@@ -103,6 +103,7 @@
       this.bindDockCollapse();
       this.bindSymmetry();
       this.bindTemplates();
+      this.bindTutorial();
       this.bindMagicFill();
       this.bindTimelapse();
       this.bindGallery();
@@ -695,6 +696,110 @@
     a.click();
     a.remove();
   }
+
+  // ---------------- One-line tutorial ----------------
+  Object.assign(UI, {
+    bindTutorial() {
+      const dlg = $('#dlg-tutorial');
+      const grid = $('#tutorial-grid');
+      const panel = $('#tutorial-panel');
+      const close = $('#tutorial-close');
+      const prev = $('#tutorial-prev');
+      const next = $('#tutorial-next');
+
+      $('#btn-tutorial').addEventListener('click', async () => {
+        if (!grid.dataset.loaded) {
+          await this._loadTutorialGrid(grid);
+          grid.dataset.loaded = '1';
+        }
+        if (typeof dlg.showModal === 'function') dlg.showModal();
+      });
+
+      close.addEventListener('click', () => this._endTutorial());
+      prev.addEventListener('click', () => this._stepTutorial(-1));
+      next.addEventListener('click', () => this._stepTutorial(+1));
+    },
+
+    async _loadTutorialGrid(grid) {
+      grid.innerHTML = '<p class="cf-hint">Загрузка…</p>';
+      try {
+        const res = await fetch('./assets/tutorials/index.json');
+        const list = await res.json();
+        grid.innerHTML = '';
+        for (const t of list) {
+          const card = document.createElement('button');
+          card.type = 'button';
+          card.className = 'template-card';
+          const diff = t.difficulty === 'easy' ? '★☆☆' : t.difficulty === 'medium' ? '★★☆' : '★★★';
+          card.innerHTML = `
+            <div class="thumb" style="background-image:url('${t.src}')"></div>
+            <div class="name">${escapeHtml(t.name)}</div>
+            <div class="cf-hint" style="font-size:10px;text-align:center">${diff}</div>
+          `;
+          card.addEventListener('click', async () => {
+            $('#dlg-tutorial').close();
+            await this._startTutorial(t);
+          });
+          grid.appendChild(card);
+        }
+      } catch (err) {
+        grid.innerHTML = `<p class="cf-hint">Не удалось загрузить уроки: ${escapeHtml(err?.message || err)}</p>`;
+      }
+    },
+
+    async _startTutorial(t) {
+      try {
+        const res = await fetch(t.src);
+        const svgText = await res.text();
+        const blob = new Blob([svgText], { type: 'image/svg+xml' });
+        const file = new File([blob], `${t.id}.svg`, { type: 'image/svg+xml' });
+        // Import as a new layer, then dim it so the user can trace over it.
+        const layer = await this.engine.importImage(file);
+        if (layer) {
+          layer.opacity = 0.28;
+          layer.name = 'Шаблон: ' + t.name;
+          // Add a fresh active layer above so strokes land on a clean canvas.
+          this.engine.addLayer();
+          this.engine.getActiveLayer().name = 'Мой рисунок';
+          this.engine.redraw();
+          this.engine.emit('change');
+        }
+        // Stash tutorial state on the UI and reveal the panel.
+        this._tutorial = { t, step: 0 };
+        $('#tutorial-name').textContent = t.name;
+        $('#tutorial-anim').innerHTML = svgText;
+        $('#tutorial-panel').hidden = false;
+        $('#btn-tutorial').classList.add('active');
+        this._renderTutorialStep();
+      } catch (err) {
+        alert('Не удалось запустить урок: ' + (err?.message || err));
+      }
+    },
+
+    _stepTutorial(delta) {
+      if (!this._tutorial) return;
+      const steps = this._tutorial.t.steps || [];
+      const max = Math.max(1, steps.length);
+      this._tutorial.step = Math.max(0, Math.min(max - 1, this._tutorial.step + delta));
+      this._renderTutorialStep();
+    },
+
+    _renderTutorialStep() {
+      if (!this._tutorial) return;
+      const { t, step } = this._tutorial;
+      const steps = t.steps || [t.description || ''];
+      $('#tutorial-step-text').textContent = steps[step] || '';
+      $('#tutorial-step-counter').textContent = `Шаг ${step + 1} из ${steps.length}`;
+      $('#tutorial-prev').disabled = step === 0;
+      $('#tutorial-next').disabled = step >= steps.length - 1;
+    },
+
+    _endTutorial() {
+      this._tutorial = null;
+      $('#tutorial-panel').hidden = true;
+      $('#btn-tutorial').classList.remove('active');
+    },
+  });
 
   window.CFUI = UI;
 })();
