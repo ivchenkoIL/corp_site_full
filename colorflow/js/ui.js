@@ -86,6 +86,8 @@
       document.body.dataset.theme = this.theme;
 
       this.activePalette = window.CFStorage.get('palette', 'recent');
+      this.mode = window.CFStorage.get('mode', 'simple');
+      document.body.dataset.mode = this.mode;
 
       this.bindPaletteTabs();
       this.renderPalette();
@@ -104,6 +106,8 @@
       this.bindSymmetry();
       this.bindTemplates();
       this.bindTutorial();
+      this.bindKidUI();
+      this.bindMenu();
       this.bindMagicFill();
       this.bindTimelapse();
       this.bindGallery();
@@ -169,6 +173,9 @@
           $$('.tool[data-tool]').forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           this.engine.setTool(btn.dataset.tool);
+          // Mirror into the kid dock so the matching big button is highlighted
+          // (no-op if there's no kid equivalent for the chosen tool).
+          this._kidSyncToolFromEngine?.();
           this.updateToolOnly();
           if (navigator.vibrate) navigator.vibrate(4);
         });
@@ -804,6 +811,117 @@
       $('#btn-tutorial').classList.remove('active');
     },
   });
+
+  // ---------------- Simple-mode (kid) UI ----------------
+  // Big tool / size / color buttons. They share state with the pro dock,
+  // so switching modes mid-session preserves the current tool & color.
+  Object.assign(UI, {
+    bindKidUI() {
+      // Tool buttons (3): brush / eraser / fill
+      $$('.kid-tool[data-tool]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          this._kidSelectTool(btn.dataset.tool);
+          if (navigator.vibrate) navigator.vibrate(4);
+        });
+      });
+      // Size pellets (4 fixed presets — easier than a slider for kids)
+      $$('.kid-size[data-size]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const px = +btn.dataset.size;
+          this.engine.setSize(px);
+          // Keep the pro slider in sync so a mode switch shows the right value.
+          const slider = $('#size');
+          if (slider) { slider.value = px; const o = $('#size-out'); if (o) o.textContent = px; }
+          $$('.kid-size').forEach(b => b.classList.toggle('active', b === btn));
+        });
+      });
+      // Big palette swatches
+      $$('.kid-swatch[data-color]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          this.setColor(btn.dataset.color);
+          this._kidMarkActiveSwatch();
+        });
+      });
+      // Reflect initial active tool + color
+      this._kidMarkActiveSwatch();
+    },
+
+    _kidSelectTool(toolName) {
+      $$('.kid-tool[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === toolName));
+      // Mirror into the pro dock so both UIs stay coherent.
+      const proBtn = document.querySelector(`.tool[data-tool="${toolName}"]`);
+      if (proBtn) {
+        $$('.tool[data-tool]').forEach(b => b.classList.remove('active'));
+        proBtn.classList.add('active');
+      }
+      this.engine.setTool(toolName);
+      this.updateToolOnly?.();
+    },
+
+    _kidMarkActiveSwatch() {
+      const hex = this.engine.color?.toLowerCase();
+      $$('.kid-swatch').forEach(b => b.classList.toggle('active', b.dataset.color?.toLowerCase() === hex));
+    },
+
+    bindMenu() {
+      const dlg = $('#dlg-menu');
+      $('#btn-menu')?.addEventListener('click', () => {
+        // Mirror the install state into the menu item.
+        $('#menu-install').hidden = $('#btn-install')?.hidden !== false;
+        $('#mode-toggle').checked = this.mode === 'pro';
+        if (typeof dlg.showModal === 'function') dlg.showModal();
+      });
+      // Big PNG save button (simple mode) — single tap, no submenu.
+      $('#btn-save-simple')?.addEventListener('click', () => this.exportImage('png'));
+
+      // Menu items
+      $$('.menu-item[data-action]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const act = btn.dataset.action;
+          dlg.close();
+          // Defer the next dialog open by one tick so the close animation completes
+          // and the dialog backdrop doesn't double-stack.
+          setTimeout(() => this._menuAction(act), 60);
+        });
+      });
+
+      // Mode toggle (Полный режим)
+      $('#mode-toggle')?.addEventListener('change', (e) => {
+        this.mode = e.target.checked ? 'pro' : 'simple';
+        document.body.dataset.mode = this.mode;
+        window.CFStorage.set('mode', this.mode);
+        // Re-sync kid UI to current engine state when returning to simple.
+        if (this.mode === 'simple') {
+          this._kidMarkActiveSwatch?.();
+          this._kidSyncToolFromEngine?.();
+        }
+      });
+    },
+
+    _kidSyncToolFromEngine() {
+      const t = this.engine.tool;
+      $$('.kid-tool[data-tool]').forEach(b => b.classList.toggle('active', b.dataset.tool === t));
+    },
+
+    _menuAction(act) {
+      switch (act) {
+        case 'templates': $('#btn-templates')?.click(); break;
+        case 'tutorial':  $('#btn-tutorial')?.click(); break;
+        case 'gallery':   $('#btn-gallery')?.click(); break;
+        case 'theme':     this.cycleTheme(); break;
+        case 'install':   $('#btn-install')?.click(); break;
+        case 'save-jpg':  this.exportImage('jpg'); break;
+      }
+    },
+  });
+
+  // When the pro dock changes color (HEX/RGB/HSL/palette swatch), make sure
+  // the kid swatch highlight updates too. Patch setColor to call our hook.
+  const _origSetColor = UI.setColor;
+  UI.setColor = function (c, opts) {
+    _origSetColor.call(this, c, opts);
+    this._kidMarkActiveSwatch?.();
+  };
 
   window.CFUI = UI;
 })();

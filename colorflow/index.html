@@ -25,7 +25,7 @@
       media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)">
 <link rel="stylesheet" href="./css/styles.css">
 </head>
-<body data-theme="auto">
+<body data-theme="auto" data-mode="simple">
 <div id="app" class="app">
 
   <!-- Top bar -->
@@ -35,41 +35,34 @@
       <span class="brand-name">ColorFlow</span>
     </div>
     <div class="topbar-actions">
-      <button class="btn btn-ghost" id="btn-install" hidden aria-label="Установить приложение" title="Установить">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span>Установить</span>
+      <!-- Always visible (both modes). Big, friendly, single-purpose buttons. -->
+      <button class="btn btn-ghost btn-big" id="btn-undo" aria-label="Отменить" title="Отменить">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14l-4-4 4-4M5 10h8a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <button class="btn btn-ghost" id="btn-undo" aria-label="Отменить" title="Отменить">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14l-4-4 4-4M5 10h8a5 5 0 0 1 0 10h-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <button class="btn btn-ghost btn-big" id="btn-clear" aria-label="Очистить весь холст" title="Очистить весь холст">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <button class="btn btn-ghost" id="btn-redo" aria-label="Повторить" title="Повторить">
+      <button class="btn btn-primary btn-big" id="btn-save-simple" aria-label="Сохранить картинку" title="Сохранить картинку">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="btn btn-ghost btn-big" id="btn-menu" aria-label="Меню" title="Меню">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="18" cy="12" r="1.8" fill="currentColor"/></svg>
+      </button>
+
+      <!-- Pro-mode only: redo + advanced buttons + export menu. Hidden in simple mode. -->
+      <button class="btn btn-ghost pro-only" id="btn-redo" aria-label="Повторить" title="Повторить">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 14l4-4-4-4M19 10h-8a5 5 0 0 0 0 10h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <button class="btn btn-ghost" id="btn-clear" aria-label="Очистить весь холст" title="Очистить весь холст">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V5a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <button class="btn btn-ghost" id="btn-symmetry" aria-label="Симметрия" title="Симметрия">
+      <button class="btn btn-ghost pro-only" id="btn-symmetry" aria-label="Симметрия" title="Симметрия">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M5 8l7-5 7 5M5 16l7 5 7-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <button class="btn btn-ghost" id="btn-templates" aria-label="Шаблоны" title="Шаблоны">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="4" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="4" y="13" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13" y="13" width="7" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="2"/></svg>
-      </button>
-      <button class="btn btn-ghost" id="btn-tutorial" aria-label="Урок одной линией" title="Урок одной линией">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18c2-6 6-10 10-10 4 0 6 4 6 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="4" cy="18" r="2" fill="currentColor"/></svg>
-      </button>
-      <button class="btn btn-ghost" id="btn-magic" aria-label="Magic Fill" title="Magic Fill ✨">
+      <button class="btn btn-ghost pro-only" id="btn-magic" aria-label="Magic Fill" title="Magic Fill ✨">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
-      <button class="btn btn-ghost" id="btn-timelapse" aria-label="Timelapse" title="Timelapse">
+      <button class="btn btn-ghost pro-only" id="btn-timelapse" aria-label="Timelapse" title="Timelapse">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>
       </button>
-      <button class="btn btn-ghost" id="btn-gallery" aria-label="Галерея" title="Галерея">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 16l5-5 5 5 3-3 5 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="9" r="2" fill="currentColor"/></svg>
-      </button>
-      <button class="btn btn-ghost" id="btn-theme" aria-label="Переключить тему" title="Тема">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <details class="export-menu">
+      <details class="export-menu pro-only">
         <summary class="btn btn-primary" aria-label="Экспорт" title="Экспорт">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <span>Экспорт</span>
@@ -159,6 +152,41 @@
     </footer>
   </aside>
 
+  <!-- Main menu — gateway to everything from simple mode -->
+  <dialog class="cf-dialog" id="dlg-menu" aria-label="Меню">
+    <form method="dialog" class="cf-dialog-body">
+      <h3>Меню</h3>
+      <div class="menu-grid">
+        <button type="button" class="menu-item" data-action="templates">
+          <span class="menu-emoji">🎨</span><span>Раскраски</span>
+        </button>
+        <button type="button" class="menu-item" data-action="tutorial">
+          <span class="menu-emoji">✏️</span><span>Урок одной линией</span>
+        </button>
+        <button type="button" class="menu-item" data-action="gallery">
+          <span class="menu-emoji">🖼</span><span>Моя галерея</span>
+        </button>
+        <button type="button" class="menu-item" data-action="theme">
+          <span class="menu-emoji">🌗</span><span>Тёмная / светлая</span>
+        </button>
+        <button type="button" class="menu-item" data-action="install" id="menu-install" hidden>
+          <span class="menu-emoji">📲</span><span>Установить как приложение</span>
+        </button>
+        <button type="button" class="menu-item" data-action="save-jpg">
+          <span class="menu-emoji">⬇️</span><span>Сохранить как JPG</span>
+        </button>
+      </div>
+      <hr class="menu-sep">
+      <label class="menu-toggle">
+        <span><strong>Полный режим</strong><br><span class="cf-hint">слои, маркер, мандала, timelapse, всё остальное</span></span>
+        <input type="checkbox" id="mode-toggle">
+      </label>
+      <menu class="cf-actions">
+        <button value="cancel" class="btn btn-ghost">Закрыть</button>
+      </menu>
+    </form>
+  </dialog>
+
   <dialog class="cf-dialog" id="dlg-gallery" aria-label="Галерея">
     <form method="dialog" class="cf-dialog-body">
       <h3>Галерея</h3>
@@ -171,8 +199,49 @@
     </form>
   </dialog>
 
+  <!-- ========== SIMPLE-MODE DOCK (default) — big touch targets, kid-friendly ========== -->
+  <aside class="kid-dock glass kid-only" id="kid-dock" aria-label="Инструменты для рисования">
+    <div class="kid-tools">
+      <button class="kid-tool active" data-tool="brush" aria-label="Кисточка">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21l4-1 11-11a2.83 2.83 0 0 0-4-4L3 16v5z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Кисточка</span>
+      </button>
+      <button class="kid-tool" data-tool="eraser" aria-label="Ластик">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l8 4 10-10-8-8L3 13v4zM10 21l11-11" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Ластик</span>
+      </button>
+      <button class="kid-tool" data-tool="fill" aria-label="Заливка">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3l8 8m-8 8l-2-2 9-9 7 7-7 7-7-7z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Заливка</span>
+      </button>
+    </div>
+
+    <div class="kid-sizes" aria-label="Размер кисти">
+      <button class="kid-size" data-size="6"><span style="--d:8px"></span></button>
+      <button class="kid-size active" data-size="14"><span style="--d:14px"></span></button>
+      <button class="kid-size" data-size="32"><span style="--d:22px"></span></button>
+      <button class="kid-size" data-size="64"><span style="--d:32px"></span></button>
+    </div>
+
+    <div class="kid-palette" aria-label="Цвета">
+      <button class="kid-swatch" data-color="#ef4444" style="background:#ef4444" aria-label="Красный"></button>
+      <button class="kid-swatch" data-color="#f97316" style="background:#f97316" aria-label="Оранжевый"></button>
+      <button class="kid-swatch" data-color="#facc15" style="background:#facc15" aria-label="Жёлтый"></button>
+      <button class="kid-swatch" data-color="#22c55e" style="background:#22c55e" aria-label="Зелёный"></button>
+      <button class="kid-swatch" data-color="#06b6d4" style="background:#06b6d4" aria-label="Голубой"></button>
+      <button class="kid-swatch" data-color="#3b82f6" style="background:#3b82f6" aria-label="Синий"></button>
+      <button class="kid-swatch" data-color="#8b5cf6" style="background:#8b5cf6" aria-label="Фиолетовый"></button>
+      <button class="kid-swatch" data-color="#ec4899" style="background:#ec4899" aria-label="Розовый"></button>
+      <button class="kid-swatch" data-color="#7c4a1e" style="background:#7c4a1e" aria-label="Коричневый"></button>
+      <button class="kid-swatch" data-color="#000000" style="background:#000000" aria-label="Чёрный"></button>
+      <button class="kid-swatch" data-color="#9ca3af" style="background:#9ca3af" aria-label="Серый"></button>
+      <button class="kid-swatch" data-color="#ffffff" style="background:#ffffff;border-color:#999" aria-label="Белый"></button>
+    </div>
+  </aside>
+
+  <!-- ========== PRO-MODE DOCK — full toolbar with everything ========== -->
   <!-- Bottom toolbar (mobile) / sidebar (desktop) -->
-  <aside class="dock glass" id="dock" role="toolbar" aria-label="Инструменты">
+  <aside class="dock glass pro-only" id="dock" role="toolbar" aria-label="Инструменты">
     <button class="dock-collapse" id="btn-dock-collapse" aria-label="Свернуть панель" title="Свернуть/развернуть"></button>
     <div class="tools">
       <button class="tool active" data-tool="brush" aria-label="Кисть" title="Кисть">

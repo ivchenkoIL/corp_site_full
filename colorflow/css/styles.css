@@ -855,6 +855,205 @@ button, input {
 
 #btn-tutorial.active { color: var(--accent-1); }
 
+/* ============================================================
+   SIMPLE-MODE (kid-friendly) — default. Big touch targets, big
+   colors, no jargon. Pro mode hides .kid-only and shows .pro-only.
+   ============================================================ */
+body[data-mode="simple"] .pro-only { display: none !important; }
+body[data-mode="pro"]    .kid-only { display: none !important; }
+
+/* Big topbar button — slightly bigger, more padding (44 → 52). */
+.btn-big {
+  min-width: 52px;
+  min-height: 52px;
+}
+.btn-big svg { width: 26px; height: 26px; }
+
+/* Kid dock — replaces the dense pro dock in simple mode. */
+.kid-dock {
+  display: grid;
+  gap: 16px;
+  padding: 16px 16px calc(16px + var(--safe-bottom));
+  border-radius: var(--radius) var(--radius) 0 0;
+  border-bottom: 0;
+  z-index: 6;
+  max-height: 50dvh;
+  overflow-y: auto;
+  animation: dock-rise 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.kid-tools {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.kid-tool {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  align-items: center;
+  justify-items: center;
+  gap: 4px;
+  padding: 14px 6px 10px;
+  border: 2px solid var(--border);
+  background: var(--bg-2);
+  color: var(--fg);
+  border-radius: 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 76px;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.kid-tool svg { width: 32px; height: 32px; }
+.kid-tool:hover { background: var(--hover); }
+.kid-tool:active { transform: scale(0.96); }
+.kid-tool.active {
+  background: var(--grad);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 8px 22px rgba(99, 102, 241, 0.35);
+}
+
+.kid-sizes {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.kid-size {
+  display: grid;
+  place-items: center;
+  padding: 12px 4px;
+  border: 2px solid var(--border);
+  background: var(--bg-2);
+  border-radius: 14px;
+  cursor: pointer;
+  min-height: 56px;
+  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.kid-size span {
+  display: block;
+  width: var(--d, 14px);
+  height: var(--d, 14px);
+  background: var(--fg);
+  border-radius: 50%;
+}
+.kid-size:hover { background: var(--hover); }
+.kid-size:active { transform: scale(0.95); }
+.kid-size.active {
+  background: var(--grad);
+  border-color: transparent;
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.35);
+}
+.kid-size.active span { background: white; }
+
+.kid-palette {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+.kid-swatch {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 14px;
+  border: 3px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+.kid-swatch:hover { transform: scale(1.06); }
+.kid-swatch:active { transform: scale(0.93); }
+.kid-swatch.active {
+  border-color: var(--accent-1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25), 0 6px 14px rgba(0, 0, 0, 0.18);
+}
+
+/* Menu — grid of big tappable items */
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin: 4px 0;
+}
+.menu-item {
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 4px;
+  padding: 14px 10px;
+  border: 2px solid var(--border);
+  background: var(--bg-2);
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: center;
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 600;
+  min-height: 70px;
+}
+.menu-item:hover { background: var(--hover); }
+.menu-emoji { font-size: 24px; line-height: 1; }
+.menu-sep {
+  border: 0;
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0 4px;
+}
+.menu-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+}
+.menu-toggle input[type="checkbox"] {
+  width: 44px;
+  height: 26px;
+  appearance: none;
+  background: var(--border);
+  border-radius: 999px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.menu-toggle input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+.menu-toggle input[type="checkbox"]:checked { background: var(--accent-1); }
+.menu-toggle input[type="checkbox"]:checked::before { transform: translateX(18px); }
+
+/* On tablet/desktop, simple-mode dock can sit as right sidebar like pro dock. */
+@media (min-width: 900px) {
+  body[data-mode="simple"] .app {
+    grid-template-columns: 1fr 320px;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "top top"
+      "stage dock";
+  }
+  body[data-mode="simple"] .topbar { grid-area: top; }
+  body[data-mode="simple"] .stage  { grid-area: stage; }
+  body[data-mode="simple"] .kid-dock {
+    grid-area: dock;
+    border-radius: var(--radius) 0 0 var(--radius);
+    align-content: start;
+    height: 100%;
+    max-height: none;
+    overflow-y: auto;
+  }
+}
+
 /* Respect user's motion preference: cut all decorative animation. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

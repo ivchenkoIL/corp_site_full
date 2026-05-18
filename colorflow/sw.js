@@ -1,7 +1,7 @@
 // ColorFlow service worker — app-shell cache + stale-while-revalidate.
 // Bump APP_VERSION whenever you ship breaking changes to invalidate clients.
 
-const APP_VERSION = 'cf-v6';
+const APP_VERSION = 'cf-v7';
 const SHELL = [
   './',
   './index.html',
