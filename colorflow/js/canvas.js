@@ -96,6 +96,54 @@
         ctx.stroke();
       },
     },
+    // Shape tools: paintShape() is called every frame with the stroke start
+    // and the current pointer position. The stroke buffer is wiped first, so
+    // each frame shows a clean preview from the original anchor.
+    line: {
+      shape: true,
+      blitComposite: 'source-over',
+      blitAlphaScale: 1,
+      paintShape(engine, ctx, start, end) {
+        ctx.lineWidth = engine.size;
+        ctx.strokeStyle = engine.color;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
+        ctx.stroke();
+      },
+    },
+    rect: {
+      shape: true,
+      blitComposite: 'source-over',
+      blitAlphaScale: 1,
+      paintShape(engine, ctx, start, end) {
+        ctx.lineWidth = engine.size;
+        ctx.strokeStyle = engine.color;
+        ctx.lineJoin = 'round';
+        const x = Math.min(start.x, end.x);
+        const y = Math.min(start.y, end.y);
+        const w = Math.abs(end.x - start.x);
+        const h = Math.abs(end.y - start.y);
+        ctx.strokeRect(x, y, w, h);
+      },
+    },
+    ellipse: {
+      shape: true,
+      blitComposite: 'source-over',
+      blitAlphaScale: 1,
+      paintShape(engine, ctx, start, end) {
+        ctx.lineWidth = engine.size;
+        ctx.strokeStyle = engine.color;
+        const cx = (start.x + end.x) / 2;
+        const cy = (start.y + end.y) / 2;
+        const rx = Math.abs(end.x - start.x) / 2;
+        const ry = Math.abs(end.y - start.y) / 2;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      },
+    },
   };
 
   function hexToRgb(hex) {
@@ -476,6 +524,9 @@
       this.lbctx.clearRect(0, 0, this.layerBefore.width, this.layerBefore.height);
       this.lbctx.drawImage(active.canvas, 0, 0);
 
+      // Shape tools (line/rect/ellipse) need the original anchor point so we
+      // can redraw the shape from origin → current on every frame.
+      this._strokeStart = { x: p.x, y: p.y, p: p.p };
       const r = this.size;
       this._strokeBbox = { x0: p.x - r, y0: p.y - r, x1: p.x + r, y1: p.y + r };
 
@@ -574,13 +625,50 @@
       const tool = TOOLS[this.tool];
       if (!tool) { this.pendingPoints.length = 0; return; }
       const ctx = this.sctx;
-      // Stroke buffer always paints with source-over; tool-specific composite
-      // is applied only when blitting onto the active layer.
       ctx.globalCompositeOperation = 'source-over';
       const transforms = this._symmetryTransforms();
       const symActive = transforms.length > 1;
       const cx = this.canvas.width / 2;
       const cy = this.canvas.height / 2;
+
+      // Shape tools (line/rect/ellipse) repaint from the original anchor each
+      // frame instead of accumulating per-segment. Wipe the buffer first so
+      // the previous preview frame doesn't ghost.
+      if (tool.shape) {
+        ctx.clearRect(0, 0, this.strokeBuf.width, this.strokeBuf.height);
+        const start = this._strokeStart;
+        const end = this.pendingPoints[this.pendingPoints.length - 1];
+        for (const t of transforms) {
+          if (t.identity) {
+            tool.paintShape(this, ctx, start, end);
+          } else {
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(t.rot);
+            ctx.scale(t.sx, t.sy);
+            ctx.translate(-cx, -cy);
+            tool.paintShape(this, ctx, start, end);
+            ctx.restore();
+          }
+        }
+        // Bbox covers the whole shape including stroke width.
+        const r = this.size + 4;
+        if (symActive) {
+          this._strokeBbox = { x0: 0, y0: 0, x1: this.canvas.width, y1: this.canvas.height };
+        } else {
+          this._strokeBbox = {
+            x0: Math.min(start.x, end.x) - r,
+            y0: Math.min(start.y, end.y) - r,
+            x1: Math.max(start.x, end.x) + r,
+            y1: Math.max(start.y, end.y) + r,
+          };
+        }
+        this.lastX = end.x; this.lastY = end.y; this.lastPressure = end.p;
+        this.pendingPoints.length = 0;
+        return;
+      }
+
+      // Freehand tools (brush/pencil/marker/eraser) paint each segment.
       let last = { x: this.lastX, y: this.lastY, p: this.lastPressure };
       for (const pt of this.pendingPoints) {
         for (const t of transforms) {
@@ -598,7 +686,6 @@
         }
         last = pt;
       }
-      // With symmetry the painted area can wrap the full canvas; mark bbox accordingly.
       if (symActive) {
         this._strokeBbox = { x0: 0, y0: 0, x1: this.canvas.width, y1: this.canvas.height };
       }
@@ -644,6 +731,8 @@
       // Bitmap-changing entries invalidate the affected layer's thumb cache.
       if (entry.type === 'stroke' || entry.type === 'clear') {
         this._invalidateLayerThumb(entry.layerId);
+      } else if (entry.type === 'clear-all') {
+        for (const s of entry.snapshots || []) this._invalidateLayerThumb(s.id);
       } else if (entry.type === 'layer-add' && entry.layerData) {
         this._invalidateLayerThumb(entry.layerData.id);
       }
@@ -670,6 +759,12 @@
         case 'stroke':
         case 'clear':
           return (e.before?.data.byteLength || 0) + (e.after?.data.byteLength || 0);
+        case 'clear-all': {
+          let n = 0;
+          for (const s of e.snapshots || []) n += s.before?.data.byteLength || 0;
+          for (const s of e.afters || []) n += s.after?.data.byteLength || 0;
+          return n;
+        }
         case 'layer-add':
         case 'layer-delete':
           return e.layerData?.img?.data.byteLength || 0;
@@ -713,6 +808,17 @@
           if (!layer) return;
           layer.ctx.putImageData(dir === 'undo' ? entry.before : entry.after, 0, 0);
           this._invalidateLayerThumb(layer.id);
+          break;
+        }
+        case 'clear-all': {
+          const arr = dir === 'undo' ? entry.snapshots : entry.afters;
+          const key = dir === 'undo' ? 'before' : 'after';
+          for (const snap of arr) {
+            const layer = this.layers.find(l => l.id === snap.id);
+            if (!layer) continue;
+            layer.ctx.putImageData(snap[key], 0, 0);
+            this._invalidateLayerThumb(layer.id);
+          }
           break;
         }
         case 'layer-add': {
@@ -764,6 +870,33 @@
       }
       const after = active.ctx.getImageData(0, 0, active.canvas.width, active.canvas.height);
       this._pushHistory({ type: 'clear', layerId: active.id, before, after });
+      this._afterChange();
+    }
+
+    // Wipes every layer in one undoable step. Background layer (index 0)
+    // refills with white; all other layers become fully transparent.
+    clearAll() {
+      if (this.activePointerId !== null) return;
+      const w = this.canvas.width, h = this.canvas.height;
+      const snapshots = this.layers.map((l, idx) => ({
+        id: l.id,
+        before: l.ctx.getImageData(0, 0, w, h),
+        bgIdx: idx === 0,
+      }));
+      for (const snap of snapshots) {
+        const layer = this.layers.find(l => l.id === snap.id);
+        if (!layer) continue;
+        layer.ctx.clearRect(0, 0, w, h);
+        if (snap.bgIdx) {
+          layer.ctx.fillStyle = '#ffffff';
+          layer.ctx.fillRect(0, 0, w, h);
+        }
+      }
+      const afters = this.layers.map((l) => ({
+        id: l.id,
+        after: l.ctx.getImageData(0, 0, w, h),
+      }));
+      this._pushHistory({ type: 'clear-all', snapshots, afters });
       this._afterChange();
     }
 

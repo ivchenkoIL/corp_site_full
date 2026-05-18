@@ -204,7 +204,11 @@
       $('#btn-undo').addEventListener('click', () => this.engine.undo());
       $('#btn-redo').addEventListener('click', () => this.engine.redo());
       $('#btn-clear').addEventListener('click', () => {
-        if (confirm('Очистить активный слой?')) this.engine.clear();
+        // Topbar trash button now wipes the entire canvas (every layer).
+        // Per-layer clearing is available via the layer panel's delete row.
+        if (confirm('Очистить весь холст? Все слои будут стёрты (можно отменить через Undo).')) {
+          this.engine.clearAll();
+        }
       });
       $('#btn-theme').addEventListener('click', () => this.cycleTheme());
       // Export button is wired by bindExportMenu.
