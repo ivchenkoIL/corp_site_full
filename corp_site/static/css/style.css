@@ -1,0 +1,75 @@
+/* === СпецМонтаж — кастомные стили === */
+
+/* Hero-секция на главной */
+.hero-section {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    min-height: 420px;
+    padding: 80px 0;
+}
+
+/* Карточки с эффектом наведения */
+.card-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Круглая иконка */
+.icon-circle {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(13, 110, 253, 0.08);
+}
+
+.icon-circle-sm {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(13, 110, 253, 0.08);
+}
+
+/* Навбар */
+.navbar-brand {
+    font-size: 1.3rem;
+}
+
+/* Футер */
+footer a:hover {
+    color: #fff !important;
+}
+
+/* Контент текст */
+.content-text {
+    line-height: 1.8;
+}
+
+/* Форма на странице контактов */
+.form-control:focus,
+.form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+}
+
+/* Адаптив для мобильных */
+@media (max-width: 768px) {
+    .hero-section {
+        min-height: 320px;
+        padding: 50px 0;
+    }
+    .hero-section h1 {
+        font-size: 1.8rem;
+    }
+    .hero-section .lead {
+        font-size: 1rem;
+    }
+}

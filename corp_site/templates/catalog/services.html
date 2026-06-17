@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+
+{% block title %}Услуги — СпецМонтаж{% endblock %}
+
+{% block content %}
+<h1 class="fw-bold mb-2">Наши услуги</h1>
+<p class="text-muted mb-5">Мы предоставляем полный комплекс услуг по обеспечению безопасности — от проектирования до сервисного обслуживания.</p>
+
+<div class="row g-4 mb-5">
+    <div class="col-lg-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body p-4">
+                <div class="icon-circle mx-auto mb-3">
+                    <i class="bi bi-pencil-square fs-1 text-success"></i>
+                </div>
+                <h4 class="fw-bold text-center">Проектирование</h4>
+                <ul class="text-muted mt-3">
+                    <li>Обследование объекта и анализ требований</li>
+                    <li>Разработка проектной документации</li>
+                    <li>Подбор оптимального оборудования</li>
+                    <li>Составление сметы</li>
+                    <li>Согласование с заказчиком</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body p-4">
+                <div class="icon-circle mx-auto mb-3">
+                    <i class="bi bi-tools fs-1 text-warning"></i>
+                </div>
+                <h4 class="fw-bold text-center">Монтаж</h4>
+                <ul class="text-muted mt-3">
+                    <li>Установка систем безопасности</li>
+                    <li>Прокладка кабельных трасс</li>
+                    <li>Настройка и программирование оборудования</li>
+                    <li>Пусконаладочные работы</li>
+                    <li>Сдача объекта заказчику</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-body p-4">
+                <div class="icon-circle mx-auto mb-3">
+                    <i class="bi bi-gear fs-1 text-info"></i>
+                </div>
+                <h4 class="fw-bold text-center">Обслуживание</h4>
+                <ul class="text-muted mt-3">
+                    <li>Плановое техническое обслуживание</li>
+                    <li>Диагностика и устранение неисправностей</li>
+                    <li>Обновление программного обеспечения</li>
+                    <li>Расширение и модернизация систем</li>
+                    <li>Круглосуточная техподдержка</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section class="mb-5">
+    <h3 class="fw-bold mb-4">Монтажные конструкции</h3>
+    <p class="text-muted mb-4">Помимо систем безопасности, мы выполняем установку инфраструктурных элементов, необходимых для их работы:</p>
+    <div class="row g-3">
+        <div class="col-md-6 col-lg-4">
+            <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                <i class="bi bi-bounding-box fs-3 text-primary me-3"></i>
+                <div>
+                    <h6 class="fw-bold mb-0">Заборы</h6>
+                    <small class="text-muted">Периметральные ограждения</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                <i class="bi bi-door-open fs-3 text-primary me-3"></i>
+                <div>
+                    <h6 class="fw-bold mb-0">Ворота и калитки</h6>
+                    <small class="text-muted">Въездные и проходные группы</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                <i class="bi bi-building fs-3 text-primary me-3"></i>
+                <div>
+                    <h6 class="fw-bold mb-0">Модульные здания</h6>
+                    <small class="text-muted">Посты охраны и КПП</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-4">
+            <div class="d-flex align-items-center p-3 bg-light rounded-3">
+                <i class="bi bi-signpost-2 fs-3 text-primary me-3"></i>
+                <div>
+                    <h6 class="fw-bold mb-0">Опоры</h6>
+                    <small class="text-muted">Для камер, освещения, антенн</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="bg-light rounded-4 p-5 text-center">
+    <h3 class="fw-bold mb-3">Готовы обсудить проект?</h3>
+    <p class="text-muted mb-4">Оставьте заявку — мы свяжемся с вами и подготовим индивидуальное предложение</p>
+    <a href="{% url 'contacts' %}" class="btn btn-primary btn-lg">
+        <i class="bi bi-send me-2"></i>Оставить заявку
+    </a>
+</section>
+{% endblock %}

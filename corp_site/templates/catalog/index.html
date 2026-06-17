@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}СпецМонтаж — Системы безопасности и оборудование{% endblock %}
+
+{% block hero %}
+<section class="hero-section text-white text-center d-flex align-items-center">
+    <div class="container">
+        <h1 class="display-4 fw-bold mb-3">Комплексные системы безопасности</h1>
+        <p class="lead mb-4">Продажа оборудования, проектирование, монтаж и обслуживание<br>систем безопасности для объектов любой сложности</p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a href="{% url 'equipment_list' %}" class="btn btn-primary btn-lg px-4">
+                <i class="bi bi-box-seam me-2"></i>Каталог оборудования
+            </a>
+            <a href="{% url 'contacts' %}" class="btn btn-outline-light btn-lg px-4">
+                <i class="bi bi-chat-dots me-2"></i>Оставить заявку
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<section class="mb-5">
+    <h2 class="text-center fw-bold mb-2">Наше оборудование</h2>
+    <p class="text-center text-muted mb-4">Широкий спектр решений для обеспечения безопасности</p>
+    <div class="row g-4">
+        {% for cat in categories %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm card-hover">
+                <div class="card-body text-center p-4">
+                    <div class="icon-circle mx-auto mb-3">
+                        <i class="bi {{ cat.icon }} fs-1 text-primary"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">{{ cat.name }}</h5>
+                    {% if cat.short_name %}
+                    <span class="badge bg-primary bg-opacity-10 text-primary mb-2">{{ cat.short_name }}</span>
+                    {% endif %}
+                    <p class="card-text text-muted small">{{ cat.description }}</p>
+                    <a href="{% url 'equipment_detail' cat.slug %}" class="btn btn-outline-primary btn-sm">Подробнее</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <div class="text-center mt-4">
+        <a href="{% url 'equipment_list' %}" class="btn btn-primary">Все категории оборудования</a>
+    </div>
+</section>
+
+<section class="mb-5">
+    <h2 class="text-center fw-bold mb-2">Наши услуги</h2>
+    <p class="text-center text-muted mb-4">Полный цикл работ — от проекта до обслуживания</p>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm card-hover">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-pencil-square fs-1 text-success mb-3"></i>
+                    <h5 class="fw-bold">Проектирование</h5>
+                    <p class="text-muted small">Разработка проектной документации с учётом требований и особенностей объекта.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm card-hover">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-tools fs-1 text-warning mb-3"></i>
+                    <h5 class="fw-bold">Монтаж</h5>
+                    <p class="text-muted small">Профессиональная установка оборудования с соблюдением всех стандартов.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm card-hover">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-gear fs-1 text-info mb-3"></i>
+                    <h5 class="fw-bold">Обслуживание</h5>
+                    <p class="text-muted small">Техническая поддержка и сервисное обслуживание установленных систем.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="text-center mt-4">
+        <a href="{% url 'services' %}" class="btn btn-success">Подробнее об услугах</a>
+    </div>
+</section>
+
+<section class="bg-light rounded-4 p-5 text-center">
+    <h3 class="fw-bold mb-3">Нужна консультация?</h3>
+    <p class="text-muted mb-4">Оставьте заявку, и наши специалисты свяжутся с вами в ближайшее время</p>
+    <a href="{% url 'contacts' %}" class="btn btn-primary btn-lg">
+        <i class="bi bi-send me-2"></i>Связаться с нами
+    </a>
+</section>
+{% endblock %}
