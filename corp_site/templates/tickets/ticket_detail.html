@@ -3,10 +3,12 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1>{{ ticket.title }}</h1>
+    {% if user.is_authenticated %}
     <div>
         <a href="{% url 'ticket_update' ticket.pk %}" class="btn btn-outline-primary btn-sm">Редактировать</a>
         <a href="{% url 'ticket_delete' ticket.pk %}" class="btn btn-outline-danger btn-sm">Удалить</a>
     </div>
+    {% endif %}
 </div>
 
 <div class="card mb-4">

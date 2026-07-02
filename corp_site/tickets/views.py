@@ -1,5 +1,7 @@
 from django.contrib import messages
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, DeleteView, DetailView, ListView, UpdateView
@@ -13,6 +15,34 @@ class TicketListView(ListView):
     context_object_name = "tickets"
     template_name = "tickets/ticket_list.html"
     paginate_by = 10
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        q = self.request.GET.get("q", "").strip()
+        status = self.request.GET.get("status", "")
+        priority = self.request.GET.get("priority", "")
+        if q:
+            queryset = queryset.filter(
+                Q(title__icontains=q) | Q(description__icontains=q)
+            )
+        if status in Ticket.Status.values:
+            queryset = queryset.filter(status=status)
+        if priority.isdigit() and int(priority) in Ticket.Priority.values:
+            queryset = queryset.filter(priority=int(priority))
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["search_query"] = self.request.GET.get("q", "").strip()
+        context["status_filter"] = self.request.GET.get("status", "")
+        context["priority_filter"] = self.request.GET.get("priority", "")
+        context["status_choices"] = Ticket.Status.choices
+        context["priority_choices"] = Ticket.Priority.choices
+        # Строка запроса без page — чтобы пагинация не сбрасывала фильтры.
+        params = self.request.GET.copy()
+        params.pop("page", None)
+        context["querystring"] = params.urlencode()
+        return context
 
 
 class TicketDetailView(DetailView):
@@ -37,7 +67,7 @@ class TicketCreateView(SuccessMessageMixin, CreateView):
         return self.object.get_absolute_url()
 
 
-class TicketUpdateView(SuccessMessageMixin, UpdateView):
+class TicketUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
     model = Ticket
     form_class = TicketForm
     template_name = "tickets/ticket_form.html"
@@ -47,7 +77,7 @@ class TicketUpdateView(SuccessMessageMixin, UpdateView):
         return self.object.get_absolute_url()
 
 
-class TicketDeleteView(SuccessMessageMixin, DeleteView):
+class TicketDeleteView(LoginRequiredMixin, SuccessMessageMixin, DeleteView):
     model = Ticket
     template_name = "tickets/ticket_confirm_delete.html"
     success_url = reverse_lazy("ticket_list")

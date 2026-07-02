@@ -5,6 +5,31 @@
     <h1>Заявки</h1>
     <a href="{% url 'ticket_create' %}" class="btn btn-success">Создать заявку</a>
 </div>
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-5">
+        <input type="text" name="q" value="{{ search_query }}" class="form-control"
+               placeholder="Поиск по заголовку и описанию">
+    </div>
+    <div class="col-md-3">
+        <select name="status" class="form-select">
+            <option value="">Все статусы</option>
+            {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select name="priority" class="form-select">
+            <option value="">Любой приоритет</option>
+            {% for value, label in priority_choices %}
+            <option value="{{ value }}" {% if priority_filter == value|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-2 d-grid">
+        <button type="submit" class="btn btn-outline-primary">Найти</button>
+    </div>
+</form>
 {% if tickets %}
 <div class="table-responsive">
     <table class="table table-striped">
@@ -36,20 +61,24 @@
 <nav>
     <ul class="pagination justify-content-center">
         {% if page_obj.has_previous %}
-        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Назад</a></li>
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if querystring %}&amp;{{ querystring }}{% endif %}">Назад</a></li>
         {% endif %}
         {% for num in page_obj.paginator.page_range %}
         <li class="page-item {% if page_obj.number == num %}active{% endif %}">
-            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+            <a class="page-link" href="?page={{ num }}{% if querystring %}&amp;{{ querystring }}{% endif %}">{{ num }}</a>
         </li>
         {% endfor %}
         {% if page_obj.has_next %}
-        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Вперед</a></li>
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if querystring %}&amp;{{ querystring }}{% endif %}">Вперед</a></li>
         {% endif %}
     </ul>
 </nav>
 {% endif %}
 {% else %}
+{% if search_query or status_filter or priority_filter %}
+<p class="text-muted">По вашему запросу ничего не найдено</p>
+{% else %}
 <p class="text-muted">Заявок пока нет</p>
+{% endif %}
 {% endif %}
 {% endblock %}

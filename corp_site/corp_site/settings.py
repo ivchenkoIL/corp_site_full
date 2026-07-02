@@ -133,5 +133,11 @@ STORAGES = {
 }
 
 
+# Auth
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'ticket_list'
+LOGOUT_REDIRECT_URL = 'ticket_list'
+
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

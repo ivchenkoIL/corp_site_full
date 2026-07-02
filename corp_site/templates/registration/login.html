@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Вход{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <h1>Вход</h1>
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label" for="{{ form.username.id_for_label }}">Логин</label>
+                <input type="text" name="username" id="{{ form.username.id_for_label }}"
+                       class="form-control" value="{{ form.username.value|default:'' }}" autofocus>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="{{ form.password.id_for_label }}">Пароль</label>
+                <input type="password" name="password" id="{{ form.password.id_for_label }}"
+                       class="form-control">
+            </div>
+            <input type="hidden" name="next" value="{{ next }}">
+            <button type="submit" class="btn btn-primary">Войти</button>
+            <a href="{% url 'ticket_list' %}" class="btn btn-link">Назад к заявкам</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

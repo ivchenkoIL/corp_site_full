@@ -48,6 +48,10 @@
 
 Домен `*.onrender.com` подхватывается автоматически (через `RENDER_EXTERNAL_HOSTNAME`), отдельно настраивать `ALLOWED_HOSTS` и `CSRF_TRUSTED_ORIGINS` не нужно.
 
+### Администратор на проде
+
+Редактирование и удаление заявок доступны только залогиненным пользователям. Чтобы создать администратора на Render, добавьте в переменные окружения сервиса `DJANGO_SUPERUSER_USERNAME`, `DJANGO_SUPERUSER_PASSWORD` (и опционально `DJANGO_SUPERUSER_EMAIL`) — пользователь создастся автоматически при следующем деплое. Локально: `python manage.py createsuperuser`.
+
 ## Частые проблемы
 
 - Ошибка `ModuleNotFoundError: No module named 'django'` означает, что зависимости не установлены. Проверьте, что из корня репозитория выполнили `pip install -r requirements.txt` и активировали виртуальное окружение.
