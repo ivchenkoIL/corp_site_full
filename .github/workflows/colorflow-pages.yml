@@ -20,8 +20,11 @@ concurrency:
 
 jobs:
   deploy:
+    # Не 'github-pages': на автосозданном environment осталась политика
+    # deployment branches, которая мгновенно отклоняет job ещё до шагов.
+    # Свежий environment создаётся без ограничений.
     environment:
-      name: github-pages
+      name: pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
