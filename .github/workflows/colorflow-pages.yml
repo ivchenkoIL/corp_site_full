@@ -29,6 +29,10 @@ jobs:
         uses: actions/checkout@v4
       - name: Configure Pages
         uses: actions/configure-pages@v5
+        with:
+          # Включает GitHub Pages автоматически, если он выключен в настройках
+          # репозитория — без этого шаг падает и деплой не работает.
+          enablement: true
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
