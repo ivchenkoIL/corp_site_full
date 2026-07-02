@@ -15,23 +15,11 @@
         <div class="row">
             <div class="col-md-4">
                 <strong>Статус:</strong>
-                {% if ticket.status == 'new' %}
-                <span class="badge bg-primary">{{ ticket.get_status_display }}</span>
-                {% elif ticket.status == 'in_progress' %}
-                <span class="badge bg-warning text-dark">{{ ticket.get_status_display }}</span>
-                {% else %}
-                <span class="badge bg-success">{{ ticket.get_status_display }}</span>
-                {% endif %}
+                <span class="badge {{ ticket.status_badge_class }}">{{ ticket.get_status_display }}</span>
             </div>
             <div class="col-md-4">
                 <strong>Приоритет:</strong>
-                {% if ticket.priority == 3 %}
-                <span class="badge bg-danger">{{ ticket.get_priority_display }}</span>
-                {% elif ticket.priority == 2 %}
-                <span class="badge bg-warning text-dark">{{ ticket.get_priority_display }}</span>
-                {% else %}
-                <span class="badge bg-secondary">{{ ticket.get_priority_display }}</span>
-                {% endif %}
+                <span class="badge {{ ticket.priority_badge_class }}">{{ ticket.get_priority_display }}</span>
             </div>
             <div class="col-md-4">
                 <strong>Крайний срок:</strong> {% if ticket.due_date %}{{ ticket.due_date|date:"d.m.Y" }}{% else %}&mdash;{% endif %}

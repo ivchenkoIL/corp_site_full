@@ -83,6 +83,22 @@ class TicketCreateViewTests(TestCase):
         self.assertEqual(ticket.title, "Новая заявка")
         self.assertRedirects(response, reverse("ticket_detail", args=[ticket.pk]))
 
+    def test_create_ticket_shows_success_message(self):
+        data = {
+            "title": "Новая заявка",
+            "description": "Описание заявки",
+            "status": "new",
+            "priority": 2,
+        }
+        response = self.client.post(reverse("ticket_create"), data, follow=True)
+        self.assertContains(response, "Заявка создана.")
+
+    def test_create_invalid_shows_errors(self):
+        response = self.client.post(reverse("ticket_create"), {"title": ""})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Ticket.objects.count(), 0)
+        self.assertContains(response, "Обязательное поле")
+
 
 class TicketUpdateViewTests(TestCase):
     def setUp(self):
@@ -151,3 +167,16 @@ class AddCommentTests(TestCase):
         self.assertRedirects(
             response, reverse("ticket_detail", args=[self.ticket.pk])
         )
+
+    def test_invalid_comment_shows_errors_and_keeps_text(self):
+        data = {
+            "author_name": "",
+            "message": "Текст без автора",
+        }
+        response = self.client.post(
+            reverse("ticket_add_comment", args=[self.ticket.pk]), data
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.ticket.comments.count(), 0)
+        self.assertContains(response, "Текст без автора")
+        self.assertContains(response, "Обязательное поле")

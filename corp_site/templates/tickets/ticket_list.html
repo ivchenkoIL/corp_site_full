@@ -21,22 +21,10 @@
             <tr>
                 <td><a href="{% url 'ticket_detail' ticket.pk %}">{{ ticket.title }}</a></td>
                 <td>
-                    {% if ticket.status == 'new' %}
-                    <span class="badge bg-primary">{{ ticket.get_status_display }}</span>
-                    {% elif ticket.status == 'in_progress' %}
-                    <span class="badge bg-warning text-dark">{{ ticket.get_status_display }}</span>
-                    {% else %}
-                    <span class="badge bg-success">{{ ticket.get_status_display }}</span>
-                    {% endif %}
+                    <span class="badge {{ ticket.status_badge_class }}">{{ ticket.get_status_display }}</span>
                 </td>
                 <td>
-                    {% if ticket.priority == 3 %}
-                    <span class="badge bg-danger">{{ ticket.get_priority_display }}</span>
-                    {% elif ticket.priority == 2 %}
-                    <span class="badge bg-warning text-dark">{{ ticket.get_priority_display }}</span>
-                    {% else %}
-                    <span class="badge bg-secondary">{{ ticket.get_priority_display }}</span>
-                    {% endif %}
+                    <span class="badge {{ ticket.priority_badge_class }}">{{ ticket.get_priority_display }}</span>
                 </td>
                 <td>{% if ticket.due_date %}{{ ticket.due_date|date:"d.m.Y" }}{% else %}&mdash;{% endif %}</td>
             </tr>

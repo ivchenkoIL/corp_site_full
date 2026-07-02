@@ -13,9 +13,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: "3.11"
       - name: Install linter
         run: |
           python -m pip install --upgrade pip
@@ -29,14 +29,14 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: [3.10, 3.11, 3.12]
+        # Версии обязательно в кавычках: без них YAML читает 3.10 как число 3.1.
+        python-version: ["3.10", "3.11", "3.12"]
     env:
-      DJANGO_SETTINGS_MODULE: corp_site.settings
       SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Cache pip
@@ -51,6 +51,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt --no-cache-dir
       - name: Check Django configuration
+        working-directory: corp_site
         run: python manage.py check
       - name: Run tests
+        working-directory: corp_site
         run: python manage.py test
