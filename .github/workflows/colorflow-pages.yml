@@ -20,9 +20,9 @@ concurrency:
 
 jobs:
   deploy:
-    # Без блока environment: пока Pages не включён, environment github-pages
-    # не существует, и job с ним падает мгновенно, не дойдя до шагов.
-    # configure-pages с enablement: true включает Pages при первом запуске.
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
