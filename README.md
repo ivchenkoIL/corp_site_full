@@ -39,6 +39,19 @@
 - Запуск dev-сервера: `python manage.py runserver`.
 - Запуск тестов: `python manage.py test`.
 
+## Деплой на Render
+
+Проект деплоится по Blueprint из `render.yaml`. Важно про базу данных:
+
+- Без переменной `DATABASE_URL` используется SQLite на диске контейнера. На Render диск **эфемерный** — данные стираются при каждом деплое и рестарте.
+- Чтобы данные сохранялись, создайте бесплатный Postgres (например, [Neon](https://neon.tech) или [Supabase](https://supabase.com)) и добавьте `DATABASE_URL` в переменные окружения сервиса в дашборде Render, например: `postgresql://user:password@host/dbname`.
+
+Домен `*.onrender.com` подхватывается автоматически (через `RENDER_EXTERNAL_HOSTNAME`), отдельно настраивать `ALLOWED_HOSTS` и `CSRF_TRUSTED_ORIGINS` не нужно.
+
+### Администратор на проде
+
+Редактирование и удаление заявок доступны только залогиненным пользователям. Чтобы создать администратора на Render, добавьте в переменные окружения сервиса `DJANGO_SUPERUSER_USERNAME`, `DJANGO_SUPERUSER_PASSWORD` (и опционально `DJANGO_SUPERUSER_EMAIL`) — пользователь создастся автоматически при следующем деплое. Локально: `python manage.py createsuperuser`.
+
 ## Частые проблемы
 
 - Ошибка `ModuleNotFoundError: No module named 'django'` означает, что зависимости не установлены. Проверьте, что из корня репозитория выполнили `pip install -r requirements.txt` и активировали виртуальное окружение.

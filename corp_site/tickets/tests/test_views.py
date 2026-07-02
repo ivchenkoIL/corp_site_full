@@ -1,5 +1,6 @@
 from datetime import date
 
+from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
 
@@ -83,6 +84,64 @@ class TicketCreateViewTests(TestCase):
         self.assertEqual(ticket.title, "Новая заявка")
         self.assertRedirects(response, reverse("ticket_detail", args=[ticket.pk]))
 
+    def test_create_ticket_shows_success_message(self):
+        data = {
+            "title": "Новая заявка",
+            "description": "Описание заявки",
+            "status": "new",
+            "priority": 2,
+        }
+        response = self.client.post(reverse("ticket_create"), data, follow=True)
+        self.assertContains(response, "Заявка создана.")
+
+    def test_create_invalid_shows_errors(self):
+        response = self.client.post(reverse("ticket_create"), {"title": ""})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Ticket.objects.count(), 0)
+        self.assertContains(response, "Обязательное поле")
+
+
+class TicketListFilterTests(TestCase):
+    def setUp(self):
+        self.printer = Ticket.objects.create(
+            title="Сломан принтер",
+            description="Не печатает",
+            status=Ticket.Status.NEW,
+            priority=Ticket.Priority.HIGH,
+        )
+        self.internet = Ticket.objects.create(
+            title="Нет интернета",
+            description="Второй этаж без сети",
+            status=Ticket.Status.IN_PROGRESS,
+            priority=Ticket.Priority.LOW,
+        )
+
+    def test_search_by_title(self):
+        response = self.client.get(reverse("ticket_list"), {"q": "принтер"})
+        self.assertContains(response, self.printer.title)
+        self.assertNotContains(response, self.internet.title)
+
+    def test_search_by_description(self):
+        # Регистр совпадает с описанием: SQLite сравнивает кириллицу
+        # в LIKE с учётом регистра (на Postgres поиск регистронезависимый).
+        response = self.client.get(reverse("ticket_list"), {"q": "Второй этаж"})
+        self.assertContains(response, self.internet.title)
+        self.assertNotContains(response, self.printer.title)
+
+    def test_filter_by_status(self):
+        response = self.client.get(reverse("ticket_list"), {"status": "in_progress"})
+        self.assertContains(response, self.internet.title)
+        self.assertNotContains(response, self.printer.title)
+
+    def test_filter_by_priority(self):
+        response = self.client.get(reverse("ticket_list"), {"priority": "3"})
+        self.assertContains(response, self.printer.title)
+        self.assertNotContains(response, self.internet.title)
+
+    def test_no_results_message(self):
+        response = self.client.get(reverse("ticket_list"), {"q": "несуществующее"})
+        self.assertContains(response, "По вашему запросу ничего не найдено")
+
 
 class TicketUpdateViewTests(TestCase):
     def setUp(self):
@@ -90,6 +149,14 @@ class TicketUpdateViewTests(TestCase):
             title="Старое название",
             description="Описание",
         )
+        self.user = User.objects.create_user("employee", password="test-pass-123")
+        self.client.force_login(self.user)
+
+    def test_anonymous_redirected_to_login(self):
+        self.client.logout()
+        url = reverse("ticket_update", args=[self.ticket.pk])
+        response = self.client.get(url)
+        self.assertRedirects(response, f"{reverse('login')}?next={url}")
 
     def test_update_ticket(self):
         data = {
@@ -113,6 +180,15 @@ class TicketDeleteViewTests(TestCase):
             title="Удалить меня",
             description="Описание",
         )
+        self.user = User.objects.create_user("employee", password="test-pass-123")
+        self.client.force_login(self.user)
+
+    def test_anonymous_redirected_to_login(self):
+        self.client.logout()
+        url = reverse("ticket_delete", args=[self.ticket.pk])
+        response = self.client.post(url)
+        self.assertRedirects(response, f"{reverse('login')}?next={url}")
+        self.assertEqual(Ticket.objects.count(), 1)
 
     def test_delete_ticket(self):
         response = self.client.post(
@@ -151,3 +227,16 @@ class AddCommentTests(TestCase):
         self.assertRedirects(
             response, reverse("ticket_detail", args=[self.ticket.pk])
         )
+
+    def test_invalid_comment_shows_errors_and_keeps_text(self):
+        data = {
+            "author_name": "",
+            "message": "Текст без автора",
+        }
+        response = self.client.post(
+            reverse("ticket_add_comment", args=[self.ticket.pk]), data
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(self.ticket.comments.count(), 0)
+        self.assertContains(response, "Текст без автора")
+        self.assertContains(response, "Обязательное поле")
