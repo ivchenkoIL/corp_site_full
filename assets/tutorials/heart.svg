@@ -1,0 +1,9 @@
+<!-- Heart — 2 mirrored cubic curves, drawn as a single continuous path.
+     Start at the bottom point, curve up to the top notch, then back down. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" fill="none">
+  <path d="M 540 820
+           C 230 580 220 320 540 420
+           C 860 320 850 580 540 820 Z"
+        stroke="#1a1a2e" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"
+        pathLength="100"/>
+</svg>

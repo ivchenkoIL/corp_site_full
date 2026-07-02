@@ -1,0 +1,10 @@
+<!-- 5-point star (pentagram) — the textbook one-line drawing.
+     5 straight segments, drawn without lifting the pen.
+     pathLength="100" lets the dash-offset animation work regardless of pixel length. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" fill="none">
+  <path d="M 540 220 L 728 799 L 236 441 L 844 441 L 352 799 Z"
+        stroke="#1a1a2e" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"
+        pathLength="100"/>
+  <!-- Step markers (numbered start of each segment). Hidden in actual canvas,
+       used by the tutorial panel which reads the JSON metadata instead. -->
+</svg>

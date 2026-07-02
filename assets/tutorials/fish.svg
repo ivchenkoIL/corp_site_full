@@ -1,0 +1,15 @@
+<!-- Fish in one continuous line. Start at the mouth, go up over the back,
+     out to the tail's upper fin tip, down to the lower tail tip, and back
+     under the belly to the mouth. Classic single-line subject. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" fill="none">
+  <path d="M 220 540
+           Q 220 360 540 360
+           Q 700 360 760 480
+           L 900 360
+           L 900 720
+           L 760 600
+           Q 700 720 540 720
+           Q 220 720 220 540 Z"
+        stroke="#1a1a2e" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"
+        pathLength="100"/>
+</svg>
