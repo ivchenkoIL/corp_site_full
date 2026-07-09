@@ -39,12 +39,29 @@
 - Запуск dev-сервера: `python manage.py runserver`.
 - Запуск тестов: `python manage.py test`.
 
+## Политика доступа
+
+- Просмотр, создание заявок и комментарии доступны **без входа** — это осознанное
+  решение для внутреннего инструмента с низким порогом подачи заявки.
+  Анонимные записи ограничены по частоте с одного IP (`tickets/throttle.py`),
+  политика зафиксирована тестами (`TicketAuthorTests`).
+- Редактирование и перенос в архив — только для залогиненных.
+- Удаление мягкое: заявка уходит в архив (`is_archived`) вместе с комментариями
+  и может быть восстановлена; физического удаления из интерфейса нет.
+
 ## Деплой на Render
 
-Проект деплоится по Blueprint из `render.yaml`. Важно про базу данных:
+Проект деплоится по Blueprint из `render.yaml`.
 
-- Без переменной `DATABASE_URL` используется SQLite на диске контейнера. На Render диск **эфемерный** — данные стираются при каждом деплое и рестарте.
-- Чтобы данные сохранялись, создайте бесплатный Postgres (например, [Neon](https://neon.tech) или [Supabase](https://supabase.com)) и добавьте `DATABASE_URL` в переменные окружения сервиса в дашборде Render, например: `postgresql://user:password@host/dbname`.
+- **`DATABASE_URL` обязателен.** Без него приложение намеренно не стартует
+  (fail-fast в `settings.py`): на эфемерном диске Render SQLite терял бы данные
+  при каждом деплое. Создайте бесплатный Postgres (например, [Neon](https://neon.tech)
+  или [Supabase](https://supabase.com)) и добавьте `DATABASE_URL` в переменные
+  окружения сервиса: `postgresql://user:password@host/dbname`.
+- **Деплой гейтится на CI.** `autoDeploy` в `render.yaml` выключен; после зелёных
+  тестов на `main` job `deploy` в `.github/workflows/django.yml` дёргает deploy-хук.
+  Для этого добавьте секрет `RENDER_DEPLOY_HOOK_URL` (Render Dashboard → corp-site →
+  Settings → Deploy Hook) в GitHub → Settings → Secrets → Actions.
 
 Домен `*.onrender.com` подхватывается автоматически (через `RENDER_EXTERNAL_HOSTNAME`), отдельно настраивать `ALLOWED_HOSTS` и `CSRF_TRUSTED_ORIGINS` не нужно.
 

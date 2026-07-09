@@ -1,10 +1,12 @@
 from datetime import date
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 
 from tickets.models import Comment, Ticket
+from tickets.views import ANON_TICKETS_PER_HOUR
 
 
 class TicketListViewTests(TestCase):
@@ -190,12 +192,41 @@ class TicketDeleteViewTests(TestCase):
         self.assertRedirects(response, f"{reverse('login')}?next={url}")
         self.assertEqual(Ticket.objects.count(), 1)
 
-    def test_delete_ticket(self):
+    def test_delete_archives_ticket(self):
+        # Удаление мягкое: запись остаётся в БД, но помечается архивной.
         response = self.client.post(
             reverse("ticket_delete", args=[self.ticket.pk])
         )
-        self.assertEqual(Ticket.objects.count(), 0)
+        self.assertEqual(Ticket.objects.count(), 1)
+        self.ticket.refresh_from_db()
+        self.assertTrue(self.ticket.is_archived)
         self.assertRedirects(response, "/tickets/")
+
+    def test_archived_hidden_from_list_but_shown_in_archive(self):
+        self.client.post(reverse("ticket_delete", args=[self.ticket.pk]))
+
+        response = self.client.get(reverse("ticket_list"))
+        self.assertNotContains(response, self.ticket.title)
+
+        response = self.client.get(reverse("ticket_list"), {"archived": "1"})
+        self.assertContains(response, self.ticket.title)
+
+    def test_restore_ticket(self):
+        self.client.post(reverse("ticket_delete", args=[self.ticket.pk]))
+
+        response = self.client.post(reverse("ticket_restore", args=[self.ticket.pk]))
+
+        self.ticket.refresh_from_db()
+        self.assertFalse(self.ticket.is_archived)
+        self.assertRedirects(response, reverse("ticket_detail", args=[self.ticket.pk]))
+
+    def test_archive_view_hidden_for_anonymous(self):
+        self.client.post(reverse("ticket_delete", args=[self.ticket.pk]))
+        self.client.logout()
+
+        # Аноним не видит архив даже с параметром archived=1.
+        response = self.client.get(reverse("ticket_list"), {"archived": "1"})
+        self.assertNotContains(response, self.ticket.title)
 
 
 class AddCommentTests(TestCase):
@@ -240,3 +271,106 @@ class AddCommentTests(TestCase):
         self.assertEqual(self.ticket.comments.count(), 0)
         self.assertContains(response, "Текст без автора")
         self.assertContains(response, "Обязательное поле")
+
+
+class CommentAuthorTests(TestCase):
+    def setUp(self):
+        self.ticket = Ticket.objects.create(title="Тикет", description="Описание")
+        self.user = User.objects.create_user(
+            "employee", password="test-pass-123", first_name="Пётр", last_name="Иванов"
+        )
+
+    def test_authenticated_comment_uses_account_name(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse("ticket_add_comment", args=[self.ticket.pk]),
+            {"message": "Комментарий сотрудника"},
+        )
+        comment = self.ticket.comments.get()
+        self.assertEqual(comment.author, self.user)
+        self.assertEqual(comment.author_name, "Пётр Иванов")
+        self.assertRedirects(response, reverse("ticket_detail", args=[self.ticket.pk]))
+
+    def test_authenticated_form_has_no_author_field(self):
+        self.client.force_login(self.user)
+        response = self.client.get(reverse("ticket_detail", args=[self.ticket.pk]))
+        self.assertNotContains(response, 'name="author_name"')
+
+
+class TicketAuthorTests(TestCase):
+    def test_authenticated_create_sets_created_by(self):
+        user = User.objects.create_user("employee", password="test-pass-123")
+        self.client.force_login(user)
+        self.client.post(
+            reverse("ticket_create"),
+            {"title": "Заявка", "description": "Текст", "status": "new", "priority": 2},
+        )
+        ticket = Ticket.objects.get()
+        self.assertEqual(ticket.created_by, user)
+
+    def test_anonymous_create_allowed_without_author(self):
+        # Политика доступа: анонимная подача заявок разрешена (см. README).
+        # Тест фиксирует её, чтобы смена политики была осознанной.
+        self.client.post(
+            reverse("ticket_create"),
+            {"title": "Анонимная заявка", "description": "Текст", "status": "new", "priority": 2},
+        )
+        ticket = Ticket.objects.get()
+        self.assertIsNone(ticket.created_by)
+
+
+class RateLimitTests(TestCase):
+    def setUp(self):
+        cache.clear()
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_anonymous_ticket_creation_is_throttled(self):
+        data = {"title": "Заявка", "description": "Текст", "status": "new", "priority": 2}
+        for _ in range(ANON_TICKETS_PER_HOUR):
+            self.client.post(reverse("ticket_create"), data)
+        self.assertEqual(Ticket.objects.count(), ANON_TICKETS_PER_HOUR)
+
+        response = self.client.post(reverse("ticket_create"), data, follow=True)
+
+        self.assertEqual(Ticket.objects.count(), ANON_TICKETS_PER_HOUR)
+        self.assertContains(response, "Слишком много заявок")
+
+    def test_authenticated_user_not_throttled(self):
+        user = User.objects.create_user("employee", password="test-pass-123")
+        self.client.force_login(user)
+        data = {"title": "Заявка", "description": "Текст", "status": "new", "priority": 2}
+        for _ in range(ANON_TICKETS_PER_HOUR + 1):
+            self.client.post(reverse("ticket_create"), data)
+        self.assertEqual(Ticket.objects.count(), ANON_TICKETS_PER_HOUR + 1)
+
+
+class PaginationTests(TestCase):
+    def setUp(self):
+        for i in range(11):
+            Ticket.objects.create(
+                title=f"Заявка {i}",
+                description="Текст",
+                priority=Ticket.Priority.HIGH,
+            )
+
+    def test_second_page_exists(self):
+        response = self.client.get(reverse("ticket_list"), {"page": 2})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["tickets"]), 1)
+
+    def test_pagination_preserves_filters(self):
+        response = self.client.get(reverse("ticket_list"), {"priority": "3"})
+        self.assertEqual(response.context["querystring"], "priority=3")
+        self.assertContains(response, "?page=2&amp;priority=3")
+
+
+class StaticAssetsTests(TestCase):
+    def test_vendored_bootstrap_is_discoverable(self):
+        # Регрессия: STATICFILES_DIRS должен включать каталог static/ проекта,
+        # иначе вендоренный Bootstrap не отдаётся ни dev-сервером, ни collectstatic.
+        from django.contrib.staticfiles import finders
+
+        self.assertIsNotNone(finders.find("vendor/bootstrap/bootstrap.min.css"))
+        self.assertIsNotNone(finders.find("vendor/bootstrap/bootstrap.bundle.min.js"))

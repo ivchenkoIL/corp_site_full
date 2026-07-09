@@ -5,7 +5,9 @@ services:
     plan: free
     buildCommand: "./bin/build.sh"
     startCommand: "cd corp_site && gunicorn corp_site.wsgi:application --bind 0.0.0.0:$PORT"
-    autoDeploy: true
+    # Деплой запускается deploy-хуком из GitHub Actions после зелёного CI
+    # (job "deploy" в .github/workflows/django.yml), а не каждым пушем в main.
+    autoDeploy: false
     envVars:
       - key: DEBUG
         value: "False"

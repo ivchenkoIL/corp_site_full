@@ -17,3 +17,7 @@ db.sqlite3
 
 # Static build artifacts
 staticfiles/
+
+# Coverage artifacts
+.coverage
+htmlcov/

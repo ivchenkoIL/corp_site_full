@@ -31,8 +31,6 @@ jobs:
       matrix:
         # Версии обязательно в кавычках: без них YAML читает 3.10 как число 3.1.
         python-version: ["3.10", "3.11", "3.12"]
-    env:
-      SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -49,10 +47,33 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt --no-cache-dir
+          pip install -r requirements.txt coverage --no-cache-dir
       - name: Check Django configuration
         working-directory: corp_site
         run: python manage.py check
-      - name: Run tests
+      - name: Run tests with coverage
         working-directory: corp_site
-        run: python manage.py test
+        run: |
+          coverage run manage.py test
+          coverage report --fail-under=75
+
+  # Деплой гейтится на зелёный CI: в render.yaml autoDeploy выключен,
+  # Render деплоит только по этому хуку после успешных тестов на main.
+  # Секрет RENDER_DEPLOY_HOOK_URL: Render Dashboard -> corp-site ->
+  # Settings -> Deploy Hook, затем GitHub -> Settings -> Secrets -> Actions.
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-22.04
+    timeout-minutes: 5
+    steps:
+      - name: Trigger Render deploy
+        env:
+          DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "::warning::Секрет RENDER_DEPLOY_HOOK_URL не задан — деплой пропущен."
+            exit 0
+          fi
+          curl -fsS -X POST "$DEPLOY_HOOK" > /dev/null
+          echo "Деплой Render запущен."

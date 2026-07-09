@@ -1,11 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Удалить заявку{% endblock %}
+{% block title %}В архив{% endblock %}
 {% block content %}
-<h1>Удалить заявку</h1>
-<p>Вы уверены, что хотите удалить заявку &laquo;{{ ticket.title }}&raquo;?</p>
+<h1>Перенести заявку в архив</h1>
+<p>Заявка &laquo;{{ ticket.title }}&raquo; будет скрыта из списка, но сохранится
+    в архиве вместе с комментариями. Восстановить её можно со страницы заявки.</p>
 <form method="post">
     {% csrf_token %}
-    <button type="submit" class="btn btn-danger">Удалить</button>
+    <button type="submit" class="btn btn-danger">В архив</button>
     <a href="{% url 'ticket_detail' ticket.pk %}" class="btn btn-secondary">Отмена</a>
 </form>
 {% endblock %}
