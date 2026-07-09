@@ -2,11 +2,20 @@
 {% block title %}{{ ticket.title }}{% endblock %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1>{{ ticket.title }}</h1>
+    <h1>{{ ticket.title }}
+        {% if ticket.is_archived %}<span class="badge bg-secondary align-middle">В архиве</span>{% endif %}
+    </h1>
     {% if user.is_authenticated %}
     <div>
+        {% if ticket.is_archived %}
+        <form method="post" action="{% url 'ticket_restore' ticket.pk %}" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-success btn-sm">Восстановить</button>
+        </form>
+        {% else %}
         <a href="{% url 'ticket_update' ticket.pk %}" class="btn btn-outline-primary btn-sm">Редактировать</a>
-        <a href="{% url 'ticket_delete' ticket.pk %}" class="btn btn-outline-danger btn-sm">Удалить</a>
+        <a href="{% url 'ticket_delete' ticket.pk %}" class="btn btn-outline-danger btn-sm">В архив</a>
+        {% endif %}
     </div>
     {% endif %}
 </div>
@@ -25,6 +34,16 @@
             </div>
             <div class="col-md-4">
                 <strong>Крайний срок:</strong> {% if ticket.due_date %}{{ ticket.due_date|date:"d.m.Y" }}{% else %}&mdash;{% endif %}
+            </div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-md-4">
+                <strong>Автор:</strong>
+                {% if ticket.created_by %}{{ ticket.created_by.get_full_name|default:ticket.created_by.username }}{% else %}аноним{% endif %}
+            </div>
+            <div class="col-md-4">
+                <strong>Исполнитель:</strong>
+                {% if ticket.assigned_to %}{{ ticket.assigned_to.get_full_name|default:ticket.assigned_to.username }}{% else %}не назначен{% endif %}
             </div>
         </div>
     </div>

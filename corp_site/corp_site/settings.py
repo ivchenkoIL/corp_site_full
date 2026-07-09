@@ -85,9 +85,17 @@ TEMPLATES = [
 WSGI_APPLICATION = 'corp_site.wsgi.application'
 
 
-# Database. Локально — SQLite; на проде задайте DATABASE_URL
-# (например, Postgres от Neon/Supabase), иначе на Render данные
-# будут стираться при каждом деплое из-за эфемерного диска.
+# Database. Локально — SQLite; на проде DATABASE_URL обязателен.
+# Fail-fast: без него на Render использовался бы SQLite на эфемерном
+# диске, и данные молча терялись бы при каждом деплое и рестарте.
+if IS_RENDER and not os.environ.get('DATABASE_URL'):
+    raise ImproperlyConfigured(
+        'На Render обязателен DATABASE_URL: без него данные хранятся в SQLite '
+        'на эфемерном диске и теряются при каждом деплое. Создайте Postgres '
+        '(Neon, Supabase или Render Postgres) и добавьте DATABASE_URL '
+        'в переменные окружения сервиса.'
+    )
+
 DATABASES = {
     'default': dj_database_url.config(
         default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
@@ -126,11 +134,20 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-STORAGES = {
-    'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
-    },
-}
+# Манифест-хранилище (хеши в именах файлов) — только на проде: локально и
+# в тестах манифест не собран, и {% static %} падал бы без collectstatic.
+if IS_RENDER:
+    STORAGES = {
+        'staticfiles': {
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        },
+    }
+else:
+    STORAGES = {
+        'staticfiles': {
+            'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+        },
+    }
 
 
 # Auth
