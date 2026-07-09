@@ -133,6 +133,9 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Статика уровня проекта (вендоренный Bootstrap) — вне приложений,
+# поэтому каталог нужно объявить явно, иначе finders её не видят.
+STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # Манифест-хранилище (хеши в именах файлов) — только на проде: локально и
 # в тестах манифест не собран, и {% static %} падал бы без collectstatic.

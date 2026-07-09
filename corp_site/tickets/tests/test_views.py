@@ -364,3 +364,13 @@ class PaginationTests(TestCase):
         response = self.client.get(reverse("ticket_list"), {"priority": "3"})
         self.assertEqual(response.context["querystring"], "priority=3")
         self.assertContains(response, "?page=2&amp;priority=3")
+
+
+class StaticAssetsTests(TestCase):
+    def test_vendored_bootstrap_is_discoverable(self):
+        # Регрессия: STATICFILES_DIRS должен включать каталог static/ проекта,
+        # иначе вендоренный Bootstrap не отдаётся ни dev-сервером, ни collectstatic.
+        from django.contrib.staticfiles import finders
+
+        self.assertIsNotNone(finders.find("vendor/bootstrap/bootstrap.min.css"))
+        self.assertIsNotNone(finders.find("vendor/bootstrap/bootstrap.bundle.min.js"))
