@@ -1,6 +1,6 @@
 # ColorFlow — браузерная разукрашка-рисовалка (PWA)
 
-Чистый HTML5 + CSS3 + vanilla JavaScript, без фреймворков. Pointer Events с pressure sensitivity, многослойность, глубокий undo/redo, 6 инструментов, palette-tabs, pinch-zoom, импорт фото, symmetry/мандала, timelapse, шаблоны для раскрашивания, AI-mock и галерея. Полноценный PWA: service worker, IndexedDB-автосейв, install prompt, offline.
+Чистый HTML5 + CSS3 + vanilla JavaScript, без фреймворков. Pointer Events с pressure sensitivity, многослойность, глубокий undo/redo, 6 инструментов, palette-tabs, pinch-zoom, импорт фото, symmetry/мандала, timelapse, шаблоны для раскрашивания, AI-генерация картинок (Reve API через backend-прокси), Magic Fill (mock) и галерея. Полноценный PWA: service worker, IndexedDB-автосейв, install prompt, offline.
 
 ## Запуск локально
 
@@ -85,6 +85,7 @@ python bin/generate_pwa_icons.py
 ## API расширения
 
 * `window.CF_AI_ENDPOINT = 'https://your-backend/magic'` — если задано до загрузки UI, кнопка «Magic Fill» постит активный слой как PNG и заменяет его ответом сервера. По умолчанию работает локальный фоллбек (saturate + contrast filter).
+* `window.CF_AI_GENERATE_ENDPOINT = 'https://your-backend/api/ai/generate/'` — адрес Django-прокси для генерации картинок по описанию (меню → «AI-картинка 🪄»). Endpoint также можно поменять прямо в диалоге (сохраняется в localStorage). Сервер держит ключ Reve API у себя и ограничивает число генераций в сутки (`AI_DAILY_LIMIT`, по умолчанию 40).
 
 ## Лицензия
 

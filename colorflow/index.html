@@ -163,6 +163,9 @@
         <button type="button" class="menu-item" data-action="tutorial">
           <span class="menu-emoji">✏️</span><span>Урок одной линией</span>
         </button>
+        <button type="button" class="menu-item" data-action="aigen">
+          <span class="menu-emoji">🪄</span><span>AI-картинка</span>
+        </button>
         <button type="button" class="menu-item" data-action="gallery">
           <span class="menu-emoji">🖼</span><span>Моя галерея</span>
         </button>
@@ -183,6 +186,33 @@
       </label>
       <menu class="cf-actions">
         <button value="cancel" class="btn btn-ghost">Закрыть</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog class="cf-dialog" id="dlg-aigen" aria-label="AI-генерация картинки">
+    <form method="dialog" class="cf-dialog-body">
+      <h3>AI-картинка ✨</h3>
+      <p class="cf-hint">Опиши, что нарисовать — картинка сгенерируется через Reve AI и ляжет новым слоем. Например: «контурная раскраска: дракон в замке, чёткие чёрные линии, белый фон».</p>
+      <textarea id="aigen-prompt" rows="3" maxlength="2560" placeholder="Что нарисовать?" style="width:100%;resize:vertical"></textarea>
+      <label class="cp-row"><span>Формат</span>
+        <select id="aigen-aspect">
+          <option value="1:1" selected>Квадрат 1:1</option>
+          <option value="3:2">Альбомный 3:2</option>
+          <option value="2:3">Портретный 2:3</option>
+          <option value="16:9">Широкий 16:9</option>
+        </select>
+      </label>
+      <details>
+        <summary class="cf-hint">Настройки сервера</summary>
+        <label class="cp-row" style="margin-top:8px"><span>Endpoint</span>
+          <input id="aigen-endpoint" type="url" placeholder="https://…/api/ai/generate/" style="width:100%">
+        </label>
+      </details>
+      <p class="cf-hint" id="aigen-status" aria-live="polite"></p>
+      <menu class="cf-actions">
+        <button value="cancel" class="btn btn-ghost" type="button" id="aigen-cancel">Закрыть</button>
+        <button type="button" class="btn btn-primary" id="aigen-go">Сгенерировать</button>
       </menu>
     </form>
   </dialog>
