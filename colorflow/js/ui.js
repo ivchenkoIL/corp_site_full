@@ -109,6 +109,7 @@
       this.bindKidUI();
       this.bindMenu();
       this.bindMagicFill();
+      this.bindAiGenerate();
       this.bindTimelapse();
       this.bindGallery();
       this.setColor(this.recent[0] || '#6366f1');
@@ -570,6 +571,77 @@
       });
     },
 
+    // ---------------- AI image generation (Reve API через backend-прокси) ----------------
+    // Ключ Reve хранится на сервере (Django, /api/ai/generate/), сюда приходит
+    // только готовый PNG в base64. Endpoint настраивается и запоминается.
+    _aiEndpoint() {
+      return (
+        window.CFStorage.get('aigenEndpoint', '') ||
+        window.CF_AI_GENERATE_ENDPOINT ||
+        'https://corp-site.onrender.com/api/ai/generate/'
+      );
+    },
+
+    _openAiGenerate() {
+      const dlg = $('#dlg-aigen');
+      $('#aigen-endpoint').value = this._aiEndpoint();
+      $('#aigen-status').textContent = '';
+      if (typeof dlg.showModal === 'function') dlg.showModal();
+      // Показываем остаток дневного лимита, не блокируя открытие диалога.
+      fetch(this._aiEndpoint(), { method: 'GET' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((s) => {
+          if (!s || !dlg.open) return;
+          $('#aigen-status').textContent = s.configured
+            ? `Осталось сегодня: ${s.remaining_today} из ${s.daily_limit}`
+            : 'На сервере не настроен ключ Reve API.';
+        })
+        .catch(() => { /* сервер спит или офлайн — статус просто не покажем */ });
+    },
+
+    bindAiGenerate() {
+      const dlg = $('#dlg-aigen');
+      if (!dlg) return;
+      $('#aigen-cancel')?.addEventListener('click', () => dlg.close());
+      const go = $('#aigen-go');
+      const status = $('#aigen-status');
+
+      go.addEventListener('click', async () => {
+        const prompt = $('#aigen-prompt').value.trim();
+        if (!prompt) { status.textContent = 'Напиши, что нарисовать.'; return; }
+        const endpoint = $('#aigen-endpoint').value.trim() || this._aiEndpoint();
+        window.CFStorage.set('aigenEndpoint', endpoint);
+
+        go.disabled = true;
+        const orig = go.textContent;
+        go.textContent = 'Генерирую…';
+        status.textContent = 'Обычно 10–30 секунд. Бесплатный сервер мог уснуть — первый запрос может быть дольше.';
+        try {
+          const res = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, aspect_ratio: $('#aigen-aspect').value }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || `Ошибка сервера (${res.status})`);
+          if (!data.image) throw new Error('Сервер не вернул картинку.');
+
+          // base64 → File → новый слой через существующий importImage().
+          const bytes = Uint8Array.from(atob(data.image), (c) => c.charCodeAt(0));
+          const file = new File([bytes], 'ai-image.png', { type: data.content_type || 'image/png' });
+          await this.engine.importImage(file);
+
+          const left = data.remaining_today != null ? ` Осталось сегодня: ${data.remaining_today}.` : '';
+          status.textContent = `Готово! Картинка добавлена новым слоем.${left}`;
+        } catch (err) {
+          status.textContent = `Не получилось: ${err?.message || err}`;
+        } finally {
+          go.disabled = false;
+          go.textContent = orig;
+        }
+      });
+    },
+
     // ---------------- Timelapse ----------------
     bindTimelapse() {
       const btn = $('#btn-timelapse');
@@ -909,6 +981,7 @@
         case 'tutorial':  $('#btn-tutorial')?.click(); break;
         case 'gallery':   $('#btn-gallery')?.click(); break;
         case 'theme':     this.cycleTheme(); break;
+        case 'aigen':     this._openAiGenerate(); break;
         case 'install':   $('#btn-install')?.click(); break;
         case 'save-jpg':  this.exportImage('jpg'); break;
       }

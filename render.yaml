@@ -15,3 +15,10 @@ services:
         generateValue: true
       - key: PYTHON_VERSION
         value: "3.11.6"
+      # Ключ Reve API задаётся вручную в Render Dashboard (Environment),
+      # sync: false запрещает хранить его в репозитории.
+      - key: REVE_API_KEY
+        sync: false
+      # Сколько AI-генераций в сутки разрешает наш сервер (защита кредитов).
+      - key: AI_DAILY_LIMIT
+        value: "40"

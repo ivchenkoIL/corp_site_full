@@ -51,6 +51,7 @@ INSTALLED_APPS = [
 
     # Local apps
     'tickets.apps.TicketsConfig',
+    'aigen.apps.AigenConfig',
 ]
 
 MIDDLEWARE = [
