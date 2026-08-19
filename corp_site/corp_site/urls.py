@@ -24,5 +24,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("django.contrib.auth.urls")),
     path("tickets/", include("tickets.urls")),
+    path("api/ai/", include("aigen.urls")),
     path("", RedirectView.as_view(url="tickets/")),
 ]
