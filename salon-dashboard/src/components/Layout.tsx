@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 import { Link, useLocation } from 'wouter'
 import {
-  BarChart3, Calculator, Cpu, LineChart, Newspaper, Scissors, Users,
+  ArrowLeft, BarChart3, Calculator, Cpu, LineChart, Newspaper,
 } from 'lucide-react'
 import { REPORT } from '../data/report'
+import { useSummary } from '../hooks/useSummary'
 import { fmtDate } from '../lib/format'
 
 const MAIN_NAV = [
@@ -12,23 +13,15 @@ const MAIN_NAV = [
   { href: '/models', label: 'Модели', icon: Cpu },
   { href: '/prices', label: 'Цены', icon: LineChart },
   { href: '/calculator', label: 'Калькулятор', icon: Calculator },
-  { href: '/salon', label: 'Салон', icon: Scissors },
-]
-
-const SALON_NAV = [
-  { href: '/salon', label: 'Дашборд', icon: BarChart3 },
-  { href: '/salon/masters', label: 'Мастера', icon: Users },
-  { href: '/salon/history', label: 'История', icon: LineChart },
-  { href: '/salon/calculator', label: 'Калькулятор', icon: Calculator },
 ]
 
 export default function Layout({ children }: { children: ReactNode }) {
   const [location] = useLocation()
-  const inSalon = location.startsWith('/salon')
+  // дата выпуска в подвале — из той же сводки, что и на дашборде
+  const summary = useSummary()
 
   const isActive = (href: string) => {
     if (href === '/') return location === '/'
-    if (href === '/salon') return inSalon
     return location.startsWith(href)
   }
 
@@ -36,9 +29,17 @@ export default function Layout({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur">
         <div className="container flex flex-wrap items-center justify-between gap-x-6 gap-y-2 py-3">
+          <div className="flex items-center gap-3">
+          <a
+            href="/"
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <ArrowLeft size={15} aria-hidden /> Назад на портал
+          </a>
           <Link href="/" className="text-lg font-bold tracking-tight text-foreground">
             Мониторинг<span className="text-secondary">·</span>ИИ
           </Link>
+          </div>
           <nav aria-label="Основная навигация" className="flex flex-wrap gap-1">
             {MAIN_NAV.map(({ href, label, icon: Icon }) => (
               <Link
@@ -56,42 +57,13 @@ export default function Layout({ children }: { children: ReactNode }) {
             ))}
           </nav>
         </div>
-        {inSalon && (
-          <div className="border-t border-border bg-background/60">
-            <nav
-              aria-label="Раздел салона"
-              className="container flex flex-wrap gap-1 py-1.5"
-            >
-              {SALON_NAV.map(({ href, label, icon: Icon }) => {
-                const active =
-                  href === '/salon' ? location === '/salon' : location.startsWith(href)
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                      active
-                        ? 'bg-secondary/15 text-foreground'
-                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    }`}
-                  >
-                    <Icon size={13} aria-hidden />
-                    {label}
-                  </Link>
-                )
-              })}
-            </nav>
-          </div>
-        )}
       </header>
 
       <main className="container py-8">{children}</main>
 
       <footer className="border-t border-border py-6">
         <div className="container text-sm text-muted-foreground">
-          {inSalon
-            ? 'Данные: выгрузка salonbackup от 6 авг 2026 · vest-smr.ru'
-            : `${REPORT.author} · выпуск ${fmtDate(REPORT.date)} · vest-smr.ru`}
+          {`${REPORT.author} · выпуск ${fmtDate(summary.date)} · vest-smr.ru`}
         </div>
       </footer>
     </div>

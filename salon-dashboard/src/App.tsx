@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Route, Switch } from 'wouter'
+import { Route, Router, Switch } from 'wouter'
 import Layout from './components/Layout'
 
 /* Страницы грузятся по требованию: recharts и выгрузка салона (388 КБ JSON)
@@ -10,10 +10,6 @@ const NewsDetail = lazy(() => import('./pages/NewsDetail'))
 const ModelsComparison = lazy(() => import('./pages/ModelsComparison'))
 const PriceHistory = lazy(() => import('./pages/PriceHistory'))
 const CostCalculator = lazy(() => import('./pages/CostCalculator'))
-const SalonDashboard = lazy(() => import('./pages/SalonDashboard'))
-const Masters = lazy(() => import('./pages/Masters'))
-const History = lazy(() => import('./pages/History'))
-const SalonCalculator = lazy(() => import('./pages/SalonCalculator'))
 
 function PageFallback() {
   return (
@@ -24,7 +20,10 @@ function PageFallback() {
 }
 
 export default function App() {
+  /* Дашборд смонтирован под /news/ внутри портала vest-smr.ru:
+     base задаёт префикс и для маршрутов, и для <Link>. */
   return (
+    <Router base="/news">
     <Layout>
       <Suspense fallback={<PageFallback />}>
         <Switch>
@@ -34,10 +33,6 @@ export default function App() {
           <Route path="/models" component={ModelsComparison} />
           <Route path="/prices" component={PriceHistory} />
           <Route path="/calculator" component={CostCalculator} />
-          <Route path="/salon" component={SalonDashboard} />
-          <Route path="/salon/masters" component={Masters} />
-          <Route path="/salon/history" component={History} />
-          <Route path="/salon/calculator" component={SalonCalculator} />
           <Route>
             <div className="container py-16 text-center text-muted-foreground">
               Страница не найдена
@@ -46,5 +41,6 @@ export default function App() {
         </Switch>
       </Suspense>
     </Layout>
+    </Router>
   )
 }

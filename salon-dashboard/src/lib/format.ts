@@ -22,6 +22,12 @@ export function pluralRu(n: number, one: string, few: string, many: string): str
   return many
 }
 
+/* Файлы дайджеста (картинки, news.json) лежат рядом со сборкой, в data/.
+   BASE_URL подставляет Vite — тот же префикс, под которым смонтирован SPA. */
+export function assetUrl(rel: string): string {
+  return `${import.meta.env.BASE_URL}data/${rel.replace(/^\/+/, '')}`
+}
+
 export function fmtDate(iso: string): string {
   const d = new Date(iso.length === 10 ? iso + 'T12:00:00' : iso)
   // news.json приходит извне: битая или пустая дата не должна давать «NaN undefined NaN»

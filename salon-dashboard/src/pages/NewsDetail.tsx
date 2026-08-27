@@ -1,12 +1,12 @@
 import { Link, useRoute } from 'wouter'
-import { ArrowLeft, ExternalLink, Star } from 'lucide-react'
+import { ArrowLeft, ExternalLink, PlayCircle, Star, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { ShareMenu } from '../components/ShareMenu'
 import { useFavorites } from '../hooks/useFavorites'
 import { useNews } from '../hooks/useNews'
-import { fmtDate } from '../lib/format'
+import { assetUrl, fmtDate } from '../lib/format'
 
 export default function NewsDetail() {
   const [, params] = useRoute('/news/:id')
@@ -43,6 +43,34 @@ export default function NewsDetail() {
           <span className="text-sm text-muted-foreground">{fmtDate(item.date)}</span>
         </div>
         <h1 className="mt-3 text-3xl font-bold leading-tight">{item.title}</h1>
+
+        {item.image && (
+          <figure className="mt-5">
+            <img
+              src={assetUrl(item.image.src)}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="w-full rounded-lg border border-border object-cover"
+            />
+            {item.image.credit && (
+              <figcaption className="mt-1.5 text-xs text-muted-foreground">
+                Иллюстрация: {item.image.credit}
+              </figcaption>
+            )}
+          </figure>
+        )}
+
+        {item.video && (
+          <a
+            href={item.video.url}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="mt-4 inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-medium text-secondary hover:bg-muted"
+          >
+            <PlayCircle size={17} /> {item.video.label ?? 'Видео у источника'}
+          </a>
+        )}
         <div className="mt-5 flex flex-col gap-4">
           {item.body.map((p, i) => (
             <p key={i} className="text-lg leading-relaxed text-foreground/90">
@@ -51,6 +79,77 @@ export default function NewsDetail() {
           ))}
         </div>
       </article>
+
+      {item.forecast && item.forecast.length > 0 && (
+        <section className="rounded-lg border border-l-4 border-border border-l-secondary bg-card p-5">
+          <h2 className="flex items-center gap-2 text-lg font-bold">
+            <TrendingUp size={18} className="text-secondary" /> Что из этого следует
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Прогноз построен по новостям выпуска и прошлым выпускам. Это оценка, а не факт.
+          </p>
+          <ul className="mt-4 flex flex-col gap-4">
+            {item.forecast.map((f, i) => (
+              <li key={i} className="flex gap-3">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-xs font-bold text-secondary">
+                  {i + 1}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm leading-relaxed">{f.text}</p>
+
+                  {/* Срок и уверенность — подписи из фиксированных списков
+                      (см. HORIZONS/CONFIDENCE в scripts/update-news.mjs).
+                      Модель иногда возвращает не то значение — генератор в
+                      таком случае оставляет поле пустым, и чипа просто нет. */}
+                  {(f.horizon || f.confidence) && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {f.horizon && (
+                        <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                          Срок: {f.horizon}
+                        </span>
+                      )}
+                      {f.confidence && (
+                        <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                          Уверенность: {f.confidence}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {(f.impact || f.signal || f.risk || f.basis) && (
+                    <dl className="mt-2 flex flex-col gap-1 text-xs text-muted-foreground">
+                      {f.impact && (
+                        <div>
+                          <dt className="inline font-medium text-foreground/80">Кого касается: </dt>
+                          <dd className="inline">{f.impact}</dd>
+                        </div>
+                      )}
+                      {f.signal && (
+                        <div>
+                          <dt className="inline font-medium text-foreground/80">Признак: </dt>
+                          <dd className="inline">{f.signal}</dd>
+                        </div>
+                      )}
+                      {f.risk && (
+                        <div>
+                          <dt className="inline font-medium text-foreground/80">Не сбудется, если: </dt>
+                          <dd className="inline">{f.risk}</dd>
+                        </div>
+                      )}
+                      {f.basis && (
+                        <div>
+                          <dt className="inline font-medium text-foreground/80">Основание: </dt>
+                          <dd className="inline">{f.basis}</dd>
+                        </div>
+                      )}
+                    </dl>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <ShareMenu title={item.title} path={`/news/${item.id}`} />

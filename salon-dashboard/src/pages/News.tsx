@@ -6,9 +6,11 @@ import { Badge } from '../components/ui/badge'
 import { useFavorites } from '../hooks/useFavorites'
 import { AI_TAGS, REPORT } from '../data/report'
 import { useNews } from '../hooks/useNews'
-import { fmtDate } from '../lib/format'
+import { assetUrl, fmtDate } from '../lib/format'
+import { useSummary } from '../hooks/useSummary'
 
 export default function News() {
+  const summary = useSummary()
   const [tag, setTag] = useState('Все')
   const [onlyFavorites, setOnlyFavorites] = useState(false)
   const { toggle, isFavorite } = useFavorites()
@@ -27,7 +29,7 @@ export default function News() {
       <div>
         <h1 className="text-3xl font-bold">Новости</h1>
         <p className="mt-1 text-muted-foreground">
-          Новостной канал мониторинга ИИ · выпуск {fmtDate(REPORT.date)} · {REPORT.author}
+          Новостной канал мониторинга ИИ · выпуск {fmtDate(summary.date)} · {REPORT.author}
         </p>
       </div>
 
@@ -67,7 +69,18 @@ export default function News() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {items.map((n) => (
-            <Card key={n.id} className="flex h-full flex-col transition-colors hover:border-secondary">
+            <Card key={n.id} className="flex h-full flex-col overflow-hidden transition-colors hover:border-secondary">
+              {n.image && (
+                <Link href={`/news/${n.id}`}>
+                  <img
+                    src={assetUrl(n.image.src)}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="h-44 w-full cursor-pointer object-cover"
+                  />
+                </Link>
+              )}
               <CardHeader>
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">

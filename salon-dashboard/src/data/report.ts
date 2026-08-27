@@ -5,6 +5,30 @@ export interface Source {
   label: string
   url: string
 }
+export interface NewsImage {
+  src: string      // путь относительно data/, например img/d20260811-2.jpg
+  credit?: string  // домен источника — подпись под картинкой
+}
+export interface NewsVideo {
+  url: string
+  label?: string
+}
+/* Прогноз: что следует из новости. basis — из чего сделан вывод (номера
+   новостей выпуска, дата прошлого выпуска). Это оценка, а не факт, и на
+   странице блок так и подписан. */
+export interface NewsForecast {
+  text: string
+  basis?: string
+  /* Разбор последствий: срок, уверенность, кого касается, наблюдаемый признак
+     и условие, при котором прогноз не сбудется. Все пять полей появились
+     позже самого прогноза и необязательны — выпуски из архива и старый
+     news.json содержат только text и basis. */
+  horizon?: string
+  confidence?: string
+  impact?: string
+  signal?: string
+  risk?: string
+}
 export interface AiNews {
   id: string
   date: string
@@ -13,6 +37,9 @@ export interface AiNews {
   summary: string
   body: string[]
   sources: Source[]
+  image?: NewsImage | null
+  video?: NewsVideo | null
+  forecast?: NewsForecast[]
 }
 export interface AiModel {
   company: string
@@ -32,7 +59,7 @@ export interface CalcModel {
 export const REPORT = {
   title: 'Еженедельный отчёт по мониторингу: индустрия ИИ и запуски продуктов конкурентов',
   date: '2026-08-08',
-  author: 'Manus AI',
+  author: 'Дайджест YandexGPT',
 }
 
 const SRC: Record<string, Source> = {

@@ -4,8 +4,9 @@ import { ArrowRight, Quote, TrendingDown, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
-import { AI_METRICS, AI_TAGS, RECOMMENDATIONS, REPORT } from '../data/report'
+import { AI_TAGS, REPORT } from '../data/report'
 import { useNews } from '../hooks/useNews'
+import { useSummary } from '../hooks/useSummary'
 import { fmtDate } from '../lib/format'
 
 const QUICK_LINKS = [
@@ -17,6 +18,7 @@ const QUICK_LINKS = [
 export default function AiDashboard() {
   const [activeCategory, setActiveCategory] = useState('Все')
   const allNews = useNews()
+  const summary = useSummary()
 
   const items = useMemo(
     () => allNews.filter((n) => activeCategory === 'Все' || n.tag === activeCategory),
@@ -28,14 +30,14 @@ export default function AiDashboard() {
       <section>
         <h1 className="text-3xl font-bold text-foreground">Дашборд мониторинга ИИ</h1>
         <p className="mt-1 text-muted-foreground">
-          {REPORT.title.split(':')[1].trim()} · выпуск {fmtDate(REPORT.date)} · {REPORT.author}
+          {REPORT.title.split(':')[1].trim()} · выпуск {fmtDate(summary.date)} · {REPORT.author}
         </p>
       </section>
 
       <section>
         <h2 className="mb-6 text-2xl font-bold">Основные показатели</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {AI_METRICS.map((m) => (
+          {summary.metrics.map((m) => (
             <Card key={m.label}>
               <CardHeader className="pb-0">
                 <CardTitle className="text-sm text-muted-foreground">{m.label}</CardTitle>
@@ -137,7 +139,7 @@ export default function AiDashboard() {
       <section>
         <h2 className="mb-4 text-2xl font-bold">Рекомендации для стратегии</h2>
         <div className="flex flex-col gap-3">
-          {RECOMMENDATIONS.map((r, i) => (
+          {summary.recommendations.map((r, i) => (
             <Card key={i}>
               <CardContent className="flex gap-4 p-4">
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-sm font-bold text-secondary">
