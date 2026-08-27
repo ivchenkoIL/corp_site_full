@@ -47,13 +47,8 @@ export interface AiModel {
   openWeight: boolean
   pricing?: string
   notes: string
-}
-export interface CalcModel {
-  name: string
-  inPrice: number // $ за 1 млн входных токенов
-  outPrice: number // $ за 1 млн выходных токенов
-  note?: string
-  estimated?: boolean
+  inPrice?: number  // $ за 1 млн входных токенов — только когда названа точная цифра
+  outPrice?: number // $ за 1 млн выходных токенов
 }
 
 export const REPORT = {
@@ -196,6 +191,9 @@ export const AI_METRICS = [
   { label: 'M&A и партнёрства', value: '3', dir: 'up' as const, good: true, note: 'Klaviyo, AWS, гиперскейлеры' },
 ]
 
+/* Этот снимок — только резервный вариант на случай, если сервер ещё ни разу
+   не собрал data/models.json (свежий деплой). Как только пройдёт первый прогон
+   с новостями рубрики «Релизы», useModels() подменит его живыми данными. */
 export const AI_MODELS: AiModel[] = [
   {
     company: 'DeepSeek',
@@ -204,14 +202,35 @@ export const AI_MODELS: AiModel[] = [
     pricing: '≈ на 99 % дешевле аналогов',
     notes:
       'Ретрейн от 31 июля: 284B MoE / 13B активных. Превосходит по агентским бенчмаркам более крупную V4-Pro при экстремально низкой стоимости.',
+    inPrice: 0.05,
+    outPrice: 0.3,
   },
   {
     company: 'OpenAI',
-    model: 'GPT-5.6 Sol / Terra / Luna',
+    model: 'GPT-5.6 Sol',
     openWeight: false,
-    pricing: 'Sol $5/$30 · Terra −50 % · Luna $1/$6 за 1M токенов',
-    notes:
-      'Трёхуровневая линейка: Sol — флагман для рассуждения и кодинга, Terra — баланс для повседневных задач, Luna — бюджетный быстрый уровень.',
+    pricing: '$5/$30 за 1M токенов',
+    notes: 'Флагман линейки GPT-5.6 для сложного рассуждения и кодинга.',
+    inPrice: 5,
+    outPrice: 30,
+  },
+  {
+    company: 'OpenAI',
+    model: 'GPT-5.6 Terra',
+    openWeight: false,
+    pricing: 'скидка 50 % к Sol',
+    notes: 'Средний уровень линейки — баланс для повседневных задач.',
+    inPrice: 2.5,
+    outPrice: 15,
+  },
+  {
+    company: 'OpenAI',
+    model: 'GPT-5.6 Luna',
+    openWeight: false,
+    pricing: '$1/$6 за 1M токенов',
+    notes: 'Бюджетный быстрый уровень линейки GPT-5.6.',
+    inPrice: 1,
+    outPrice: 6,
   },
   {
     company: 'Alibaba',
@@ -236,23 +255,11 @@ export const AI_MODELS: AiModel[] = [
   },
 ]
 
-/* История цен — данные из примера навыка ($ за 1M токенов, blended) */
+/* Резервный снимок истории цен — до первого прогона, который начнёт писать
+   реальные точки в data/price-history.json (по одной за день). */
 export const PRICE_HISTORY = [
-  { date: '1 июля', DeepSeek: 0.012, 'GPT-5.6': 1.5 },
-  { date: '8 июля', DeepSeek: 0.011, 'GPT-5.6': 1.3 },
-]
-
-export const CALC_MODELS: CalcModel[] = [
-  { name: 'GPT-5.6 Sol', inPrice: 5, outPrice: 30 },
-  { name: 'GPT-5.6 Terra', inPrice: 2.5, outPrice: 15, note: 'скидка 50 % к Sol' },
-  { name: 'GPT-5.6 Luna', inPrice: 1, outPrice: 6 },
-  {
-    name: 'DeepSeek V4 Flash',
-    inPrice: 0.05,
-    outPrice: 0.3,
-    note: '≈ 99 % дешевле флагманов',
-    estimated: true,
-  },
+  { date: '1 июля', 'DeepSeek V4 Flash': 0.06, 'GPT-5.6 Sol': 5 },
+  { date: '8 июля', 'DeepSeek V4 Flash': 0.05, 'GPT-5.6 Sol': 5 },
 ]
 
 export const AI_TAGS = ['Все', 'Релизы', 'Рынок', 'Безопасность', 'Регулирование']

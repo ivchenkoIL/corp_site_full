@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link, useLocation } from 'wouter'
 import {
-  ArrowLeft, BarChart3, Calculator, Cpu, LineChart, Newspaper,
+  Archive, ArrowLeft, BarChart3, Calculator, Cpu, LineChart, Newspaper,
 } from 'lucide-react'
 import { REPORT } from '../data/report'
 import { useSummary } from '../hooks/useSummary'
@@ -13,6 +13,7 @@ const MAIN_NAV = [
   { href: '/models', label: 'Модели', icon: Cpu },
   { href: '/prices', label: 'Цены', icon: LineChart },
   { href: '/calculator', label: 'Калькулятор', icon: Calculator },
+  { href: '/archive', label: 'Архив', icon: Archive },
 ]
 
 export default function Layout({ children }: { children: ReactNode }) {

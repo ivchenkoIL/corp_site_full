@@ -1,22 +1,36 @@
 import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
-import { Badge } from '../components/ui/badge'
-import { CALC_MODELS } from '../data/report'
+import { useModels } from '../hooks/useModels'
 
 const usd = (v: number) =>
   v.toLocaleString('ru-RU', { maximumFractionDigits: v < 10 ? 2 : 0 })
 
 export default function CostCalculator() {
-  const [modelName, setModelName] = useState(CALC_MODELS[0].name)
+  const calcModels = useModels().filter(
+    (m): m is typeof m & { inPrice: number; outPrice: number } =>
+      m.inPrice !== undefined && m.outPrice !== undefined,
+  )
+  const label = (m: (typeof calcModels)[number]) => `${m.company} ${m.model}`
+
+  const [modelKey, setModelKey] = useState(calcModels[0] ? label(calcModels[0]) : '')
   const [inTokens, setInTokens] = useState(50) // млн токенов в месяц
   const [outTokens, setOutTokens] = useState(10)
 
-  const model = CALC_MODELS.find((m) => m.name === modelName) ?? CALC_MODELS[0]
+  if (calcModels.length === 0) {
+    return (
+      <div className="py-16 text-center text-muted-foreground">
+        Ни у одной модели пока нет точной цены за токен — калькулятор появится, как только
+        цена будет названа в новостях
+      </div>
+    )
+  }
+
+  const model = calcModels.find((m) => label(m) === modelKey) ?? calcModels[0]
   const inCost = inTokens * model.inPrice
   const outCost = outTokens * model.outPrice
   const totalCost = inCost + outCost
 
-  const cheapest = CALC_MODELS.reduce((a, b) =>
+  const cheapest = calcModels.reduce((a, b) =>
     inTokens * a.inPrice + outTokens * a.outPrice <= inTokens * b.inPrice + outTokens * b.outPrice ? a : b,
   )
   const cheapestCost = inTokens * cheapest.inPrice + outTokens * cheapest.outPrice
@@ -26,7 +40,7 @@ export default function CostCalculator() {
       <div>
         <h1 className="text-3xl font-bold">Калькулятор затрат</h1>
         <p className="mt-1 text-muted-foreground">
-          Месячный бюджет на инференс по ценам из отчёта, $ за 1 млн токенов
+          Месячный бюджет на инференс по ценам из последних новостей, $ за 1 млн токенов
         </p>
       </div>
 
@@ -35,18 +49,18 @@ export default function CostCalculator() {
           <CardTitle>Модель</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
-          {CALC_MODELS.map((m) => (
+          {calcModels.map((m) => (
             <button
-              key={m.name}
-              onClick={() => setModelName(m.name)}
-              aria-pressed={modelName === m.name}
+              key={label(m)}
+              onClick={() => setModelKey(label(m))}
+              aria-pressed={modelKey === label(m)}
               className={`rounded-md border px-4 py-2.5 text-left text-sm font-medium transition-colors ${
-                modelName === m.name
+                modelKey === label(m)
                   ? 'border-secondary bg-secondary/15 text-foreground'
                   : 'border-border bg-card text-muted-foreground hover:text-foreground'
               }`}
             >
-              {m.name}
+              {label(m)}
               <span className="ml-2 text-muted-foreground">
                 ${m.inPrice} / ${m.outPrice}
               </span>
@@ -95,22 +109,16 @@ export default function CostCalculator() {
       <Card className="border-secondary">
         <CardHeader>
           <CardTitle>Итого в месяц</CardTitle>
-          {model.estimated && (
-            <CardDescription>
-              <Badge variant="accent">оценка</Badge> цены DeepSeek рассчитаны от «≈99 % дешевле
-              флагманов»
-            </CardDescription>
-          )}
         </CardHeader>
         <CardContent>
           <p className="text-4xl font-bold">${usd(totalCost)}</p>
           <p className="mt-2 text-sm text-muted-foreground">
-            вход ${usd(inCost)} + выход ${usd(outCost)} · {model.name}
+            вход ${usd(inCost)} + выход ${usd(outCost)} · {label(model)}
           </p>
-          {cheapest.name !== model.name && (
+          {label(cheapest) !== label(model) && (
             <div className="mt-4 border-t border-border pt-4 text-sm">
               <span className="text-muted-foreground">
-                Дешевле всего под эту нагрузку — <b className="text-foreground">{cheapest.name}</b>:{' '}
+                Дешевле всего под эту нагрузку — <b className="text-foreground">{label(cheapest)}</b>:{' '}
                 <b className="text-secondary">${usd(cheapestCost)}</b> (экономия $
                 {usd(totalCost - cheapestCost)} в месяц)
               </span>

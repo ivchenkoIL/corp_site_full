@@ -7,6 +7,10 @@
    4. Вторым запросом строит прогноз по каждой новости, опираясь на
       сегодняшний выпуск и архив прошлых (data/archive/).
    5. Считает показатели выпуска и просит рекомендации (summary.json).
+   6. Если в выпуске были новости с рубрикой «Релизы» — обновляет таблицу
+      моделей (data/models.json) и снимок истории цен (data/price-history.json).
+   7. Пишет индекс архива (data/archive/index.json) для страницы «Архив».
+      Архив хранится ARCHIVE_KEEP_DAYS дней (сейчас — полгода).
 
    Использование:
      YC_API_KEY=... YC_FOLDER_ID=... node scripts/update-news.mjs [путь-к-news.json]
@@ -50,9 +54,10 @@ const CONFIDENCE = ['высокая', 'средняя', 'низкая']
 const ARTICLE_CHARS = 2500     // сколько текста статьи отдаём модели
 const IMAGE_MIN_BYTES = 12_000 // мельче — это трекинг-пиксель или заглушка
 const ARCHIVE_DAYS = 14        // сколько прошлых выпусков подмешиваем в прогноз
-const ARCHIVE_KEEP_DAYS = 120  // сколько выпусков храним
+const ARCHIVE_KEEP_DAYS = 183  // сколько выпусков храним — «минимум три месяца» с запасом на полгода
 const IMAGE_KEEP_DAYS = 45     // сколько дней держим скачанные картинки
 const IMAGE_MAX_BYTES = 1_500_000
+const MODELS_KEEP = 10         // сколько моделей держим в таблице «Модели»/калькуляторе
 
 // эндпоинты можно переопределить в тестах, чтобы прогнать пайплайн без облака
 const IAM_ENDPOINT = process.env.YC_IAM_ENDPOINT ?? 'https://iam.api.cloud.yandex.net/iam/v1/tokens'
@@ -94,6 +99,9 @@ const outPath = resolve(process.argv[2] ?? 'salon-dashboard/public/data/news.jso
 const dataDir = dirname(outPath)
 const imgDir = join(dataDir, 'img')
 const archiveDir = join(dataDir, 'archive')
+const archiveIndexPath = join(archiveDir, 'index.json')
+const modelsPath = join(dataDir, 'models.json')
+const priceHistoryPath = join(dataDir, 'price-history.json')
 const today = new Date().toISOString().slice(0, 10)
 
 function decodeEntities(s) {
@@ -470,6 +478,24 @@ async function cleanup(keep = []) {
   } catch { /* картинок ещё нет */ }
 }
 
+/* Индекс архива для страницы «Архив» на дашборде: без него фронту нечем
+   узнать, какие даты вообще есть — сам каталог archive/ по HTTP не листается. */
+async function writeArchiveIndex() {
+  try {
+    const files = (await readdir(archiveDir)).filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort().reverse()
+    const index = []
+    for (const f of files) {
+      try {
+        const items = JSON.parse(await readFile(join(archiveDir, f), 'utf-8'))
+        if (Array.isArray(items)) index.push({ date: f.slice(0, 10), count: items.length })
+      } catch { /* битый файл — пропускаем, не роняем весь индекс */ }
+    }
+    await writeAtomic(archiveIndexPath, index)
+  } catch (e) {
+    console.error(`✗ Индекс архива не обновлён: ${e.message}`)
+  }
+}
+
 // ───────────────────────────────────────────────────────────── прогнозы
 
 /* onlyIdx — 0-based номера новостей, для которых нужны прогнозы. Просить
@@ -600,6 +626,13 @@ async function backfillOnlyAndExit(list) {
   } catch (e) {
     console.error(`✗ Прогнозы дозаполнить не удалось: ${e.message}`)
   }
+  // релизов сегодня не было — но точку в истории цен всё равно фиксируем
+  try {
+    const models = await readModels()
+    if (models.length) await updatePriceHistory(models)
+  } catch (e) {
+    console.error(`✗ Снимок истории цен не сделан: ${e.message}`)
+  }
   process.exit(0)
 }
 
@@ -648,6 +681,122 @@ ${news.map((n, i) => `${i + 1}. [${n.tag}] ${n.title} — ${n.summary}`).join('\
   // рваную сводку не пишем: лучше вчерашняя целая
   if (recs.length < 2) throw new Error(`рекомендаций ${recs.length}, нужно минимум 2`)
   return recs.slice(0, 3)
+}
+
+// ────────────────────────────────────────────────── модели и цены инференса
+
+/* Таблицы «Модели» и «Калькулятор» раньше были одним куском текста, зашитым
+   в сборку 08.08 и никогда не обновлявшимся — сколько бы дней ни прошло, там
+   оставался тот же отчёт. Теперь ведём отдельный реестр: обновляем только
+   когда в выпуске есть новости с рубрикой «Релизы», и только тем, что реально
+   написано в этих новостях — старые модели не трогаем, если о них не было речи. */
+async function readModels() {
+  try {
+    const raw = JSON.parse(await readFile(modelsPath, 'utf-8'))
+    return Array.isArray(raw) ? raw : []
+  } catch {
+    return []
+  }
+}
+
+async function askModelsUpdate(prevModels, releases) {
+  const prevText = prevModels.length
+    ? prevModels
+        .map((m, i) => `${i + 1}. ${m.company} — ${m.model}${m.pricing ? ` (${m.pricing})` : ''}`)
+        .join('\n')
+    : '(таблица пуста — заполняем впервые)'
+
+  return ask(
+    `Ты ведёшь таблицу актуальных моделей ИИ для дашборда мониторинга индустрии. Ниже — текущая таблица и новые новости рубрики «Релизы» из сегодняшнего выпуска. Обнови таблицу: допиши модели из новых релизов, которых там ещё нет; если новость описывает более новую версию модели, которая уже есть в таблице, — замени эту строку, а не добавляй вторую; остальные строки таблицы, которых новости не касаются, перепиши как есть, ничего не выдумывая заново.
+
+Ответь СТРОГО JSON-массивом без пояснений и без markdown, каждый элемент:
+{
+  "company": "компания-разработчик",
+  "model": "название модели/линейки",
+  "openWeight": true или false — открытые веса или закрытая модель,
+  "pricing": "короткая цена/скидка текстом, как в новости, например «$5/$30 за 1M токенов» или «≈40% дешевле предыдущей» — пусто, если цена не называлась",
+  "notes": "1–2 предложения о модели по фактам из новости",
+  "inPrice": число $ за 1 млн ВХОДНЫХ токенов — ТОЛЬКО если в новости названа точная цифра, иначе не включай поле,
+  "outPrice": число $ за 1 млн ВЫХОДНЫХ токенов — та же оговорка
+}
+
+Правила: не выдумывай компании, модели и цифры, которых нет в тексте новостей; "inPrice"/"outPrice" — только когда указана явная цена в долларах за токены, оценки и проценты в них не переводи; держи в таблице не больше ${MODELS_KEEP} самых свежих и значимых моделей — при необходимости убирай самые старые и наименее значимые.
+
+Текущая таблица:
+${prevText}
+
+Новые релизы:
+${releases.map((n, i) => `${i + 1}. ${n.title} — ${n.summary}\n   ${(n.body ?? []).join(' ').slice(0, 500)}`).join('\n')}`,
+    4000,
+  )
+}
+
+function applyModelsUpdate(text) {
+  const raw = cutJson(text, '[', ']')
+  if (!Array.isArray(raw)) throw new Error('таблица моделей — не массив')
+  const num = (v) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : undefined)
+  const models = raw
+    .filter((m) => m && typeof m.company === 'string' && typeof m.model === 'string')
+    .slice(0, MODELS_KEEP)
+    .map((m) => ({
+      company: m.company.trim().slice(0, 60),
+      model: m.model.trim().slice(0, 80),
+      openWeight: m.openWeight === true,
+      pricing: typeof m.pricing === 'string' ? m.pricing.trim().slice(0, 120) : '',
+      notes: typeof m.notes === 'string' ? m.notes.trim().slice(0, 400) : '',
+      inPrice: num(m.inPrice),
+      outPrice: num(m.outPrice),
+    }))
+  if (!models.length) throw new Error('пустая таблица моделей')
+  return models
+}
+
+/* История цен — не отдельный запрос к модели, а числовой снимок текущей
+   таблицы: каждый прогон добавляет точку по моделям с известной ценой входа.
+   Повторный прогон в тот же день перезаписывает точку за сегодня, а не множит. */
+async function updatePriceHistory(models) {
+  const priced = models.filter((m) => m.inPrice !== undefined)
+  if (!priced.length) return
+  let history = []
+  try {
+    const raw = JSON.parse(await readFile(priceHistoryPath, 'utf-8'))
+    if (Array.isArray(raw)) history = raw
+  } catch { /* файла ещё нет */ }
+
+  const row = { date: today }
+  for (const m of priced) row[m.model] = m.inPrice
+  history = history.filter((r) => r.date !== today)
+  history.push(row)
+
+  const edge = (() => {
+    const d = new Date()
+    d.setUTCDate(d.getUTCDate() - ARCHIVE_KEEP_DAYS)
+    return d.toISOString().slice(0, 10)
+  })()
+  history = history.filter((r) => r.date >= edge).sort((a, b) => (a.date < b.date ? -1 : 1))
+  await writeAtomic(priceHistoryPath, history)
+}
+
+/* added — только реально новые новости этого прогона (не весь выпуск): поле
+   n.date — дата публикации статьи по мнению модели, а не дата захвата, и на
+   него нельзя полагаться при отборе «сегодняшнего» (см. readTodayIssue). */
+async function refreshModels(added) {
+  const releases = added.filter((n) => n.tag === 'Релизы')
+  const prevModels = await readModels()
+  if (!releases.length) {
+    // релизов сегодня не было — таблица не устарела, трогать нечего
+    if (prevModels.length) await updatePriceHistory(prevModels)
+    return
+  }
+  try {
+    const models = applyModelsUpdate(await askModelsUpdate(prevModels, releases))
+    await writeAtomic(modelsPath, models)
+    await updatePriceHistory(models)
+    console.error(`✓ Таблица моделей обновлена: ${models.length} записей (релизов сегодня: ${releases.length})`)
+  } catch (e) {
+    console.error(`✗ Таблица моделей не обновлена (остаётся прежняя): ${e.message}`)
+    if (prevModels.length) await updatePriceHistory(prevModels)
+  }
 }
 
 // ─────────────────────────────────────────────────────────────── прогон
@@ -781,6 +930,8 @@ console.error(`✓ Записано ${news.length} новостей в ${outPath
 
 await writeArchive(news)
 await cleanup(news)
+await writeArchiveIndex()
+await refreshModels(added)
 
 /* Сводка — отдельным файлом и отдельной попыткой: новости к этому моменту уже
    на диске, и если модель ответит криво, на странице останется вчерашняя. */

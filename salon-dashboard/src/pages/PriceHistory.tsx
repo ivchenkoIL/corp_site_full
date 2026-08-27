@@ -2,27 +2,35 @@ import {
   CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
-import { Badge } from '../components/ui/badge'
-import { CALC_MODELS, PRICE_HISTORY } from '../data/report'
+import { useModels } from '../hooks/useModels'
+import { priceHistoryKeys, usePriceHistory } from '../hooks/usePriceHistory'
+
+// цикличная палитра — моделей может стать больше, чем цветов, поэтому по кругу
+const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4']
 
 export default function PriceHistory() {
+  const rows = usePriceHistory()
+  const keys = priceHistoryKeys(rows)
+  const models = useModels().filter((m) => m.inPrice !== undefined)
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-3xl font-bold">История цен</h1>
         <p className="mt-1 text-muted-foreground">
-          Стоимость инференса, $ за 1 млн токенов (blended)
+          Стоимость инференса, $ за 1 млн входных токенов — по одной точке за день, начиная с
+          того дня, когда цена модели впервые попала в дайджест
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>DeepSeek против GPT-5.6</CardTitle>
-          <CardDescription>июль 2026, $ за 1M токенов</CardDescription>
+          <CardTitle>Динамика цен по моделям</CardTitle>
+          <CardDescription>$ за 1M входных токенов</CardDescription>
         </CardHeader>
         <CardContent className="h-96">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={PRICE_HISTORY} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
+            <LineChart data={rows} margin={{ top: 8, right: 16, left: 8, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--chart-grid)" />
               <XAxis dataKey="date" stroke="var(--chart-axis)" tickLine={false} axisLine={false} />
               <YAxis
@@ -42,20 +50,17 @@ export default function PriceHistory() {
                 formatter={(v, name) => [`$${Number(v)} / 1M токенов`, String(name)]}
               />
               <Legend formatter={(value) => <span style={{ color: 'var(--foreground)' }}>{String(value)}</span>} />
-              <Line
-                type="monotone"
-                dataKey="DeepSeek"
-                stroke="#10b981"
-                strokeWidth={2}
-                dot={{ r: 4, strokeWidth: 2, fill: 'var(--card)' }}
-              />
-              <Line
-                type="monotone"
-                dataKey="GPT-5.6"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                dot={{ r: 4, strokeWidth: 2, fill: 'var(--card)' }}
-              />
+              {keys.map((k, i) => (
+                <Line
+                  key={k}
+                  type="monotone"
+                  dataKey={k}
+                  connectNulls
+                  stroke={COLORS[i % COLORS.length]}
+                  strokeWidth={2}
+                  dot={{ r: 4, strokeWidth: 2, fill: 'var(--card)' }}
+                />
+              ))}
             </LineChart>
           </ResponsiveContainer>
         </CardContent>
@@ -63,7 +68,7 @@ export default function PriceHistory() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Актуальные цены из отчёта</CardTitle>
+          <CardTitle>Актуальные цены</CardTitle>
           <CardDescription>$ за 1 млн токенов: вход / выход</CardDescription>
         </CardHeader>
         <CardContent>
@@ -78,15 +83,12 @@ export default function PriceHistory() {
                 </tr>
               </thead>
               <tbody className="[font-variant-numeric:tabular-nums]">
-                {CALC_MODELS.map((m) => (
-                  <tr key={m.name} className="border-b border-border last:border-0">
-                    <td className="py-2.5 pr-4 font-medium">{m.name}</td>
+                {models.map((m) => (
+                  <tr key={`${m.company}-${m.model}`} className="border-b border-border last:border-0">
+                    <td className="py-2.5 pr-4 font-medium">{m.model}</td>
                     <td className="py-2.5 pr-4 text-right">${m.inPrice}</td>
-                    <td className="py-2.5 pr-4 text-right">${m.outPrice}</td>
-                    <td className="py-2.5 text-muted-foreground">
-                      {m.estimated && <Badge variant="accent" className="mr-2">оценка</Badge>}
-                      {m.note ?? '—'}
-                    </td>
+                    <td className="py-2.5 pr-4 text-right">{m.outPrice !== undefined ? `$${m.outPrice}` : '—'}</td>
+                    <td className="py-2.5 text-muted-foreground">{m.pricing || '—'}</td>
                   </tr>
                 ))}
               </tbody>

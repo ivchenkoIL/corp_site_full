@@ -10,6 +10,8 @@ const NewsDetail = lazy(() => import('./pages/NewsDetail'))
 const ModelsComparison = lazy(() => import('./pages/ModelsComparison'))
 const PriceHistory = lazy(() => import('./pages/PriceHistory'))
 const CostCalculator = lazy(() => import('./pages/CostCalculator'))
+const Archive = lazy(() => import('./pages/Archive'))
+const ArchiveDay = lazy(() => import('./pages/ArchiveDay'))
 
 function PageFallback() {
   return (
@@ -33,6 +35,8 @@ export default function App() {
           <Route path="/models" component={ModelsComparison} />
           <Route path="/prices" component={PriceHistory} />
           <Route path="/calculator" component={CostCalculator} />
+          <Route path="/archive" component={Archive} />
+          <Route path="/archive/:date" component={ArchiveDay} />
           <Route>
             <div className="container py-16 text-center text-muted-foreground">
               Страница не найдена
