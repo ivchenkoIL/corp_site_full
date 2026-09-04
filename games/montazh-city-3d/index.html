@@ -1414,30 +1414,32 @@ function buildTextures(gl) {
     };
     /* широкий лист: масса крупных листьев в круге, низ глуше */
     cellAt(0, 0, () => {
-      for (let i = 0; i < 190; i++) {
+      for (let i = 0; i < 520; i++) {
         const px = H / 2 + (R() - .5) * (H - pad * 2), py = H / 2 + (R() - .5) * (H - pad * 2);
         const d = Math.hypot(px - H / 2, py - H / 2) / (H / 2 - pad);
-        if (d > 1) continue;
-        const r = (9 + R() * 18) * (1 - d * 0.40), k = py > H * 0.56 ? 0.74 : 1;
+        if (d > 1 || R() < d * d * 0.7) continue;
+        const r = (10 + R() * 18) * (1 - d * 0.35), k = py > H * 0.56 ? 0.74 : 1;
         x.fillStyle = 'rgb(' + Math.round((46 + R() * 38) * k) + ',' + Math.round((80 + R() * 64) * k) + ',' + Math.round((34 + R() * 38) * k) + ')';
         x.beginPath(); x.ellipse(px, py, r, r * (0.6 + R() * 0.5), R() * Math.PI, 0, TAU); x.fill();
       }
     });
     /* мелкий лист: вытянутая вуаль с просветами и рваным контуром */
     cellAt(1, 0, () => {
-      x.strokeStyle = 'rgba(58,48,36,.5)'; x.lineWidth = 1.4;
-      for (let i = 0; i < 7; i++) {                       /* веточки, чтобы масса не была облаком */
+      /* Веточки рисуем тонкими и бледными: при увеличении карты жирные штрихи
+         читаются висящими полосами, а не ветками. */
+      x.strokeStyle = 'rgba(58,48,36,.28)'; x.lineWidth = 0.8;
+      for (let i = 0; i < 5; i++) {
         x.beginPath(); x.moveTo(H / 2, H - pad);
-        x.quadraticCurveTo(H / 2 + (R() - .5) * H * .4, H * .5, pad + R() * (H - pad * 2), pad + R() * H * .5);
+        x.quadraticCurveTo(H / 2 + (R() - .5) * H * .3, H * .55, H / 2 + (R() - .5) * H * .5, pad + R() * H * .45);
         x.stroke();
       }
-      for (let i = 0; i < 420; i++) {
-        const px = H / 2 + (R() - .5) * (H - pad * 2) * 0.86, py = H / 2 + (R() - .5) * (H - pad * 2);
-        const d = Math.hypot((px - H / 2) / (H * 0.42), (py - H / 2) / (H * 0.48));
-        if (d > 1 || R() < d * 0.55) continue;
-        const r = 3.5 + R() * 8, k = py > H * 0.60 ? 0.76 : 1;
+      for (let i = 0; i < 1100; i++) {
+        const px = H / 2 + (R() - .5) * (H - pad * 2) * 0.94, py = H / 2 + (R() - .5) * (H - pad * 2);
+        const d = Math.hypot((px - H / 2) / (H * 0.46), (py - H / 2) / (H * 0.47));
+        if (d > 1 || R() < d * d * 0.85) continue;
+        const r = 4.5 + R() * 9, k = py > H * 0.60 ? 0.78 : 1;
         x.fillStyle = 'rgb(' + Math.round((52 + R() * 44) * k) + ',' + Math.round((92 + R() * 68) * k) + ',' + Math.round((38 + R() * 40) * k) + ')';
-        x.beginPath(); x.ellipse(px, py, r, r * (0.5 + R() * 0.5), R() * Math.PI, 0, TAU); x.fill();
+        x.beginPath(); x.ellipse(px, py, r, r * (0.55 + R() * 0.5), R() * Math.PI, 0, TAU); x.fill();
       }
     });
     /* еловая лапа: веточка слева направо, хвоинки назад-вбок и короче к концу */
@@ -1791,6 +1793,27 @@ const POTHOLES = [];
   for (const x of ROADS_X) for (let i = 0; i < 5; i++)
     POTHOLES.push({ z: 8 + R() * (W.z - 16), x: x + (R() < .5 ? -1 : 1) * (1 + R() * 3), r: 1 + R() * 0.7 });
 })();
+
+/* Высота покрытия в точке. Тротуар лежит выше проезжей части, отмостка выше
+   газона — и если рисовать людей и технику на нуле, ноги уходят в бордюр,
+   а колёса под асфальт. Порядок проверок важен: дорога режет двор. */
+function surfY(x, z) {
+  for (const r of ROADS_Z) {
+    const d = Math.abs(z - r);
+    if (d < ROAD_W / 2) return 0.031;
+    if (d < ROAD_W / 2 + SIDE_W) return 0.161;
+  }
+  for (const r of ROADS_X) {
+    const d = Math.abs(x - r);
+    if (d < ROAD_W / 2) return 0.031;
+    if (d < ROAD_W / 2 + SIDE_W) return 0.161;
+  }
+  if (x > 106.5 && x < 121 && z > 93 && z < 119) return 0.051;   /* парковка у БЦ */
+  if (x > 38 && x < 52 && z > 47 && z < 57) return 0.051;        /* спортплощадка */
+  for (const b of BUILDINGS)                                     /* отмостка вокруг дома */
+    if (x > b.x - 1.45 && x < b.x + b.w + 1.45 && z > b.z - 1.45 && z < b.z + b.d + 1.45) return 0.186;
+  return 0.013;                                                  /* газон и голая земля */
+}
 
 function isRoad(x, z) {
   for (const r of ROADS_Z) if (Math.abs(z - r) < ROAD_W / 2) return true;
@@ -2267,7 +2290,11 @@ function emitSign(gl, b) {
    v=0, то есть верх холста). Отступ 8/512 отрезает соседнюю ячейку на мипах. */
 const CELL = (() => {
   const m = 8 / 512, h = 0.5;
-  const mk = (cx, cy) => ({ u0: cx * h + m, u1: (cx + 1) * h - m, vT: cy * h + m, vB: (cy + 1) * h - m });
+  /* Атлас грузится с UNPACK_FLIP_Y_WEBGL, поэтому верхняя строка холста
+     оказывается в верхней половине текстурных координат. Если считать
+     строки «как нарисовано», крона возьмёт ячейку травы. */
+  const mk = (cx, cy) => ({ u0: cx * h + m, u1: (cx + 1) * h - m,
+                            vT: 1 - cy * h - m, vB: 1 - (cy + 1) * h + m });
   return { broad: mk(0, 0), veil: mk(1, 0), fir: mk(0, 1), tuft: mk(1, 1) };
 })();
 const cellUV = c => [c.u0, c.vB, c.u1, c.vB, c.u1, c.vT, c.u0, c.vT];
@@ -2412,10 +2439,10 @@ function emitTree(x, z, M, p) {
   else crownDome(M.leaves, R, x, z, th, cr, tips, col, cell);
   /* палая листва: пятна под кроной, тот же альфа-тест, что и у карт.
      Веса ветра не даём — иначе листья поедут по земле. */
-  for (let i = 0, n = 3 + Math.floor(R() * 3); i < n; i++) {
-    const a = R() * TAU, rr = cr * (0.2 + R() * 0.9), s = 0.6 + R() * 0.8;
+  for (let i = 0, n = 4 + Math.floor(R() * 4); i < n; i++) {
+    const a = R() * TAU, rr = cr * (0.2 + R() * 0.9), s = 0.24 + R() * 0.30;
     const lx = x + Math.cos(a) * rr, lz = z + Math.sin(a) * rr;
-    const c = shade(sp.litter, 0.72 + R() * 0.45);
+    const c = shade(sp.litter, 0.50 + R() * 0.30);
     M.leaves.quad([lx - s, 0.035, lz + s], [lx + s, 0.035, lz + s], [lx + s, 0.035, lz - s], [lx - s, 0.035, lz - s],
       0, 1, 0, UVC.broad, c, 0, 0);
   }
@@ -3330,7 +3357,7 @@ const BONES = []; for (let i = 0; i < 20; i++) BONES.push(m4());
 const RIG = {
   root: 0.96, sit: 0.60,
   spine: 0.06, chest: 0.24, neck: 0.24,      /* подъёмы суставов корпуса */
-  shoulder: [0.19, 0.20], upperArm: 0.30, foreArm: 0.27,
+  shoulder: [0.200, 0.19], upperArm: 0.30, foreArm: 0.27,
   hip: [0.105, -0.06], thigh: 0.44, shin: 0.38
 };
 
@@ -3387,21 +3414,21 @@ function makeCharMesh(gl, pal) {
   m.bevelBox(0, -0.02, 0, 0.35 * bw, 0.30, 0.23 * bw, shirt,
     { bev: 0.045, r: 0.07, cs: 2, part: BONE.CHEST, gloss: CLOTH, uv: 0.6, taper: [1.02, 0.94], skipTop: true });
   for (const sx of [-1, 1])
-    m.ellipsoid(sx * 0.175 * bw, 0.20, 0, 0.075, 0.075, 0.098, 8, 5, shirt, { part: BONE.CHEST, gloss: CLOTH });
+    m.ellipsoid(sx * 0.180 * bw, 0.192, 0, 0.078, 0.076, 0.098, 8, 5, shirt, { part: BONE.CHEST, gloss: CLOTH });
   /* воротник */
   m.bevelBox(0, 0.215, 0, 0.155, 0.045, 0.135, pal.collar || mul(shirt, 0.82),
     { bev: 0.012, r: 0.04, cs: 2, part: BONE.CHEST, gloss: CLOTH, skipTop: true });
 
   if (pal.vest) {                        /* сигнальный жилет: цельная манишка */
     const v = pal.vest, refl = [1.45, 1.45, 1.5];
-    m.bevelBox(0, -0.035, 0, 0.365 * bw, 0.275, 0.245 * bw, v,
+    m.bevelBox(0, -0.035, 0, 0.335 * bw, 0.275, 0.235 * bw, v,
       { bev: 0.02, r: 0.07, cs: 2, part: BONE.CHEST, gloss: 0.22, uv: 0.5, taper: [1.0, 0.96], skipTop: true });
     for (const y of [0.035, 0.135])       /* световозвращающие полосы вокруг */
-      m.bevelBox(0, y, 0, 0.372 * bw, 0.038, 0.252 * bw, refl,
+      m.bevelBox(0, y, 0, 0.342 * bw, 0.038, 0.242 * bw, refl,
         { bev: 0.005, r: 0.07, cs: 2, part: BONE.CHEST, gloss: 0.5, skipTop: true });
-    m.box(0, -0.02, 0.125 * bw, 0.014, 0.245, 0.008, mul(v, 0.55), { part: BONE.CHEST, gloss: 0.3 });  /* молния */
+    m.box(0, -0.02, 0.120 * bw, 0.014, 0.245, 0.008, mul(v, 0.55), { part: BONE.CHEST, gloss: 0.3 });  /* молния */
     for (const sx of [-1, 1])             /* плечевые лямки */
-      m.box(sx * 0.115 * bw, 0.235, 0, 0.075, 0.02, 0.20 * bw, v, { part: BONE.CHEST, gloss: 0.22 });
+      m.box(sx * 0.105 * bw, 0.235, 0, 0.070, 0.02, 0.19 * bw, v, { part: BONE.CHEST, gloss: 0.22 });
   }
 
   /* ---------- шея и голова ---------- */
@@ -3746,7 +3773,7 @@ function poseCharacter(o) {
     m4mul(BONES[BONE.ACC], BONES[BONE.HANDR], m4compose(SCRATCH[7], 0, -0.30, 0.02, 0.25, 0, 0, 1));
   else {
     const bg = Math.sin(ph) * 0.10 * sp + (iN === 2 ? ik * 0.30 : 0);
-    T(BONES[BONE.ACC], BONES[BONE.HIP], 0.205, -0.01, -0.05, 0.05 + bg, 0, 0.20 - bg * 0.35);
+    T(BONES[BONE.ACC], BONES[BONE.HIP], 0.315, -0.02, -0.075, 0.05 + bg, 0, 0.16 - bg * 0.35);
   }
   for (let i = 0; i < NBONE; i++) BONEBUF.set(BONES[i], i * 16);
 }
@@ -3962,12 +3989,14 @@ function buildVehicles(gl) {
     /* седло и подседельный штырь */
     m.tube([[0, 0.86, -0.24], [0, 1.00, -0.26]], 0.014, 6, STEEL, { gloss: 0.8 });
     m.bevelBox(0, 0.99, -0.28, 0.10, 0.05, 0.30, [.20, .20, .24], { bev: 0.018, r: 0.04, cs: 3, gloss: 0.35, taper: [1.6, 0.8] });
-    /* педали и звезда */
-    m.cyl(0, 0.26, -0.02, 0.09, 0.012, 12, [.55, .56, .62], { gloss: 0.8 });
-    for (const sx of [-1, 1]) {
-      m.box(sx * 0.09, 0.24, -0.02, 0.03, 0.16, 0.03, STEEL, { gloss: 0.7 });
-      m.bevelBox(sx * 0.09, 0.15, -0.02, 0.07, 0.02, 0.12, DARK, { bev: 0.005, r: 0.01, cs: 1, gloss: 0.3 });
-    }
+    /* шатуны с педалями и звезда — кость 4, координаты от оси каретки
+       (0, 0.30, -0.02). Шатуны противоположны по построению, поэтому одной
+       кости хватает, чтобы педали крутились как надо. */
+    m.cyl(-0.055, -0.006, 0, 0.092, 0.012, 12, [.55, .56, .62], { gloss: 0.8, part: 4 });
+    m.box(-0.075, -0.17, 0, 0.028, 0.17, 0.030, STEEL, { gloss: 0.7, part: 4 });
+    m.bevelBox(-0.105, -0.192, 0, 0.09, 0.022, 0.11, DARK, { bev: 0.005, r: 0.01, cs: 1, gloss: 0.3, part: 4 });
+    m.box(0.075, 0, 0, 0.028, 0.17, 0.030, STEEL, { gloss: 0.7, part: 4 });
+    m.bevelBox(0.105, 0.170, 0, 0.09, 0.022, 0.11, DARK, { bev: 0.005, r: 0.01, cs: 1, gloss: 0.3, part: 4 });
     /* цепь */
     m.tube([[0.02, 0.30, -0.02], [0.02, 0.30, -wb]], 0.010, 5, [.35, .36, .40], { gloss: 0.6 });
     /* багажник, крылья, фара */
@@ -4002,7 +4031,7 @@ function buildVehicles(gl) {
     m.ellipsoid(0, -0.015, 0.100, 0.052, 0.026, 0.075, 8, 3, dfur, { part: 2, gloss: 0.18 });
     /* лапы: каждая в своей кости, геометрия висит от сустава вниз */
     for (const pt of [3, 4, 5, 6])
-      m.bevelBox(0, -0.16, 0, pt < 5 ? 0.062 : 0.066, 0.30, pt < 5 ? 0.07 : 0.075, fur,
+      m.bevelBox(0, -0.32, 0, pt < 5 ? 0.062 : 0.066, 0.32, pt < 5 ? 0.07 : 0.075, fur,
         { bev: 0.014, r: 0.014, cs: 2, part: pt, gloss: 0.14, skipTop: true });
     /* хвост от своего сустава назад-вверх */
     m.tube([[0, 0, 0], [0, 0.10, -0.12], [0.02, 0.20, -0.18]], 0.035, 6, fur, { part: 7, gloss: 0.14 });
@@ -4039,7 +4068,7 @@ function drawVehicle(kind, x, y, z, yaw, wheelPhase, tint, o) {
   gl.uniformMatrix4fv(P.u.uBones, false, BONEBUF);
   drawMesh(VEH[kind], TX.paint, BONES[0], { skin: true, tint });
 }
-function drawBike(x, y, z, yaw, wheelPhase, lean, steer) {
+function drawBike(x, y, z, yaw, wheelPhase, lean, steer, crank) {
   const gl = GL.gl, P = R3.main;
   const st = steer || 0;
   m4compose(BONES[0], x, y, z, 0, yaw, lean || 0, 1);
@@ -4047,7 +4076,9 @@ function drawBike(x, y, z, yaw, wheelPhase, lean, steer) {
   m4mul(BONES[3], BONES[0], m4compose(SCRATCH[7], 0, 0.92, 0.30, 0, st, 0, 1));
   m4mul(BONES[1], BONES[3], m4compose(SCRATCH[7], 0, -0.58, 0.22, 0, Math.PI / 2, -wheelPhase, 1));
   m4mul(BONES[2], BONES[0], m4compose(SCRATCH[7], 0, 0.34, -0.52, 0, Math.PI / 2, -wheelPhase, 1));
-  for (let i = 0; i < 4; i++) BONEBUF.set(BONES[i], i * 16);
+  /* каретка: шатуны крутятся в такт с ногами всадника */
+  m4mul(BONES[4], BONES[0], m4compose(SCRATCH[7], 0, 0.30, -0.02, crank || 0, 0, 0, 1));
+  for (let i = 0; i < 5; i++) BONEBUF.set(BONES[i], i * 16);
   gl.uniformMatrix4fv(P.u.uBones, false, BONEBUF);
   drawMesh(VEH.bike, TX.paint, BONES[0], { skin: true });
 }
@@ -6010,7 +6041,7 @@ function tickAct(e, dt, want) {
 
 /* Поза «как есть» из полей жителя: одно место, где логика связана с анимацией. */
 function charPose(e, extra) {
-  const o = { x: e.x, z: e.z, yaw: e.yaw || 0, phase: e.phase || 0, speed: e.sp || 0,
+  const o = { x: e.x, y: surfY(e.x, e.z), z: e.z, yaw: e.yaw || 0, phase: e.phase || 0, speed: e.sp || 0,
     gait: e.gait, time: e.time, seed: e.seed, acc: e.acc, idle: e.idle, idleP: e.idleP,
     headYaw: e.lkY, headPitch: e.lkP, act: e.act, actK: e.actK, down: e.downK || 0 };
   if (extra) for (const k in extra) o[k] = extra[k];
@@ -7145,7 +7176,7 @@ function drawShadow(x, z, size, alpha) {
   gl.uniformMatrix4fv(P.u.uView, false, R3.view);
   gl.uniform3f(P.u.uRight, 1, 0, 0);
   gl.uniform3f(P.u.uUp, 0, 0, 1);
-  gl.uniform3f(P.u.uPos, x, 0.05, z);
+  gl.uniform3f(P.u.uPos, x, surfY(x, z) + 0.022, z);
   gl.uniform2f(P.u.uSize, size, size);
   gl.uniform4f(P.u.uColor, 0, 0, 0, alpha);
   gl.uniform1f(P.u.uHard, 1.6);
@@ -7179,7 +7210,7 @@ function drawDynamic() {
 
   beginMainLights();
   /* машины */
-  for (const c of S.cars) if (vis(c.x, c.z)) drawVehicle(c.kind, c.x, 0, c.z, c.yaw, c.wheel, [c.tint[0], c.tint[1], c.tint[2], 1], c);
+  for (const c of S.cars) if (vis(c.x, c.z)) drawVehicle(c.kind, c.x, surfY(c.x, c.z), c.z, c.yaw, c.wheel, [c.tint[0], c.tint[1], c.tint[2], 1], c);
   /* прохожие и жители */
   for (const q of S.peds) if (vis(q.x, q.z, 60)) drawCharacter(pedMesh(q.mesh), charPose(q));
   for (const h of S.hools) if (vis(h.x, h.z, 60)) drawCharacter(CHAR_MESHES.hool, charPose(h));
@@ -7187,7 +7218,7 @@ function drawDynamic() {
   for (const n of S.npcs) if (vis(n.x, n.z, 70))
     drawCharacter(n.kind === 'sanya' ? CHAR_MESHES.sanya : (CHAR_MESHES[n.who] || CHAR_MESHES.client), charPose(n));
   for (const g of S.guards) if (vis(g.x, g.z, 90)) {
-    drawVehicle('sedan', g.x, 0, g.z, g.yaw, g.wheel || 0, [.55, .12, .16, 1],
+    drawVehicle('sedan', g.x, surfY(g.x, g.z), g.z, g.yaw, g.wheel || 0, [.55, .12, .16, 1],
       { pitch: g.pitch, roll: g.roll, steer: clamp((g.roll || 0) * -4, -0.5, 0.5) });
     drawCharacter(CHAR_MESHES.guard, charPose(g));
   }
@@ -7198,12 +7229,15 @@ function drawDynamic() {
   for (const d of S.dogs) if (vis(d.x, d.z, 50)) drawDog3(d);
   /* Олег и велосипед */
   if (p.onBike) {
-    drawBike(p.x, 0, p.z, S.bike.yaw, S.bike.wheel, S.bike.lean, S.bike.steer);
-    drawCharacter(CHAR_MESHES.oleg, charPose(p, { y: 0.30, yaw: S.bike.yaw, phase: S.bike.wheel * 0.8,
+    const by = surfY(p.x, p.z), bph = S.bike.wheel * 0.8;
+    drawBike(p.x, by, p.z, S.bike.yaw, S.bike.wheel, S.bike.lean, S.bike.steer, bph * 1.4);
+    /* седло стоит на 0.26 позади оси велосипеда — иначе Олег висит перед ним */
+    const sx = p.x - Math.sin(S.bike.yaw) * 0.26, sz = p.z - Math.cos(S.bike.yaw) * 0.26;
+    drawCharacter(CHAR_MESHES.oleg, charPose(p, { x: sx, z: sz, y: by + 0.53, yaw: S.bike.yaw, phase: bph,
       speed: clamp(Math.abs(S.bike.speed) / 6, 0, 1), sit: true, roll: (S.bike.lean || 0) * 0.85,
       lean: 0.34 + clamp(Math.abs(S.bike.speed) / 26, 0, .3), drunk: p.drunk / 100, act: '', idleP: 1 }));
   } else {
-    drawBike(S.bike.x, 0, S.bike.z, S.bike.yaw + 0.4, 0, 0.6, 0);
+    drawBike(S.bike.x, surfY(S.bike.x, S.bike.z), S.bike.z, S.bike.yaw + 0.4, 0, 0.6, 0, 0.4);
     drawCharacter(CHAR_MESHES.oleg, charPose(p, { yaw: p.yaw, lean: p.hurt > 0 ? 0.25 : 0, drunk: p.drunk / 100 }));
   }
   /* установленные камеры на опорах */
@@ -7222,7 +7256,7 @@ function drawDog3(d) {
   const ph = d.phase * 2, amp = 0.28 + sp * 0.62;
   const be = Math.sin(Math.PI * clamp(d.barkK || 0, 0, 1));      /* колокол лая */
   /* корпус пружинит на бегу и приседает на лае */
-  m4compose(BONES[0], d.x, 0.42 + Math.sin(ph * 2) * 0.03 * sp - be * 0.02, d.z,
+  m4compose(BONES[0], d.x, surfY(d.x, d.z) + 0.42 + Math.sin(ph * 2) * 0.03 * sp - be * 0.02, d.z,
     -sp * 0.06 + Math.sin(ph * 2) * 0.04 * sp, d.yaw, Math.sin(ph) * 0.05 * sp, 1);
   /* голова: смотрит на цель, задирается на лае, опускается на бегу */
   m4mul(BONES[1], BONES[0], m4compose(SCRATCH[6], 0, 0.02, 0.30,
