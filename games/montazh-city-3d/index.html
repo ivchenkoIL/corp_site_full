@@ -3349,7 +3349,12 @@ const K = {
   camL: ['KeyQ'], camR: ['KeyE']
 };
 function requestLock() {
-  try { $('stage').requestPointerLock(); } catch (e) { }
+  try {
+    const pr = $('stage').requestPointerLock();
+    /* Chrome возвращает промис: он отклоняется, если захват курсора запрещён
+       (iframe без разрешения) или пользователь только что вышел из захвата. */
+    if (pr && typeof pr.catch === 'function') pr.catch(() => { });
+  } catch (e) { }
 }
 function exitLock() { try { if (document.pointerLockElement) document.exitPointerLock(); } catch (e) { } }
 
