@@ -156,7 +156,13 @@
       var t = performance.now(); var r = _linkProgram(pr);
       P.shaders.linkMs += performance.now() - t;
       var all = (shOf.get(pr) || []).join('\n');
-      var kind = all.indexOf('uBones') >= 0 ? 'main'
+      /* Вид программы. Основной признак — метка /*PASS:имя*\/ в исходнике
+         шейдера: она не зависит от того, как названы юниформы, и новые
+         программы (кубмапа неба, префильтр, BRDF, тонмаппинг) не попадают
+         в «other» молча. Для сборок без меток — прежняя эвристика. */
+      var tag = /PASS:([a-z0-9_]+)/i.exec(all);
+      var kind = tag ? tag[1].toLowerCase()
+               : all.indexOf('uBones') >= 0 ? 'main'
                : all.indexOf('uInvVP') >= 0 ? 'sky'
                : all.indexOf('uHard') >= 0 ? 'glow' : 'other';
       kindOf.set(pr, kind);
@@ -173,27 +179,52 @@
       return _useProgram(pr);
     };
 
-    /* Запасной способ разобрать кадр по проходам, когда
-       EXT_disjoint_timer_query_webgl2 недоступен.
+    /* ------------ Разбор кадра по проходам ---------------------------
 
-       ВАЖНО про выбор синхронизации. Проверено замером на этом же стеке:
-       gl.finish() возвращается за 0 мс на отрисовке, которая реально занимает
-       350 мс, и fenceSync + clientWaitSync(SYNC_FLUSH_COMMANDS_BIT) — тоже за
-       0 мс. То есть в Chrome ни то ни другое не дожидается GPU, и мерить ими
-       проход бессмысленно: получишь глубину очереди, а не работу. Реально
-       дожидается только readPixels — те же 350 мс он и показывает. Поэтому
-       границу прохода отбиваем чтением одного пикселя.
+       Прямой способ — по запросу TIME_ELAPSED_EXT на каждый проход — на M4
+       не работает: замерено, шесть запросов в кадре дают сумму 32 мс там,
+       где кадр целиком стоит 4.4 мс, а «очистка» из одного gl.clear —
+       1.8 мс. Причина не в самих запросах: тайловый GPU на каждой границе
+       запроса вынужден сохранить буфер в память и загрузить обратно, и при
+       2880x1800 с мультисэмплингом это дороже самих проходов. Ровно та же
+       беда, что у readPixels, только вместо синхронизации с CPU — обмен с
+       памятью.
 
-       Плата за это — постоянная надбавка на каждую синхронизацию (при
-       antialias:true readPixels ещё и разрешает мультисэмпл). Надбавку
-       калибруем в начале профилировки и вычитаем. Числа остаются оценочными:
-       это распределение стоимости между проходами, а не абсолютная цена. Если
-       таймер-запросы есть — верить надо им, а не этому. */
+       Поэтому меряем префиксами: один запрос на кадр, от начала кадра до
+       конца прохода k, а k перебирается по кадрам. Искусственная граница в
+       каждом замере ровно одна и стоит примерно одинаково (сохранение
+       буфера того же размера), поэтому в разности T(k) − T(k−1) она
+       сокращается и остаётся цена самого прохода. Слот k = −1 (пустой
+       префикс) даёт саму надбавку, а последний префикс — кадр целиком, и
+       его можно сверить с обычным замером кадра: расхождение видно в
+       отчёте.
+
+       Запасной способ (WebKit, где EXT_disjoint_timer_query_webgl2 нет) —
+       чтение одного пикселя на границе прохода. Проверено: ни gl.finish(),
+       ни fenceSync+clientWaitSync в Chrome не дожидаются GPU (возвращаются
+       за 0 мс на отрисовке в 350 мс), реально дожидается только readPixels.
+       Надбавку калибруем и вычитаем, но на тайловом GPU она соизмерима с
+       проходами, поэтому оттуда — только грубая пропорция. */
+    P.passMethod = TQ ? 'timer' : 'sync';
     P._segStart = 0;
     P._segKind = null;
-    P.segments = [];
-    P._segBuf = null;
+    P._segBuf = null;             /* запасной способ: сегменты текущего кадра */
     P.syncOverheadMs = 0;
+    P._segAcc = {};               /* запасной способ: label -> {kind, ms:[], ...} */
+    P._pfxAcc = {};               /* таймер: sig -> {k -> [ms]} */
+    P._pfxSeq = {};               /* sig -> список ярлыков по порядку */
+    P._segPend = [];
+    P._segPool = [];
+    P._segQLive = null;
+    P._segLabel = null;
+    P._segSeen = null;
+    P._segSeq = null;             /* ярлыки проходов текущего кадра по порядку */
+    P._segIdx = -1;               /* индекс текущего прохода в кадре */
+    P._profK = -1;                /* до какого прохода включительно мерим этот кадр */
+    P._profSlots = 2;             /* сколько слотов в переборе; растёт по факту */
+    P._profRot = 0;
+    P.segLost = 0;
+
     var px1 = new Uint8Array(4);
     function syncGPU() {
       try { gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px1); } catch (e) { }
@@ -205,64 +236,149 @@
       P.syncOverheadMs = +a[a.length >> 1].toFixed(3);
       return P.syncOverheadMs;
     };
+
+    /* Ярлык прохода: вид программы плюс номер его появления в кадре
+       (main#0 — статика района, main#1 — персонажи и техника). */
+    function labelFor(kind) {
+      var n = P._segSeen[kind] || 0;
+      P._segSeen[kind] = n + 1;
+      return kind + '#' + n;
+    }
+    function accPush(label, kind, ms, draws, tris) {
+      var a = P._segAcc[label] || (P._segAcc[label] = { kind: kind, ms: [], draws: [], tris: [] });
+      a.ms.push(ms); a.draws.push(draws); a.tris.push(tris);
+    }
+
+    function pfxEnd() {
+      if (!P._segQLive) return;
+      try {
+        gl.endQuery(TQ.TIME_ELAPSED_EXT);
+        P._segPend.push({ q: P._segQLive, k: P._profK, seq: P._segSeq });
+      } catch (e) { P._segPool.push(P._segQLive); }
+      P._segQLive = null;
+    }
+    function pfxBegin() {
+      try {
+        var q = P._segPool.pop() || gl.createQuery();
+        gl.beginQuery(TQ.TIME_ELAPSED_EXT, q);
+        P._segQLive = q;
+      } catch (e) { P._segQLive = null; }
+    }
+    /* результаты приходят по порядку; читаем без ожидания */
+    P._drainSegments = function () {
+      if (P.passMethod !== 'timer' || !P._segPend.length) return;
+      while (P._segPend.length) {
+        var e = P._segPend[0], ok = false;
+        try { ok = gl.getQueryParameter(e.q, gl.QUERY_RESULT_AVAILABLE); } catch (err) { P._segPend.shift(); continue; }
+        if (!ok) break;
+        var bad = false;
+        try { bad = !!gl.getParameter(TQ.GPU_DISJOINT_EXT); } catch (err) { }
+        P._segPend.shift();
+        var ns = 0;
+        try { ns = gl.getQueryParameter(e.q, gl.QUERY_RESULT); } catch (err) { bad = true; }
+        P._segPool.push(e.q);
+        if (bad) { P.segLost++; continue; }
+        var sig = e.seq.join('|');
+        var byK = P._pfxAcc[sig] || (P._pfxAcc[sig] = {});
+        (byK[e.k] || (byK[e.k] = [])).push(ns / 1e6);
+        P._pfxSeq[sig] = e.seq;
+      }
+    };
+
     function closeSegment(nextKind) {
-      var now;
+      if (P.passMethod === 'timer') {
+        /* граница прохода: если этот кадр мерит префикс, закрываем запрос
+           ровно здесь, дальше кадр идёт без замера */
+        if (nextKind !== null) {
+          if (P._segIdx === P._profK) pfxEnd();   /* префикс кончается после прохода _profK */
+          P._segIdx++;
+          P._segSeq.push(labelFor(nextKind));
+        }
+        return;
+      }
       syncGPU();
-      now = performance.now();
+      var now = performance.now();
       if (P._segKind !== null && P._segBuf) {
-        P._segBuf.push({ kind: P._segKind, ms: +Math.max(0, now - P._segStart - P.syncOverheadMs).toFixed(3),
-                         raw: +(now - P._segStart).toFixed(3),
-                         draws: P._segDraws, tris: Math.round(P._segTris) });
+        var label = P._segLabel;
+        accPush(label, P._segKind, +Math.max(0, now - P._segStart - P.syncOverheadMs).toFixed(3),
+                P._segDraws, Math.round(P._segTris));
+        P._segBuf.push({ label: label, kind: P._segKind, ms: +(now - P._segStart).toFixed(3) });
       }
       P._segKind = nextKind;
+      P._segLabel = nextKind === null ? null : labelFor(nextKind);
       P._segStart = now;
       P._segDraws = 0;
       P._segTris = 0;
     }
     P._closeSegment = closeSegment;
+
     P._openSegments = function () {
+      P._segSeen = {};
+      P._segDraws = 0; P._segTris = 0;
+      if (P.passMethod === 'timer') {
+        /* слот −1 меряет пустой префикс: это и есть надбавка за границу */
+        P._profK = (P._profRot++ % P._profSlots) - 1;
+        P._segIdx = 0;
+        P._segSeq = ['clear#0'];       /* нулевой проход — до первой смены программы */
+        P._segSeen['clear'] = 1;
+        pfxBegin();
+        if (P._profK < 0) pfxEnd();
+        return;
+      }
       if (!P.syncOverheadMs) P._calibrateSync(5);
       P._segBuf = [];
-      P._segKind = null; P._segDraws = 0; P._segTris = 0;
+      P._segKind = null;
       syncGPU();
       P._segStart = performance.now();
       P._segKind = 'clear';
+      P._segLabel = labelFor('clear');
     };
     P._finishSegments = function () {
+      if (P.passMethod === 'timer') {
+        pfxEnd();
+        /* число слотов = проходов в кадре плюс слот надбавки */
+        var n = P._segSeq.length + 1;
+        if (n > P._profSlots) P._profSlots = n;
+        return [];
+      }
       closeSegment(null);
       var b = P._segBuf; P._segBuf = null; P._segKind = null;
       return b || [];
     };
-
     /* --- счётчики кадра --- */
     var f = P.cur = newCounters();
     function newCounters() {
+      /* виды проходов не перечислены заранее: программы добавляются
+         (кубмапа неба, префильтр, BRDF, тонмаппинг), и неизвестный вид
+         должен считаться, а не превращать счётчик в NaN */
       return { draws: 0, tris: 0, verts: 0, byKind: { sky: 0, main: 0, glow: 0, other: 0 },
                trisByKind: { sky: 0, main: 0, glow: 0, other: 0 },
                progSwitch: 0, vaoBind: 0, texBind: 0, uniformCalls: 0 };
     }
+    function bump(o, k, v) { o[k] = (o[k] || 0) + v; }
     P._newCounters = newCounters;
     P._reset = function () { P.cur = f = newCounters(); };
 
     var _drawElements = gl.drawElements.bind(gl);
     gl.drawElements = function (mode, count) {
-      f.draws++; f.byKind[curKind]++; f.verts += count;
-      var t = count / 3; f.tris += t; f.trisByKind[curKind] += t;
-      if (P._segBuf) { P._segDraws++; P._segTris += t; }
+      f.draws++; bump(f.byKind, curKind, 1); f.verts += count;
+      var t = count / 3; f.tris += t; bump(f.trisByKind, curKind, t);
+      if (P.finishActive) { P._segDraws++; P._segTris += t; }
       return _drawElements.apply(null, arguments);
     };
     var _drawArrays = gl.drawArrays.bind(gl);
     gl.drawArrays = function (mode, first, count) {
-      f.draws++; f.byKind[curKind]++; f.verts += count;
-      var t = count / 3; f.tris += t; f.trisByKind[curKind] += t;
-      if (P._segBuf) { P._segDraws++; P._segTris += t; }
+      f.draws++; bump(f.byKind, curKind, 1); f.verts += count;
+      var t = count / 3; f.tris += t; bump(f.trisByKind, curKind, t);
+      if (P.finishActive) { P._segDraws++; P._segTris += t; }
       return _drawArrays.apply(null, arguments);
     };
     if (gl.drawElementsInstanced) {
       var _dei = gl.drawElementsInstanced.bind(gl);
       gl.drawElementsInstanced = function (mode, count, type, off, inst) {
-        f.draws++; f.byKind[curKind]++; f.verts += count * inst;
-        var t = count / 3 * inst; f.tris += t; f.trisByKind[curKind] += t;
+        f.draws++; bump(f.byKind, curKind, 1); f.verts += count * inst;
+        var t = count / 3 * inst; f.tris += t; bump(f.trisByKind, curKind, t);
+        if (P.finishActive) { P._segDraws++; P._segTris += t; }
         return _dei.apply(null, arguments);
       };
     }
@@ -391,19 +507,23 @@
 
       if (P.sampling && P._reset) P._reset();
 
+      /* кадр под профилировку проходов — каждый N-й, если включено.
+         Решаем это ДО запроса вокруг кадра: одновременно активным может быть
+         только один TIME_ELAPSED_EXT, а профилируемый кадр открывает свой на
+         каждый сегмент. Поэтому цену кадра целиком и разбор по проходам
+         снимаем в разных кадрах — и в статистику кадра профилируемые не идут. */
+      var prof = false;
+      if (P.sampling && P.finishEvery > 0 && P._openSegments && (P._frameNo++ % P.finishEvery) === 0) {
+        prof = true; P.finishActive = true; P._openSegments();
+      }
+
       /* запрос таймера GPU вокруг всей работы кадра */
-      if (P.sampling && gl && TQ) {
+      if (P.sampling && !prof && gl && TQ) {
         try {
           if (gl.getParameter(TQ.GPU_DISJOINT_EXT)) P.gpu.disjoint++;
           qLive = qPool.pop() || gl.createQuery();
           gl.beginQuery(TQ.TIME_ELAPSED_EXT, qLive);
         } catch (e) { qLive = null; }
-      }
-
-      /* кадр под профилировку проходов — каждый N-й, если включено */
-      var prof = false;
-      if (P.sampling && P.finishEvery > 0 && P._openSegments && (P._frameNo++ % P.finishEvery) === 0) {
-        prof = true; P.finishActive = true; P._openSegments();
       }
 
       var c0 = performance.now();
@@ -440,6 +560,9 @@
           });
           drainQueries();
         }
+        /* результаты сегментов дочитываем всегда: последние запросы окна
+           разрешаются уже после stop(), и без этого хвост окна пропал бы */
+        if (P._drainSegments) P._drainSegments();
       }
       return r;
     });
@@ -482,10 +605,24 @@
   P.start = function (finishEvery) {
     P.frames.length = 0; P.profFrames.length = 0; P.pendingQ.length = 0;
     P.gpu.pending = 0; P.gpu.resolved = 0; P._frameNo = 0;
+    P._segAcc = {}; P._pfxAcc = {}; P._pfxSeq = {}; P.segLost = 0; P._profRot = 0;
     P.finishEvery = finishEvery | 0;
     P.sampling = true;
   };
   P.stop = function () { P.sampling = false; return P.frames.slice(); };
+
+  /* Дождаться, пока разрешатся последние запросы сегментов. Ждём кадрами, а
+     не циклом: результат приходит через кадр-два, а занимать поток нельзя. */
+  P.flushSegments = function (frames) {
+    var left = frames || 8;
+    return new Promise(function (done) {
+      (function step() {
+        if (P._drainSegments) P._drainSegments();
+        if (--left <= 0 || !P._segPend || !P._segPend.length) return done(P._segPend ? P._segPend.length : 0);
+        origRAF(step);
+      })();
+    });
+  };
 
   /* Сколько кадров уже годится в статистику. Нужно, чтобы окно замера
      закрывалось по числу набранных кадров, а не по секундомеру: диалог
@@ -559,33 +696,100 @@
   /* Средняя стоимость каждого прохода кадра. Проходы идут в неизменном порядке
      (небо → статика → тени → динамика → свечения), поэтому опознаём их по
      порядковому номеру внутри кадра, а не только по программе. */
+  /* Средняя стоимость каждого прохода кадра.
+
+     Ярлык прохода — вид программы плюс номер его появления внутри кадра
+     (main#0 — статика района, main#1 — персонажи и техника). Порядок
+     проходов может меняться от кадра к кадру: грань кубмапы окружения
+     обновляется не каждый кадр, ночью добавляются свечения. Поэтому копим
+     по ярлыку, а не по позиции в списке. */
+  P.PASS_NAMES = {
+    /* Первый проход — остаток: очистка, установка камеры и разгон конвейера.
+       Искусственная граница запроса попадает именно сюда и в разностях
+       остальных проходов сокращается, поэтому цифра тут завышена. */
+    'clear#0': 'очистка, камера и разгон конвейера',
+    'env#0': 'окружение: небо в кубмапу',
+    'env#1': 'окружение: префильтр и SH',
+    'env#2': 'окружение: BRDF',
+    'main#0': 'статика района',
+    'glow#0': 'тени под объектами',
+    'main#1': 'персонажи и техника',
+    'sky#0': 'небо',
+    'glow#1': 'свечения и маркеры',
+    'tone#0': 'тонмаппинг в холст'
+  };
+  function medOf(a) { var s2 = a.slice().sort(function (x, y) { return x - y; }); return s2.length ? s2[s2.length >> 1] : 0; }
+  /* межквартильный размах префикса — шумовой пол: проход дешевле него
+     этим способом не разрешается, и отрицательная разность значит ровно это */
+  function iqrOf(a) {
+    if (a.length < 4) return 0;
+    var s2 = a.slice().sort(function (x, y) { return x - y; });
+    return s2[Math.floor(s2.length * 0.75)] - s2[Math.floor(s2.length * 0.25)];
+  }
+
+  /* Разбор кадра по проходам.
+
+     Таймер: цена прохода = разность медиан соседних префиксов, надбавка за
+     искусственную границу сокращается (слот −1 меряет её отдельно и
+     печатается как overheadMs). Отрицательные разности означают, что шум
+     превысил цену прохода, — так и пишем, не обнуляя.
+
+     readPixels: как раньше, доля прохода в сумме. */
   P.passReport = function () {
-    if (!P.profFrames.length) return { available: false, reason: 'профилировка проходов не включена' };
-    var names = ['clear:очистка+служебное', 'sky:небо', 'main:статика района',
-                 'glow:тени под объектами', 'main:персонажи и техника', 'glow:свечения и маркеры'];
-    var acc = [];
-    for (var i = 0; i < P.profFrames.length; i++) {
-      var segs = P.profFrames[i];
-      for (var j = 0; j < segs.length; j++) {
-        if (!acc[j]) acc[j] = { name: names[j] || ('#' + j + ':' + segs[j].kind), kind: segs[j].kind, ms: [], draws: [], tris: [] };
-        acc[j].ms.push(segs[j].ms); acc[j].draws.push(segs[j].draws); acc[j].tris.push(segs[j].tris);
+    if (P.passMethod === 'timer') {
+      var sigs = Object.keys(P._pfxAcc || {});
+      if (!sigs.length) return { available: false, reason: 'профилировка проходов не включена или не дала результатов' };
+      /* берём самую частую последовательность проходов: порядок может
+         меняться (грань окружения обновляется не каждый кадр) */
+      var best = null, bestN = -1;
+      for (var i = 0; i < sigs.length; i++) {
+        var n = 0, byK = P._pfxAcc[sigs[i]];
+        for (var k in byK) n += byK[k].length;
+        if (n > bestN) { bestN = n; best = sigs[i]; }
       }
+      var acc = P._pfxAcc[best], seq = P._pfxSeq[best];
+      var overhead = acc['-1'] ? medOf(acc['-1']) : 0;
+      var rows = [], prev = overhead, total = 0;
+      for (var j = 0; j < seq.length; j++) {
+        var a = acc[String(j)];
+        if (!a || !a.length) { prev = prev; continue; }
+        var t = medOf(a), ms = t - prev;
+        prev = t;
+        total += ms;
+        rows.push({ pass: seq[j] + ':' + (P.PASS_NAMES[seq[j]] || seq[j]), label: seq[j],
+                    kind: seq[j].split('#')[0], msMedian: +ms.toFixed(4),
+                    prefixMs: +t.toFixed(4), noiseMs: +iqrOf(a).toFixed(4), samples: a.length });
+      }
+      rows.forEach(function (r) { r.share = total ? +(r.msMedian / total * 100).toFixed(1) : 0; });
+      var full = rows.length ? rows[rows.length - 1].prefixMs - overhead : 0;
+      rows.sort(function (a, b) { return b.msMedian - a.msMedian; });
+      return {
+        available: true, method: 'EXT_disjoint_timer_query_webgl2, префиксы: один запрос на кадр от начала кадра до конца прохода k',
+        note: 'Цена прохода — разность медиан соседних префиксов; надбавка за границу запроса сокращается в разности.',
+        overheadMs: +overhead.toFixed(4),
+        frameFromPrefixMs: +full.toFixed(4),
+        variants: sigs.length, chosenSamples: bestN, lostQueries: P.segLost || 0,
+        totalMsMedian: +total.toFixed(4), rows: rows
+      };
     }
-    function med(a) { var s = a.slice().sort(function (x, y) { return x - y; }); return s.length ? +s[s.length >> 1].toFixed(3) : 0; }
-    var rows = acc.map(function (r) {
-      return { pass: r.name, kind: r.kind, msMedian: med(r.ms), drawsMedian: med(r.draws), trisMedian: med(r.tris) };
+    var acc2 = P._segAcc || {};
+    var labels = Object.keys(acc2);
+    if (!labels.length) return { available: false, reason: 'профилировка проходов не включена' };
+    var rows2 = labels.map(function (L) {
+      var r = acc2[L];
+      return { pass: L + ':' + (P.PASS_NAMES[L] || r.kind), label: L, kind: r.kind,
+               msMedian: +medOf(r.ms).toFixed(4), drawsMedian: +medOf(r.draws).toFixed(1),
+               trisMedian: Math.round(medOf(r.tris)), samples: r.ms.length };
     });
-    var total = rows.reduce(function (a, r) { return a + r.msMedian; }, 0);
-    rows.forEach(function (r) { r.share = total ? +(r.msMedian / total * 100).toFixed(1) : 0; });
-    rows.sort(function (a, b) { return b.msMedian - a.msMedian; });
+    var total2 = rows2.reduce(function (a, r) { return a + r.msMedian; }, 0);
+    rows2.forEach(function (r) { r.share = total2 ? +(r.msMedian / total2 * 100).toFixed(1) : 0; });
+    rows2.sort(function (a, b) { return b.msMedian - a.msMedian; });
     return {
       available: true,
-      method: P.gpu.available
-        ? 'readPixels на границах проходов (сверить с EXT_disjoint_timer_query_webgl2)'
-        : 'readPixels на границах проходов; таймер-запросов в этом браузере нет',
+      method: 'readPixels на границах проходов; таймер-запросов в этом браузере нет',
       syncOverheadMs: P.syncOverheadMs,
       note: 'Оценка распределения, не абсолютная цена: каждая граница стоит одной синхронизации, надбавка вычтена по калибровке.',
-      profiledFrames: P.profFrames.length, totalMsMedian: +total.toFixed(3), rows: rows
+      profiledFrames: P.profFrames.length, totalMsMedian: +total2.toFixed(4), rows: rows2
     };
   };
 

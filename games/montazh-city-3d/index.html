@@ -599,6 +599,8 @@ void main(){
 }`;
 
 const FS_MAIN = `#version 300 es
+/* PASS:main — метка для оснастки замера (tools/perf-inject.js): по ней
+   программа опознаётся в разборе кадра по проходам, а не по именам юниформ. */
 precision highp float;
 precision mediump sampler2DArray;
 in vec3 vNor; in vec2 vUV; in vec3 vCol; in float vEmis; in vec3 vWorld; in float vGloss;
@@ -723,6 +725,7 @@ void main(){
 }`;
 
 const FS_SKY = `#version 300 es
+/* PASS:sky */
 precision highp float;
 in vec3 vDir;
 uniform vec3 uEye, uSunDir, uZenith, uHorizon, uSunCol, uGround;
@@ -781,6 +784,7 @@ void main(){
 }`;
 
 const FS_GLOW = `#version 300 es
+/* PASS:glow */
 precision highp float;
 in vec2 vUV;
 uniform vec4 uColor;

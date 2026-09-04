@@ -149,15 +149,23 @@ async function runScene(browser, sc, common) {
                          `(выброшено ${report.droppedDialogFrames} кадров на диалогах).\n`);
   const frames = await page.evaluate(() => window.__MCPERF.frames.map(f => [f.ts, f.cpuMs, f.gpuMs, f.draws, f.tris, f.dlg ? 1 : 0]));
 
-  /* 2) разбор кадра по проходам. Кадры с gl.finish() заведомо медленнее
-        обычных, поэтому окно отдельное и короткое, а в FPS они не идут. */
+  /* 2) разбор кадра по проходам. Где есть EXT_disjoint_timer_query_webgl2 —
+        по одному TIME_ELAPSED_EXT на сегмент; одновременно активным может
+        быть только один запрос, поэтому цена кадра целиком в этих кадрах не
+        снимается и в FPS они не идут. Где таймера нет (WebKit) — прежний
+        запасной способ с readPixels на границах. */
   await page.evaluate(() => window.__MCPERF.start(1));
   const tP = Date.now();
   while (Date.now() - tP < OPT.profile) {
     await sleep(200);
     if (await dialogOpen()) await page.keyboard.press('Space');
   }
-  const passes = await page.evaluate(() => { window.__MCPERF.stop(); return window.__MCPERF.passReport(); });
+  const passes = await page.evaluate(async () => {
+    window.__MCPERF.stop();
+    /* последние запросы таймера разрешаются через кадр-два после окна */
+    if (window.__MCPERF.flushSegments) await window.__MCPERF.flushSegments(12);
+    return window.__MCPERF.passReport();
+  });
 
   await ctx.close();
   return {
@@ -205,9 +213,15 @@ for (const sc of list) {
     `draw ${rep.draws.p50}  тр ${rep.tris.p50}  gpu ${rep.gpuMs.p50 ?? '—'}  ` +
     (rep.render ? `буфер ${rep.render.w}×${rep.render.h}${rep.render.wMin !== rep.render.wMax ? ' (' + rep.render.wMin + '…' + rep.render.wMax + ')' : ''}  ` : '') +
     `(${rep.frames} кадров, ${rep.frameMsSamples} интервалов, ${rep.droppedDialogFrames} выброшено)\n`);
-  if (r.passes && r.passes.available)
+  if (r.passes && r.passes.available) {
     for (const row of r.passes.rows)
-      process.stderr.write(`      ${String(row.share).padStart(5)}%  ${String(row.msMedian).padStart(8)}мс  ${row.pass}\n`);
+      process.stderr.write(`      ${String(row.share).padStart(5)}%  ${String(row.msMedian.toFixed(3)).padStart(8)}мс  ` +
+                           `${row.noiseMs !== undefined ? '±' + row.noiseMs.toFixed(2) + '  ' : ''}${row.pass}\n`);
+    if (r.passes.overheadMs !== undefined)
+      process.stderr.write(`      кадр по префиксам ${r.passes.frameFromPrefixMs.toFixed(3)}мс, ` +
+                           `надбавка за границу ${r.passes.overheadMs.toFixed(3)}мс, ` +
+                           `вариантов порядка ${r.passes.variants}\n`);
+  }
 }
 await browser.close();
 
