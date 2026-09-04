@@ -57,9 +57,16 @@ p('| --- | --- | --- |');
 p(`| Снято | ${A.when} | ${B.when} |`);
 p(`| Рендерер | ${A.common?.ctx?.unmasked || A.common?.ctx?.renderer || '—'} | ${B.common?.ctx?.unmasked || B.common?.ctx?.renderer || '—'} |`);
 p(`| Окно | ${A.viewport.css.join('×')} @ dpr ${A.viewport.dpr} | ${B.viewport.css.join('×')} @ dpr ${B.viewport.dpr} |`);
+p(`| Профиль качества | ${A.quality ? A.quality + (A.dynamic ? ', авто-масштаб' : '') : '— (до этапа 02)'} | ${B.quality ? B.quality + (B.dynamic ? ', авто-масштаб' : '') : '— (до этапа 02)'} |`);
 p(`| Ядер у хоста | ${A.host?.cpus ?? '—'} | ${B.host?.cpus ?? '—'} |`);
 p('');
 
+/* фаза текстур: от отметки «генерируем текстуры» до «строим район» */
+function texPhaseMs(boot) {
+  const ph = boot?.phases || [];
+  const a = ph.find(p => p.name === 'load:генерируем текстуры'), b = ph.find(p => p.name === 'load:строим район');
+  return a && b ? +(b.t - a.t).toFixed(1) : null;
+}
 const byId = d => Object.fromEntries(d.scenes.map(s => [s.scene, s]));
 const sa = byId(A), sb = byId(B);
 for (const id of Object.keys(sa)) {
@@ -78,8 +85,10 @@ for (const id of Object.keys(sa)) {
     ['Треугольников p50', x.report.tris.p50, y.report.tris.p50, null],
     ['Время GPU p50, мс', x.report.gpuMs?.p50 ?? null, y.report.gpuMs?.p50 ?? null,
       delta(x.report.gpuMs?.p50, y.report.gpuMs?.p50)],
+    ['Буфер отрисовки', x.report.render ? x.report.render.w + '×' + x.report.render.h : null, y.report.render ? y.report.render.w + '×' + y.report.render.h : null, null],
     ['Интервалов в выборке', x.report.frameMsSamples, y.report.frameMsSamples, null],
-    ['Загрузка до первого кадра, мс', x.boot?.firstFrameAt, y.boot?.firstFrameAt, delta(x.boot?.firstFrameAt, y.boot?.firstFrameAt)]
+    ['Загрузка до конца заставки, мс', x.boot?.doneAt, y.boot?.doneAt, delta(x.boot?.doneAt, y.boot?.doneAt)],
+    ['— из них генерация текстур, мс', texPhaseMs(x.boot), texPhaseMs(y.boot), delta(texPhaseMs(x.boot), texPhaseMs(y.boot))]
   ];
   for (const [k, va, vb, d] of rows) p(`| ${k} | ${num(va)} | ${num(vb)} | ${d || ''} |`);
   p('');
@@ -119,7 +128,8 @@ if (ma && mb) {
   p('');
   p(`| | ${NA} | ${NB} |`);
   p('| --- | ---: | ---: |');
-  p(`| Текстур | ${ma.texCount} | ${mb.texCount} |`);
+  p(`| Текстур (объектов GL) | ${ma.texCount} | ${mb.texCount} |`);
+  p(`| Нулевой уровень, МиБ | ${num(ma.texMiBL0)} | ${num(mb.texMiBL0)} |`);
   p(`| Текстуры с мипами, МиБ | ${num(ma.texMiBWithMips)} | ${num(mb.texMiBWithMips)} |`);
   p(`| Буферы, МиБ | ${num(ma.bufferMiB)} | ${num(mb.bufferMiB)} |`);
   p('');

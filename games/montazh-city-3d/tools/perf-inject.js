@@ -282,6 +282,31 @@
              : (type === gl.UNSIGNED_SHORT || type === gl.SHORT || type === gl.HALF_FLOAT) ? 2 : 4;
       return ch * sz;
     }
+    /* байт на тексель по sized-формату (texStorage*, texImage3D) и его имя */
+    var FMT = {};
+    [['RGBA8', 4], ['SRGB8_ALPHA8', 4], ['RGB8', 3], ['SRGB8', 3], ['RG8', 2], ['R8', 1],
+     ['RGBA4', 2], ['RGB5_A1', 2], ['RGB565', 2], ['RGBA16F', 8], ['RGBA32F', 16], ['RG16F', 4], ['R16F', 2],
+     ['R32F', 4], ['DEPTH_COMPONENT16', 2], ['DEPTH_COMPONENT24', 4], ['DEPTH24_STENCIL8', 4],
+     ['RGBA', 4], ['RGB', 3], ['LUMINANCE_ALPHA', 2], ['LUMINANCE', 1], ['ALPHA', 1]
+    ].forEach(function (p) { if (gl[p[0]] !== undefined) FMT[gl[p[0]]] = { name: p[0], bpp: p[1] }; });
+    function fmtOf(ifmt) { return FMT[ifmt] || { name: '0x' + Number(ifmt).toString(16), bpp: 4 }; }
+    function levelsBytes(w, h, d, bpp, levels) {
+      var total = 0;
+      for (var l = 0; l < levels; l++) { total += Math.max(1, w >> l) * Math.max(1, h >> l) * d * bpp; }
+      return total;
+    }
+    /* учёт одной текстуры: L0 отдельно, с мипами отдельно; массивы — со всеми слоями */
+    function account(target, w, h, layers, ifmt, levels) {
+      var t = bound[target];
+      var fi = fmtOf(ifmt), l0 = w * h * layers * fi.bpp;
+      var rec = { w: w, h: h, layers: layers, fmt: fi.name, bytes: l0, mips: levels > 1, target: target === gl.TEXTURE_2D_ARRAY ? '2d_array' : target === gl.TEXTURE_3D ? '3d' : '2d' };
+      if (t) texInfo.set(t, rec);
+      P.mem.textures.push(rec);
+      P.mem.texCount++;
+      P.mem.texBytesL0 += l0;
+      P.mem.texBytesWithMips += levels > 1 ? levelsBytes(w, h, layers, fi.bpp, levels) : l0;
+      return rec;
+    }
     var _texImage2D = gl.texImage2D.bind(gl);
     gl.texImage2D = function (target, level, internalformat, a, b, c, d, e, g) {
       var w, h, bytes;
@@ -308,8 +333,42 @@
     var _generateMipmap = gl.generateMipmap.bind(gl);
     gl.generateMipmap = function (target) {
       var t = bound[target], rec = t && texInfo.get(t);
+      /* у immutable-хранилища (texStorage*) мипы уже посчитаны при выделении */
       if (rec && !rec.mips) { rec.mips = true; P.mem.texBytesWithMips += Math.round(rec.bytes / 3); }
       return _generateMipmap(target);
+    };
+    /* immutable-хранилище: 2D и массивы слоёв (этап 02 держит материалы в TEXTURE_2D_ARRAY) */
+    if (gl.texStorage2D) {
+      var _texStorage2D = gl.texStorage2D.bind(gl);
+      gl.texStorage2D = function (target, levels, ifmt, w, h) {
+        account(target, w, h, 1, ifmt, levels);
+        return _texStorage2D.apply(null, arguments);
+      };
+    }
+    if (gl.texStorage3D) {
+      var _texStorage3D = gl.texStorage3D.bind(gl);
+      gl.texStorage3D = function (target, levels, ifmt, w, h, depth) {
+        account(target, w, h, depth, ifmt, levels);
+        return _texStorage3D.apply(null, arguments);
+      };
+    }
+    if (gl.texImage3D) {
+      var _texImage3D = gl.texImage3D.bind(gl);
+      gl.texImage3D = function (target, level, ifmt, w, h, depth) {
+        if (level === 0 && w && h) account(target, w, h, depth, ifmt, 1);
+        return _texImage3D.apply(null, arguments);
+      };
+    }
+    var _deleteTexture = gl.deleteTexture.bind(gl);
+    gl.deleteTexture = function (t) {
+      var rec = t && texInfo.get(t);
+      if (rec && !rec.deleted) {
+        rec.deleted = true;
+        P.mem.texCount--; P.mem.texBytesL0 -= rec.bytes;
+        P.mem.texBytesWithMips -= rec.mips ? Math.round(rec.bytes * 4 / 3) : rec.bytes;
+        var k = P.mem.textures.indexOf(rec); if (k >= 0) P.mem.textures.splice(k, 1);
+      }
+      return _deleteTexture(t);
     };
 
     /* --- память под буферы --- */
@@ -363,8 +422,10 @@
         }
         if (P.sampling) {
           var cur = P.cur || {};
+          var cv = gl && gl.canvas;
           P.frames.push({
             ts: +ts.toFixed(3),
+            rw: cv ? cv.width : 0, rh: cv ? cv.height : 0,
             cpuMs: +cpu.toFixed(3),
             gpuMs: null,
             draws: cur.draws | 0,
@@ -468,8 +529,11 @@
     var gpu = fr.filter(function (x) { return x.gpuMs !== null; }).map(function (x) { return x.gpuMs; });
     var draws = fr.map(function (x) { return x.draws; });
     var tris = fr.map(function (x) { return x.tris; });
+    var rw = fr.map(function (x) { return x.rw || 0; }), rh = fr.map(function (x) { return x.rh || 0; });
     return {
       frames: fr.length,
+      /* буфер отрисовки: медиана и крайние значения — при авто-масштабе они расходятся */
+      render: { w: pct(rw, 50), h: pct(rh, 50), wMin: pct(rw, 0), wMax: pct(rw, 100), hMin: pct(rh, 0), hMax: pct(rh, 100) },
       fpsMean: dt.length ? +(1000 / avg(dt)).toFixed(2) : null,
       fpsFromP50: dt.length ? +(1000 / pct(dt, 50)).toFixed(2) : null,
       frameMs: { p50: pct(dt, 50), p95: pct(dt, 95), p99: pct(dt, 99), min: pct(dt, 0), max: pct(dt, 100), mean: avg(dt) },
@@ -535,7 +599,7 @@
         texMiBWithMips: +(P.mem.texBytesWithMips / 1048576).toFixed(3),
         bufferMiB: +(P.mem.bufferBytes / 1048576).toFixed(3),
         biggest: P.mem.textures.slice().sort(function (a, b) { return b.bytes - a.bytes; }).slice(0, 12)
-          .map(function (t) { return { size: t.w + 'x' + t.h, kiB: Math.round(t.bytes / 1024) }; })
+          .map(function (t) { return { size: t.w + 'x' + t.h + (t.layers > 1 ? 'x' + t.layers : ''), fmt: t.fmt || 'RGBA8', kiB: Math.round(t.bytes / 1024) }; })
       }
     };
   };

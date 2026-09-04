@@ -14,11 +14,13 @@
      node tools/perf-probe.mjs --width=1440 --height=900 --dpr=2
      node tools/perf-probe.mjs --warmup=6 --measure=12  # секунды
      node tools/perf-probe.mjs --shots=docs/shots/00-base
+     node tools/perf-probe.mjs --quality=high --dynamic=1  # профиль и авто-масштаб
 
    Если playwright лежит не рядом, укажи путь:
      NODE_PATH=/usr/lib/node_modules node tools/perf-probe.mjs
    ===================================================================== */
 import { loadPlaywright } from './find-playwright.mjs';
+import { SCENES, saveFor, optsFor, SAVE_KEY, OPT_KEY } from './scenes.mjs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -49,52 +51,15 @@ const OPT = {
   minFrames: +(argv.minFrames || 60),
   shots: argv.shots ? path.resolve(REPO, argv.shots) : null,
   out: argv.out ? path.resolve(REPO, argv.out) : null,
-  headed: argv.headed === 'true'
+  headed: argv.headed === 'true',
+  /* профиль качества (low | medium | high) и авто-масштаб; по умолчанию
+     авто-масштаб выключен — иначе цифры не сравнить между прогонами */
+  quality: argv.quality || 'medium',
+  dynamic: argv.dynamic === '1' || argv.dynamic === 'true'
 };
 
-/* -------------------------------- сцены ---------------------------------- */
-/* yaw: 0 = на +Z (юг района), PI/2 = на +X (восток), PI = на -Z, 3PI/2 = на -X.
-   Час 17:00 — штатное начало смены: солнце низкое, но фонари ещё не горят,
-   поэтому свет во всех трёх сценах одинаковый и сравнение честное.        */
-const SCENES = {
-  street: {
-    id: '01-street',
-    title: 'Открытая улица',
-    where: 'Северная магистраль (дорога z=18.75), северный тротуар, точка x=90 z=12.25, взгляд на восток вдоль улицы.',
-    why: 'Длинные простреливаемые дистанции, много неба и тумана, застройка по одной стороне. Проверяет дальность отрисовки и заливку неба.',
-    p: { x: 90, z: 12.25, yaw: Math.PI / 2 }, bike: { x: 86, z: 12.6 }, hour: 17
-  },
-  dense: {
-    id: '02-dense',
-    title: 'Плотная застройка',
-    where: 'Двор «Три Колена», точка x=50 z=45, взгляд на север (yaw=PI): впереди стена «Панельной 12» с подъездами, вокруг клён, кусты, живая изгородь и детская площадка.',
-    why: 'Стена дома закрывает верх кадра, низ и края забиты зеленью с альфа-тестом — худший случай и по геометрии, и по прозрачным пикселям. Точка выбрана так, чтобы устоявшаяся камера (6 м за спиной) не оказалась внутри кроны, и в 15 м от Клянчилы: ближе он подходит знакомиться, открывает диалог и замер встаёт.',
-    p: { x: 50, z: 45, yaw: Math.PI }, bike: { x: 52.5, z: 46.5 }, hour: 17
-  },
-  traffic: {
-    id: '03-traffic',
-    title: 'Техника в движении',
-    where: 'Перекрёсток дорог x=100 и z=75, угловой тротуар x=93 z=70.5, взгляд на перекрёсток (yaw=1.05).',
-    why: 'В кадре обе оси движения сразу: машины идут по четырём полосам и не останавливаются, по тротуарам ходят люди. Проверяет стоимость анимации техники и людей и отдельного прохода теней.',
-    p: { x: 93, z: 70.5, yaw: 1.05 }, bike: { x: 91, z: 66 }, hour: 17
-  }
-};
-
-/* ----------------------- сохранение под сцену ---------------------------- */
-function saveFor(sc) {
-  return {
-    v: 1, ts: Date.now(),
-    p: { x: sc.p.x, z: sc.p.z, yaw: sc.p.yaw, health: 100, stamina: 100, drunk: 0,
-         money: 1500, rep: 30, tools: ['screw', 'tester', 'ties', 'lamp'], tool: 0 },
-    bike: { x: sc.bike.x, z: sc.bike.z, cond: 100 },
-    clock: sc.hour * 3600, day: 1, heat: 0,
-    missionIndex: 0, missionsDone: [], free: false, freeCount: 0,
-    upgrades: {}, stats: { earned: 0, crashes: 0, fixed: 0, sober: 0, bestQ: 0, fines: 0, dist: 0 },
-    flags: { tutorialDone: true },
-    poles: new Array(24).fill(false), station: 0
-  };
-}
-const OPTS = { camFollow: true, lowFx: false, station: 0, sfx: 0.7, mus: 0.5, muted: false };
+/* сцены, сохранение и настройки — в scenes.mjs, общие для всех инструментов */
+const OPTS = optsFor(OPT.quality, OPT.dynamic);
 
 /* --------------------------------- прогон -------------------------------- */
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -111,12 +76,12 @@ async function runScene(browser, sc, common) {
   page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
 
   await page.addInitScript({ path: INJECT });
-  await page.addInitScript(({ save, opts }) => {
+  await page.addInitScript(({ save, opts, keys }) => {
     try {
-      localStorage.setItem('montazh_city_3d_save_v1', JSON.stringify(save));
-      localStorage.setItem('montazh_city_3d_save_v1_opt', JSON.stringify(opts));
+      localStorage.setItem(keys.save, JSON.stringify(save));
+      localStorage.setItem(keys.opt, JSON.stringify(opts));
     } catch (e) { window.__MCPERF_STORAGE_FAIL = String(e); }
-  }, { save: saveFor(sc), opts: OPTS });
+  }, { save: saveFor(sc), opts: OPTS, keys: { save: SAVE_KEY, opt: OPT_KEY } });
 
   const url = pathToFileURL(GAME).href;
   const tNav = Date.now();
@@ -221,6 +186,7 @@ const out = {
   browserVersion: browser.version(),
   playwrightFrom,
   viewport: { css: [OPT.width, OPT.height], dpr: OPT.dpr },
+  quality: OPT.quality, dynamic: OPT.dynamic,
   warmupMs: OPT.warmup, measureMs: OPT.measure, profileMs: OPT.profile, minFrames: OPT.minFrames,
   host: { platform: process.platform, arch: process.arch, cpus: (await import('node:os')).cpus().length },
   scenes: []
@@ -237,6 +203,7 @@ for (const sc of list) {
   process.stderr.write(
     `fps≈${rep.fpsFromP50}  p50 ${rep.frameMs.p50}мс  p95 ${rep.frameMs.p95}мс  ` +
     `draw ${rep.draws.p50}  тр ${rep.tris.p50}  gpu ${rep.gpuMs.p50 ?? '—'}  ` +
+    (rep.render ? `буфер ${rep.render.w}×${rep.render.h}${rep.render.wMin !== rep.render.wMax ? ' (' + rep.render.wMin + '…' + rep.render.wMax + ')' : ''}  ` : '') +
     `(${rep.frames} кадров, ${rep.frameMsSamples} интервалов, ${rep.droppedDialogFrames} выброшено)\n`);
   if (r.passes && r.passes.available)
     for (const row of r.passes.rows)

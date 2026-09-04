@@ -10,6 +10,7 @@
      node tools/perf-trace.mjs --scene=traffic --out=docs/perf/trace-traffic.json
    ===================================================================== */
 import { loadPlaywright } from './find-playwright.mjs';
+import { SCENES, saveFor, optsFor, SAVE_KEY, OPT_KEY } from './scenes.mjs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -25,25 +26,14 @@ const REPO = path.resolve(HERE, '..', '..', '..');
 const argv = Object.fromEntries(process.argv.slice(2).map(a => {
   const m = /^--([^=]+)(?:=(.*))?$/.exec(a); return m ? [m[1], m[2] ?? 'true'] : [a, 'true'];
 }));
-const SCENES = {
-  street: { p: { x: 90, z: 12.25, yaw: Math.PI / 2 }, bike: { x: 86, z: 12.6 } },
-  dense: { p: { x: 55, z: 45, yaw: Math.PI }, bike: { x: 57.5, z: 46.5 } },
-  traffic: { p: { x: 93.5, z: 68.5, yaw: Math.PI / 4 }, bike: { x: 91, z: 66 } }
-};
 const name = argv.scene || 'dense';
 const sc = SCENES[name];
 if (!sc) { console.error('Сцена: street | dense | traffic'); process.exit(2); }
 const SECONDS = +(argv.seconds || 12);
 const W = +(argv.width || 1440), H = +(argv.height || 900), DPR = +(argv.dpr || 2);
 
-const save = {
-  v: 1, ts: Date.now(),
-  p: { x: sc.p.x, z: sc.p.z, yaw: sc.p.yaw, health: 100, stamina: 100, drunk: 0, money: 1500, rep: 30,
-       tools: ['screw', 'tester', 'ties', 'lamp'], tool: 0 },
-  bike: { x: sc.bike.x, z: sc.bike.z, cond: 100 },
-  clock: 17 * 3600, day: 1, heat: 0, missionIndex: 0, missionsDone: [], free: false, freeCount: 0,
-  upgrades: {}, stats: {}, flags: { tutorialDone: true }, poles: new Array(24).fill(false), station: 0
-};
+const save = saveFor(sc);
+const opts = optsFor(argv.quality || 'medium', argv.dynamic === '1' || argv.dynamic === 'true');
 
 const browser = await playwright.chromium.launch({
   args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required']
@@ -51,12 +41,12 @@ const browser = await playwright.chromium.launch({
 const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DPR });
 const page = await ctx.newPage();
 await page.addInitScript({ path: INJECT });
-await page.addInitScript(s => {
+await page.addInitScript(({ save, opts, keys }) => {
   try {
-    localStorage.setItem('montazh_city_3d_save_v1', JSON.stringify(s));
-    localStorage.setItem('montazh_city_3d_save_v1_opt', JSON.stringify({ camFollow: true, lowFx: false, muted: false }));
+    localStorage.setItem(keys.save, JSON.stringify(save));
+    localStorage.setItem(keys.opt, JSON.stringify(opts));
   } catch (e) { }
-}, save);
+}, { save, opts, keys: { save: SAVE_KEY, opt: OPT_KEY } });
 
 await page.goto(pathToFileURL(GAME).href, { waitUntil: 'load' });
 await page.waitForSelector('#bCont', { timeout: 120000 });
