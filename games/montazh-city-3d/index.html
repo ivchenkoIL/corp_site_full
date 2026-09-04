@@ -459,6 +459,38 @@ const QCFG = {
      и авторские палитры переводятся в линейное пространство той же гаммой.
      Кодирование в sRGB — один раз, в проходе постобработки. */
   color: { gamma: 2.2, exposure: 1.02, sunK: 1.0, ambK: 1.7, skyK: 0.76, fogK: 1.0 },
+  /* Свет. Модель отражения физическая: GGX (Троубридж–Райц) для распределения
+     микрограней, высотно-коррелированный Smith для затенения геометрией,
+     Френель по Шлику, Ламберт в диффузе с сохранением энергии. Одна и та же
+     BRDF для солнца, для точечных источников и для окружения. Ни одного
+     числа освещения в шейдере — всё здесь. */
+  light: {
+    sunK: 1.0,          /* множитель солнечной освещённости */
+    vGlossK: 0.85,      /* лужи, стекло, краска: rough_eff = rough·(1 − vGloss·k) */
+    roughMin: 0.045,    /* ниже блик вырождается в точку и мерцает на движении */
+    f0: 0.04,           /* отражение диэлектрика в упор, 4 % */
+    ambK: 1.0,          /* множитель рассеянного (до этапа окружения — палитры Env) */
+    /* Точечные источники: спад обратный квадрату с оконной функцией на
+       радиусе, та же BRDF, что у солнца. Раньше был линейный спад (1 − d/16)²
+       и обёртка 0.75/0.25, из-за которой затенённая сторона всё равно
+       светилась. */
+    lamp: {
+      radius: 16,       /* дальше источник не считается, м */
+      /* Сила источника: освещённость = power·k·окно²/расстояние². Значение не
+         на глаз: приравнено к прежнему вкладу (0.75·NoL + 0.25)·(1 − d/16)² на
+         восьми и на четырнадцати метрах — оба уравнения дают 21. */
+      power: 21,
+      warm: [1, .82, .55], oleg: [.65, .7, .95], torch: [1, .95, .8], bike: [1, .92, .7],
+      kSmall: 0.7, kBig: 1.15, kOleg: 0.55, kTorch: 2.1, kBike: 1.4
+    },
+    emis: { win: 1.55, tint: [1, .86, .6], tintK: 0.35 },   /* окна и неон */
+    horizonOccl: 1.0,   /* гашение отражений, ушедших под геометрическую нормаль */
+    /* Вершинное затенение низа стен и кузовов. Это не дубль карты AO: та про
+       мелкий рельеф материала, а это контакт с землёй, которого карте взять
+       неоткуда. Сила задана так, как читается после линеаризации. */
+    groundAO: { y0: 0, y1: 3.5, k: 0.17 },
+    bodyAO: { y0: 0.15, y1: 1.0, k: 0.12 }
+  },
   /* Постобработка. Сцена рисуется в HDR-буфер в линейном свете, и ровно один
      раз в конце кадра он превращается в картинку: экспозиция, ACES,
      насыщенность, кодирование в sRGB, дизеринг. Раньше тонмаппинг вызывался
@@ -608,6 +640,54 @@ void main(){
   fragColor = vec4(c + d * (uDither / 255.0), 1.0);
 }`;
 
+/* --- Физическая модель отражения --------------------------------------
+   GGX (Троубридж–Райц) для распределения микрограней, высотно-
+   коррелированный Smith для затенения, Френель по Шлику, Ламберт в диффузе.
+   Одна и та же BRDF для солнца, для точечных источников и для окружения —
+   иначе объекты и выглядят наклеенными: блик живёт по одним правилам,
+   рассеянное по другим, отражение неба вовсе отсутствует. */
+const GLSL_PBR = `
+const float PI = 3.14159265, INV_PI = 0.31830989;
+float D_GGX(float NoH, float a){
+  float a2 = a * a, d = NoH * NoH * (a2 - 1.0) + 1.0;
+  return a2 / max(PI * d * d, 1e-7);
+}
+/* уже делённый на 4·NoL·NoV — в произведении с D эти множители сокращаются */
+float V_Smith(float NoV, float NoL, float a){
+  float a2 = a * a;
+  float gv = NoL * sqrt(NoV * NoV * (1.0 - a2) + a2);
+  float gl = NoV * sqrt(NoL * NoL * (1.0 - a2) + a2);
+  return 0.5 / max(gv + gl, 1e-5);
+}
+vec3 F_Schlick(vec3 f0, float u){ return f0 + (1.0 - f0) * pow(1.0 - u, 5.0); }
+/* Приближение Кариса для второй суммы split-sum. Взято вместо таблицы BRDF:
+   таблица стоила бы прохода генерации, текстуры и выборки на каждый пиксель,
+   а это десяток арифметических операций и ноль обращений к памяти. */
+vec3 envBRDF(vec3 f0, float rough, float NoV){
+  const vec4 c0 = vec4(-1.0, -0.0275, -0.572, 0.022);
+  const vec4 c1 = vec4(1.0, 0.0425, 1.04, -0.04);
+  vec4 r = rough * c0 + c1;
+  float a004 = min(r.x * r.x, exp2(-9.28 * NoV)) * r.x + r.y;
+  vec2 ab = vec2(-1.04, 1.04) * a004 + r.zw;
+  return f0 * ab.x + ab.y;
+}
+/* Зеркальная окклюзия из AO: гладкое зеркало окклюдируется слабее шершавого,
+   иначе металл в углу чернеет. */
+float specOcclusion(float NoV, float ao, float rough){
+  return clamp(pow(NoV + ao, exp2(-16.0 * rough - 1.0)) - 1.0 + ao, 0.0, 1.0);
+}
+/* Прямой источник: солнце и фонарь считаются одинаково, разница только в
+   освещённости irr и в направлении L. */
+vec3 directLight(vec3 N, vec3 V, vec3 L, vec3 irr, vec3 diff, vec3 f0, float a){
+  float NoL = max(dot(N, L), 0.0);
+  if (NoL <= 0.0) return vec3(0.0);
+  vec3 H = normalize(L + V);
+  float NoV = max(dot(N, V), 1e-4), NoH = max(dot(N, H), 0.0), VoH = max(dot(V, H), 0.0);
+  vec3 F = F_Schlick(f0, VoH);
+  vec3 spec = F * (D_GGX(NoH, a) * V_Smith(NoV, NoL, a));
+  return ((vec3(1.0) - F) * diff * INV_PI + spec) * irr * NoL;
+}`;
+
 const VS_MAIN = `#version 300 es
 layout(location=0) in vec3 aPos;
 layout(location=1) in vec3 aNor;
@@ -654,14 +734,16 @@ uniform sampler2DArray uDetail;   /* detail-нормаль высокой час
 uniform float uLayer, uHasSurf, uTriplanar, uDetailK;
 uniform vec2 uMatRM;              /* roughness, metalness для материалов без карт */
 uniform vec3 uDetailP;            /* повторов на тайл, ближняя и дальняя дистанции, м */
-uniform vec3 uSunDir, uSunCol, uAmbSky, uAmbGround, uFogCol;
+uniform vec3 uSunDir, uSunIrr, uAmbSky, uAmbGround, uFogCol;
 uniform float uFogDens, uNight, uAlphaMode, uCut, uGlossMul;
 uniform vec4 uTint;
 uniform vec3 uEye;
 uniform vec3 uLampPos[${QCFG.shader.maxLamps}];
 uniform vec3 uLampCol[${QCFG.shader.maxLamps}];
+uniform float uLampR2, uLampP;
 uniform int uLampN;
 out vec4 fragColor;
+${GLSL_PBR}
 /* Касательный базис из производных экрана: тангенсов в вершинах нет и не нужно */
 vec3 perturb(vec3 N, vec3 nt, vec3 p, vec2 uv){
   vec3 dp1 = dFdx(p), dp2 = dFdy(p);
@@ -674,6 +756,7 @@ vec3 perturb(vec3 N, vec3 nt, vec3 p, vec2 uv){
 }
 void main(){
   vec3 Ng = normalize(vNor);
+  vec3 vNorG = Ng;                   /* геометрическая нормаль: для горизонтной окклюзии */
   vec3 N = Ng;
   vec4 t;
   vec4 sf = vec4(0.5, 0.5, uMatRM);
@@ -710,47 +793,46 @@ void main(){
     }
   }
   vec3 V = normalize(uEye - vWorld);
-  vec3 tex = t.rgb * vCol * uTint.rgb;
-  float rough = sf.z, metal = sf.w;
-  vec3 base = tex * (1.0 - metal * 0.6);
-  vec3 specCol = mix(vec3(1.0), tex, metal);
-  /* блеск: из вершин (лужи, стекло, краска) плюс из карты шероховатости */
-  float gloss = clamp(vGloss * uGlossMul + (1.0 - rough) * (1.0 - rough) * 0.45 + metal * 0.2, 0.0, 1.0);
-  float ndl = max(dot(N, uSunDir), 0.0);
-  vec3 amb = mix(uAmbGround, uAmbSky, N.y * 0.5 + 0.5) * ao;
-  vec3 fillDir = normalize(vec3(-uSunDir.x, 0.45, -uSunDir.z));
-  float fill = max(dot(N, fillDir), 0.0) * ao;
-  vec3 lit = base * (amb + uSunCol * ndl * mix(1.0, ao, 0.4) + uAmbSky * fill * 0.28);
-  /* блик от солнца: краска, стекло, мокрый асфальт */
-  if (gloss > 0.01) {
-    float shin = mix(12.0, 140.0, gloss);
-    vec3 H = normalize(uSunDir + V);
-    float sp = pow(max(dot(N, H), 0.0), shin) * smoothstep(0.0, 0.06, ndl);
-    lit += uSunCol * specCol * sp * gloss * (0.5 + 1.7 * gloss);
-    float fres = pow(1.0 - max(dot(N, V), 0.0), 4.0);
-    lit += uAmbSky * specCol * fres * gloss * 0.85;
-  }
-  /* точечные источники: фонари, вывески и фары */
+  vec3 albedo = t.rgb * vCol * uTint.rgb;
+  float metal = sf.w;
+  /* vGloss — авторская поправка «мокрое, лакированное, стеклянное»: она
+     снижает шероховатость, а не подменяет её. Всё остальное из карт. */
+  float rough = max(sf.z * (1.0 - clamp(vGloss * uGlossMul, 0.0, 1.0) * ${gf(QCFG.light.vGlossK)}), ${gf(QCFG.light.roughMin)});
+  float a = rough * rough;
+  vec3 diff = albedo * (1.0 - metal);
+  vec3 f0 = mix(vec3(${gf(QCFG.light.f0)}), albedo, metal);
+  float NoV = max(dot(N, V), 1e-4);
+
+  /* солнце */
+  vec3 lit = directLight(N, V, uSunDir, uSunIrr * mix(1.0, ao, 0.5), diff, f0, a);
+
+  /* Рассеянное и зеркальное от окружения. Пока источник — полусферические
+     палитры Env; на шаге окружения сюда встанут сферические гармоники и
+     префильтрованная кубмапа неба, а палитры уйдут. */
+  vec3 R = reflect(-V, N);
+  float horiz = clamp(1.0 + ${gf(QCFG.light.horizonOccl)} * dot(R, vNorG), 0.0, 1.0);
+  horiz *= horiz;
+  vec3 skyRad = mix(uAmbGround, uAmbSky, clamp(R.y * 0.5 + 0.5, 0.0, 1.0));
+  vec3 irr = mix(uAmbGround, uAmbSky, N.y * 0.5 + 0.5) * PI;
+  lit += diff * irr * INV_PI * ao;
+  lit += skyRad * envBRDF(f0, rough, NoV) * specOcclusion(NoV, ao, rough) * horiz;
+
+  /* точечные источники: фонари, витрины и фары */
   for (int i = 0; i < ${QCFG.shader.maxLamps}; i++) {
     if (i >= uLampN) break;
     vec3 d = uLampPos[i] - vWorld;
-    float dl = length(d);
-    float att = clamp(1.0 - dl / 16.0, 0.0, 1.0);
-    att *= att;
-    vec3 L = d / max(dl, 0.001);
-    float nl = max(dot(N, L), 0.0) * 0.75 + 0.25;
-    lit += base * uLampCol[i] * nl * att;
-    if (gloss > 0.15) {
-      vec3 H = normalize(L + V);
-      lit += uLampCol[i] * specCol * pow(max(dot(N, H), 0.0), mix(12.0, 140.0, gloss)) * gloss * att * 1.4;
-    }
+    float d2 = dot(d, d);
+    if (d2 > uLampR2) continue;
+    /* спад обратный квадрату с оконной функцией на радиусе: свет кончается
+       ровно там, где кончается, и не обрывается ступенькой */
+    float win = clamp(1.0 - d2 * d2 / (uLampR2 * uLampR2), 0.0, 1.0);
+    float att = uLampP * win * win / max(d2, 0.05);
+    lit += directLight(N, V, d * inversesqrt(max(d2, 1e-8)), uLampCol[i] * att * ao, diff, f0, a);
   }
   /* окна и неон: альфа текстуры — маска свечения */
   float winMask = (uAlphaMode > 0.5) ? 0.0 : t.a;
   float em = vEmis + winMask;
-  lit += base * em * uNight * 1.55 + vec3(1.0, 0.86, 0.6) * winMask * uNight * 0.35;
-  /* блик неба на верхних гранях */
-  lit += uAmbSky * 0.08 * max(N.y, 0.0) * ao;
+  lit += albedo * em * uNight * ${gf(QCFG.light.emis.win)} + ${gv3(QCFG.light.emis.tint)} * winMask * uNight * ${gf(QCFG.light.emis.tintK)};
   float f = 1.0 - exp(-uFogDens * dEye);
   vec3 col = mix(lit, uFogCol, clamp(f, 0.0, 1.0));
   /* линейный свет в HDR-буфер: экспозиция и тонмаппинг — один раз, в проходе постобработки */
@@ -3810,8 +3892,10 @@ function buildWorld(gl) {
   emitVine(M, 143.7, 25.0, 143.7, 35.7, 4.6, 503);   /* западная стена цеха №3 */
   emitVine(M, 48.9, 106.2, 32.5, 106.2, 2.6, 504);   /* гаражи сервисного квартала */
 
-  /* мягкое затемнение низа стен */
-  for (const k of ['panel','stucco','brick','indust','garage']) M[k].aoByHeight(0, 3.5, 0.30);
+  /* Мягкое затемнение низа стен: контакт с землёй, которого карте AO взять
+     неоткуда — та про мелкий рельеф материала. Числа в QCFG.light.groundAO. */
+  const GA = QCFG.light.groundAO;
+  for (const k of ['panel','stucco','brick','indust','garage']) M[k].aoByHeight(GA.y0, GA.y1, GA.k);
 
   /* Прозрачные батчи перечисляем явно. Батч хранит имя материала, а не
      текстуру: drawStatic берёт TX[name] при каждом вызове, поэтому при
@@ -4003,7 +4087,11 @@ const Env = {
        конце кодирует обратно, поэтому сюда они уходят через ту же гамму;
        коэффициенты QCFG.color правят баланс солнца, рассеянного и неба. */
     const K = QCFG.color, L = this.L;
-    lin3(L.sunCol, this.sunCol, K.sunK); lin3(L.ambSky, this.ambSky, K.ambK); lin3(L.ambGround, this.ambGround, K.ambK);
+    /* Солнце уходит в шейдер освещённостью, а не «цветом»: диффуз считается
+       как albedo/PI · E · NoL, и множитель PI живёт здесь, чтобы в шейдере не
+       было ни одного числа освещения. */
+    lin3(L.sunCol, this.sunCol, K.sunK * QCFG.light.sunK * Math.PI);
+    lin3(L.ambSky, this.ambSky, K.ambK * QCFG.light.ambK); lin3(L.ambGround, this.ambGround, K.ambK * QCFG.light.ambK);
     lin3(L.fog, this.fog, K.fogK); lin3(L.zenith, this.zenith, K.skyK); lin3(L.horizon, this.horizon, K.skyK);
     lin3(L.ground, this.ground, K.skyK);
   }
@@ -4253,7 +4341,7 @@ function beginMain(lamps) {
   gl.uniformMatrix4fv(P.u.uProj, false, R3.proj);
   gl.uniformMatrix4fv(P.u.uView, false, R3.view);
   gl.uniform3fv(P.u.uSunDir, Env.sun);
-  gl.uniform3fv(P.u.uSunCol, Env.L.sunCol);
+  gl.uniform3fv(P.u.uSunIrr, Env.L.sunCol);
   gl.uniform3fv(P.u.uAmbSky, Env.L.ambSky);
   gl.uniform3fv(P.u.uAmbGround, Env.L.ambGround);
   gl.uniform3fv(P.u.uFogCol, Env.L.fog);
@@ -4271,11 +4359,14 @@ function beginMain(lamps) {
   gl.uniform1f(P.u.uCut, 0.5);
   gl.uniform3f(P.u.uWind, Env.windX * Env.windAmp, Env.windZ * Env.windAmp, R3.time);
   gl.uniform1f(P.u.uSkin, 0);
+  const LP = QCFG.light.lamp;
+  gl.uniform1f(P.u.uLampR2, LP.radius * LP.radius);
+  gl.uniform1f(P.u.uLampP, LP.power * Math.PI);
   const n = Math.min(QCFG.shader.maxLamps, Q.lamps, lamps ? lamps.length : 0);
   gl.uniform1i(P.u.uLampN, n);
   for (let i = 0; i < n; i++) {
     gl.uniform3f(P.u['uLampPos[' + i + ']'] || P.u.uLampPos, lamps[i].x, lamps[i].y, lamps[i].z);
-    const c = lamps[i].c || [1, .82, .55];
+    const c = lamps[i].c || LP.warm;
     const k = lamps[i].k === undefined ? 1 : lamps[i].k;
     gl.uniform3f(P.u['uLampCol[' + i + ']'] || P.u.uLampCol, lin1(c[0]) * k, lin1(c[1]) * k, lin1(c[2]) * k);
   }
@@ -4979,7 +5070,7 @@ function buildCar(gl, spec) {
   /* выхлоп */
   body.tube([[spec.body[16][0] + 0.10, 0.26, -hw * 0.55], [spec.body[16][0] - 0.06, 0.26, -hw * 0.55]], 0.035, 6, [.4, .4, .44], { part: 0, gloss: 0.7 });
 
-  body.aoByHeight(0.15, 1.0, 0.22);
+  body.aoByHeight(QCFG.light.bodyAO.y0, QCFG.light.bodyAO.y1, QCFG.light.bodyAO.k);
   body.rotY(-Math.PI / 2);                 /* нос — в сторону +Z */
 
   const m = new Mesh();
@@ -8378,13 +8469,14 @@ function drawDog3(d) {
 function beginMainLights() {
   const p = S.player, lamps = [];
   if (Env.night > 0.04) {
+    const LP = QCFG.light.lamp;
     const all = Static.lamps.slice().sort((a, b) => dist2(a.x, a.z, p.x, p.z) - dist2(b.x, b.z, p.x, p.z));
     for (let i = 0; i < Math.min(Q.lampPick, all.length); i++)
-      lamps.push({ x: all[i].x, y: all[i].y, z: all[i].z, c: [1, .82, .55], k: Env.night * (all[i].small ? 0.7 : 1.15) });
+      lamps.push({ x: all[i].x, y: all[i].y, z: all[i].z, c: LP.warm, k: Env.night * (all[i].small ? LP.kSmall : LP.kBig) });
     /* собственный свет Олега, чтобы ночью не идти вслепую */
-    lamps.push({ x: p.x, y: 1.6, z: p.z, c: [.65, .7, .95], k: Env.night * 0.55 });
-    if (p.lampOn) lamps.push({ x: p.x + Math.sin(p.yaw) * 2.6, y: 1.3, z: p.z + Math.cos(p.yaw) * 2.6, c: [1, .95, .8], k: Env.night * 2.1 });
-    if (p.onBike && S.upgrades.light) lamps.push({ x: p.x + Math.sin(S.bike.yaw) * 4, y: 1, z: p.z + Math.cos(S.bike.yaw) * 4, c: [1, .92, .7], k: Env.night * 1.4 });
+    lamps.push({ x: p.x, y: 1.6, z: p.z, c: LP.oleg, k: Env.night * LP.kOleg });
+    if (p.lampOn) lamps.push({ x: p.x + Math.sin(p.yaw) * 2.6, y: 1.3, z: p.z + Math.cos(p.yaw) * 2.6, c: LP.torch, k: Env.night * LP.kTorch });
+    if (p.onBike && S.upgrades.light) lamps.push({ x: p.x + Math.sin(S.bike.yaw) * 4, y: 1, z: p.z + Math.cos(S.bike.yaw) * 4, c: LP.bike, k: Env.night * LP.kBike });
   }
   beginMain(lamps);
 }
