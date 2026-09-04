@@ -388,7 +388,7 @@ const QCFG = {
       scaleMin: 0.5,      /* ниже авто-масштаб не опускается */
       texSS: 1,           /* холсты текстур в логическом размере: 256² вместо 512² */
       aniso: 4,           /* анизотропная фильтрация, ограничена возможностями GPU */
-      msaa: false,        /* мультисэмплинг контекста */
+      msaa: 0,            /* сэмплов в HDR-буфере сцены: 0, 2 или 4 */
       detail: false,      /* detail-нормаль вблизи */
       lamps: 4,           /* источников света в шейдере, не больше shader.maxLamps */
       lampPick: 3,        /* ближайших фонарей в подборке ночью */
@@ -400,13 +400,13 @@ const QCFG = {
     },
     medium: {
       title: 'среднее',
-      dprMax: 1.25, scale: 1, scaleMin: 0.6, texSS: 2, aniso: 8, msaa: true, detail: true,
+      dprMax: 1.25, scale: 1, scaleMin: 0.6, texSS: 2, aniso: 8, msaa: 2, detail: true,
       lamps: 8, lampPick: 5, glowR: 52, vis: 1, sparks: 1, scan: true,
       veg: { grass: 1, cards: 1 }
     },
     high: {
       title: 'высокое',
-      dprMax: 2, scale: 1, scaleMin: 0.6, texSS: 2, aniso: 16, msaa: true, detail: true,
+      dprMax: 2, scale: 1, scaleMin: 0.6, texSS: 2, aniso: 16, msaa: 2, detail: true,
       lamps: 8, lampPick: 5, glowR: 52, vis: 1, sparks: 1, scan: true,
       veg: { grass: 1, cards: 1 }
     }
@@ -455,11 +455,31 @@ const QCFG = {
     aoRadius: 5,         /* радиус размытия высот для ambient occlusion, px логических */
     aoStrength: 2.0
   },
-  /* Цвет. Albedo лежит в SRGB8_ALPHA8 и семплится линейно, тонмаппинг
-     заканчивается кодированием в sRGB; палитры света и вершинные цвета
-     переводятся в линейное пространство той же гаммой. Коэффициенты
-     подобраны так, чтобы средняя яркость контрольных сцен совпала с базой. */
-  color: { gamma: 2.2, exposure: 1.02, sunK: 1.0, ambK: 1.7, skyK: 0.76, fogK: 1.0 }
+  /* Цвет. Albedo лежит в SRGB8_ALPHA8 и семплится линейно; вершинные цвета
+     и авторские палитры переводятся в линейное пространство той же гаммой.
+     Кодирование в sRGB — один раз, в проходе постобработки. */
+  color: { gamma: 2.2, exposure: 1.02, sunK: 1.0, ambK: 1.7, skyK: 0.76, fogK: 1.0 },
+  /* Постобработка. Сцена рисуется в HDR-буфер в линейном свете, и ровно один
+     раз в конце кадра он превращается в картинку: экспозиция, ACES,
+     насыщенность, кодирование в sRGB, дизеринг. Раньше тонмаппинг вызывался
+     дважды — в геометрии и в небе, — а свечения смешивались уже в
+     закодированном пространстве. */
+  post: {
+    /* Формат буфера сцены. Замерено на сцене 01, высокий профиль, GPU p50:
+       RGBA16F  ×4 10.86 мс · ×2 6.86 · без MSAA 5.21
+       R11F     ×4  7.17 мс · ×2 5.99 · без MSAA 4.93   (база без HDR 3.92)
+       Четыре байта на тексель вместо восьми — и вся разница в обмене с
+       памятью: расширения WEBGL_multisampled_render_to_texture нет ни в
+       Chromium, ни в WebKit, поэтому мультисэмпл приходится разрешать блитом
+       через память. Полос на ночном небе R11F не прибавил (154 уровня против
+       146 у RGBA16F на том же градиенте) — сказывается дизеринг на выводе. */
+    hdr: 'R11F_G11F_B10F',   /* RGBA16F | R11F_G11F_B10F | RGBA8 */
+    msaaMax: 4,         /* потолок сэмплов поверх профиля; реальное — по getInternalformatParameter */
+    exposure: 0.55,     /* общий множитель поверх ключевых точек Env: кривая ACES
+                           «горячее» прежней Рейнхарда и на тех же числах пересвечивает */
+    sat: 1.06,
+    dither: 1.0         /* сила дизеринга в младшем бите: без него ночное небо полосит */
+  }
 };
 let Q = QCFG.profiles.medium;      /* активный профиль; назначает applyProfile */
 
@@ -552,17 +572,40 @@ function m4invRT(o, m) {              /* инверсия для матрицы 
 /* ------------------------------------------------------------------ */
 const GL = { gl: null, canvas: null, w: 1, h: 1, dpr: 1, scale: 1, uiDpr: 1, aniso: null, maxAniso: 1, renderer: '' };
 
-/* Общий кусок: плёночная кривая тона и насыщенность. Одинаковый для неба
-   и для геометрии, иначе горизонт «разъезжается» с туманом. */
-const GLSL_TONE = `
-vec3 tonemap(vec3 x, float sat){
-  x = max(x, vec3(0.0));
-  vec3 c = x / (vec3(1.0) + x);                 /* сжимаем свет, тени не поднимаем */
-  c = c * c * (3.0 - 2.0 * c) * 0.22 + c * 0.78; /* лёгкий плёночный носок */
+/* Числа конфигурации в текст шейдера. */
+const gf = v => (v !== 0 && Math.abs(v) < 1e-4 ? v.toExponential(8) : v.toFixed(8));
+const gv3 = a => 'vec3(' + a.map(gf).join(', ') + ')';
+
+/* --- Постобработка ----------------------------------------------------
+   Единственное место, где линейный свет становится картинкой. Сцена, небо и
+   свечения складываются в HDR-буфере, и уже он проходит экспозицию, ACES,
+   насыщенность, кодирование в sRGB и дизеринг. */
+const VS_TONE = `#version 300 es
+layout(location=0) in vec2 aPos;
+out vec2 vUV;
+void main(){ vUV = aPos * 0.5 + 0.5; gl_Position = vec4(aPos, 0.0, 1.0); }`;
+
+const FS_TONE = `#version 300 es
+/* PASS:tone */
+precision mediump float;
+in vec2 vUV;
+uniform sampler2D uHDR;
+uniform float uExposure, uSat, uDither;
+out vec4 fragColor;
+/* ACES, аппроксимация Наркович: одна дробь вместо матриц RRT и ODT */
+vec3 aces(vec3 x){
+  return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0);
+}
+/* Interleaved gradient noise, разность двух отсчётов даёт треугольное
+   распределение: в восьми битах ночное небо иначе идёт полосами. */
+float ign(vec2 p){ return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715)))); }
+void main(){
+  vec3 c = aces(texture(uHDR, vUV).rgb * uExposure);
   float g = dot(c, vec3(0.2126, 0.7152, 0.0722));
-  c = mix(vec3(g), c, sat);
-  /* всё выше — в линейном свете; монитору отдаём sRGB-кодированное значение */
-  return pow(max(c, vec3(0.0)), vec3(1.0 / ${QCFG.color.gamma.toFixed(2)}));
+  c = mix(vec3(g), c, uSat);
+  c = pow(max(c, vec3(0.0)), vec3(1.0 / ${QCFG.color.gamma.toFixed(2)}));
+  float d = ign(gl_FragCoord.xy) - ign(gl_FragCoord.xy + vec2(11.0, 7.0));
+  fragColor = vec4(c + d * (uDither / 255.0), 1.0);
 }`;
 
 const VS_MAIN = `#version 300 es
@@ -612,14 +655,13 @@ uniform float uLayer, uHasSurf, uTriplanar, uDetailK;
 uniform vec2 uMatRM;              /* roughness, metalness для материалов без карт */
 uniform vec3 uDetailP;            /* повторов на тайл, ближняя и дальняя дистанции, м */
 uniform vec3 uSunDir, uSunCol, uAmbSky, uAmbGround, uFogCol;
-uniform float uFogDens, uNight, uAlphaMode, uCut, uExposure, uGlossMul;
+uniform float uFogDens, uNight, uAlphaMode, uCut, uGlossMul;
 uniform vec4 uTint;
 uniform vec3 uEye;
 uniform vec3 uLampPos[${QCFG.shader.maxLamps}];
 uniform vec3 uLampCol[${QCFG.shader.maxLamps}];
 uniform int uLampN;
 out vec4 fragColor;
-${GLSL_TONE}
 /* Касательный базис из производных экрана: тангенсов в вершинах нет и не нужно */
 vec3 perturb(vec3 N, vec3 nt, vec3 p, vec2 uv){
   vec3 dp1 = dFdx(p), dp2 = dFdy(p);
@@ -711,7 +753,8 @@ void main(){
   lit += uAmbSky * 0.08 * max(N.y, 0.0) * ao;
   float f = 1.0 - exp(-uFogDens * dEye);
   vec3 col = mix(lit, uFogCol, clamp(f, 0.0, 1.0));
-  fragColor = vec4(tonemap(col * uExposure, 1.12), uTint.a);
+  /* линейный свет в HDR-буфер: экспозиция и тонмаппинг — один раз, в проходе постобработки */
+  fragColor = vec4(col, uTint.a);
 }`;
 
 const VS_SKY = `#version 300 es
@@ -729,9 +772,8 @@ const FS_SKY = `#version 300 es
 precision highp float;
 in vec3 vDir;
 uniform vec3 uEye, uSunDir, uZenith, uHorizon, uSunCol, uGround;
-uniform float uExposure, uCloud, uTime;
+uniform float uCloud, uTime;
 out vec4 fragColor;
-${GLSL_TONE}
 float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float vnoise(vec2 p){
   vec2 i = floor(p), f = fract(p);
@@ -769,7 +811,7 @@ void main(){
   } else {
     col = mix(uHorizon * 0.75, uGround, clamp(-h * 2.4, 0.0, 1.0));
   }
-  fragColor = vec4(tonemap(col * uExposure, 1.12), 1.0);
+  fragColor = vec4(col, 1.0);
 }`;
 
 const VS_GLOW = `#version 300 es
@@ -3797,11 +3839,112 @@ function buildWorld(gl) {
 /* 7. Рендерер                                                          */
 /* ------------------------------------------------------------------ */
 const R3 = {
-  main: null, sky: null, glow: null, skyVAO: null, glowVAO: null,
+  main: null, sky: null, glow: null, tone: null, skyVAO: null, glowVAO: null,
   proj: m4(), view: m4(), model: m4(), invVP: m4(), tmp: m4(), tmp2: m4(),
   eye: [0, 0, 0], right: [1, 0, 0], up: [0, 1, 0], fwd: [0, 0, -1], time: 0,
   curGrp: null                         /* группа текстур, связанная сейчас */
 };
+
+/* --- HDR-буфер сцены --------------------------------------------------
+   Сцена, небо и свечения складываются в линейном свете в буфере RGBA16F, и
+   уже он один раз проходит тонмаппинг в холст. Отсюда же берётся масштаб
+   рендера: раньше уменьшался сам холст, теперь — этот буфер, а холст
+   остаётся в полной плотности, чтобы тонмаппинг писал в чёткие пиксели.
+
+   Мультисэмплинг наш собственный (renderbufferStorageMultisample), потому
+   что мультисэмплинг контекста разрешается в холст, а нам нужно разрешить в
+   текстуру. На M4 RGBA16F поддерживает 2 и 4 сэмпла в обоих движках,
+   MAX_SAMPLES = 4. Если RGBA16F окажется недоступен, откатываемся на RGBA8:
+   тонмаппинг остаётся одним проходом, но яркое обрезается до единицы. */
+const HDR = {
+  fb: null, color: null, depth: null,      /* мультисэмпловый буфер сцены */
+  resolveFb: null, tex: null,              /* одно-сэмпловый, из него читает тонмаппинг */
+  w: 0, h: 0, samples: 0, fmt: 0, fmtName: '', px: 4, type: 0, extFmt: 0, ok: false, bytes: 0
+};
+
+/* Сколько сэмплов реально дают для этого формата. */
+function pickSamples(gl, ifmt, want) {
+  if (want <= 0) return 0;
+  let list = null;
+  try { list = gl.getInternalformatParameter(gl.RENDERBUFFER, ifmt, gl.SAMPLES); } catch (e) { }
+  if (!list || !list.length) return 0;
+  let best = 0;
+  for (const v of list) if (v <= want && v > best) best = v;
+  return best;
+}
+
+function initHDR(gl) {
+  /* Оба расширения, а не первое сработавшее: half_float делает пригодным для
+     отрисовки только *16F, а R11F_G11F_B10F — уже color_buffer_float. С
+     коротким замыканием на || второе не запрашивалось, вложение выходило
+     «not renderable», и сцена молча не рисовалась. */
+  const half = gl.getExtension('EXT_color_buffer_half_float');
+  const full = gl.getExtension('EXT_color_buffer_float');
+  const can = { RGBA16F: !!(half || full), R11F_G11F_B10F: !!full, RGBA8: true };
+  const want = can[QCFG.post.hdr] ? QCFG.post.hdr : 'RGBA8';
+  HDR.fmt = gl[want] !== undefined ? gl[want] : gl.RGBA8;
+  HDR.fmtName = want;
+  HDR.px = want === 'RGBA16F' ? 8 : 4;
+  /* у R11F_G11F_B10F внешний формат RGB, а не RGBA: с RGBA texImage2D даёт
+     INVALID_OPERATION, буфер выходит неполным и сцена молча не рисуется */
+  HDR.type = want === 'RGBA16F' ? gl.HALF_FLOAT : want === 'R11F_G11F_B10F' ? gl.UNSIGNED_INT_10F_11F_11F_REV : gl.UNSIGNED_BYTE;
+  HDR.extFmt = want === 'R11F_G11F_B10F' ? gl.RGB : gl.RGBA;
+  HDR.fb = gl.createFramebuffer();
+  HDR.resolveFb = gl.createFramebuffer();
+  HDR.color = gl.createRenderbuffer();
+  HDR.depth = gl.createRenderbuffer();
+  HDR.tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, HDR.tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+}
+
+/* Перевыделение под новый размер буфера сцены. Зовётся из applyRenderSize,
+   то есть при смене окна, плотности и шага авто-масштаба. */
+function resizeHDR(gl, w, h) {
+  const want = Math.min(Q.msaa | 0, QCFG.post.msaaMax);
+  const samples = pickSamples(gl, HDR.fmt, want);
+  if (HDR.w === w && HDR.h === h && HDR.samples === samples) return;
+  HDR.w = w; HDR.h = h; HDR.samples = samples;
+  const px = HDR.px;
+
+  /* Текстура, из которой читает тонмаппинг. texImage2D, а не texStorage2D:
+     буфер перевыделяется на каждом шаге авто-масштаба, а неизменяемое
+     хранилище пришлось бы каждый раз пересоздавать. */
+  gl.bindTexture(gl.TEXTURE_2D, HDR.tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, HDR.fmt, w, h, 0, HDR.extFmt, HDR.type, null);
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, HDR.fb);
+  if (samples > 0) {
+    /* мультисэмпловый цвет в renderbuffer, разрешается блитом в текстуру */
+    gl.bindRenderbuffer(gl.RENDERBUFFER, HDR.color);
+    gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, HDR.fmt, w, h);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, HDR.color);
+  } else {
+    /* без мультисэмплинга сцена пишет прямо в текстуру: разрешать нечего,
+       и смен буфера в кадре остаётся две вместо трёх */
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, HDR.tex, 0);
+  }
+  gl.bindRenderbuffer(gl.RENDERBUFFER, HDR.depth);
+  if (samples > 0) gl.renderbufferStorageMultisample(gl.RENDERBUFFER, samples, gl.DEPTH_COMPONENT24, w, h);
+  else gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, w, h);
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, HDR.depth);
+  const st1 = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+
+  let st2 = gl.FRAMEBUFFER_COMPLETE;
+  if (samples > 0) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, HDR.resolveFb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, HDR.tex, 0);
+    st2 = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+  }
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  HDR.ok = st1 === gl.FRAMEBUFFER_COMPLETE && st2 === gl.FRAMEBUFFER_COMPLETE;
+  HDR.bytes = w * h * (px + 4) * Math.max(1, samples) + (samples > 0 ? w * h * px : 0);
+  if (!HDR.ok) console.warn('HDR-буфер неполон: 0x' + st1.toString(16) + ' / 0x' + st2.toString(16));
+}
 
 const Env = {
   sun: [0.4, 0.6, 0.5], sunCol: [1, .86, .66], ambSky: [.32, .34, .46], ambGround: [.2, .17, .2],
@@ -3867,10 +4010,10 @@ const Env = {
 };
 
 function initRenderer(canvas) {
-  /* msaa — атрибут контекста, меняется только перезапуском; профиль к этому
-     моменту уже прочитан из настроек (loadOpts), новому игроку — по умолчанию */
-  const prof = QCFG.profiles[S.quality];
-  const gl = canvas.getContext('webgl2', { antialias: prof ? !!prof.msaa : true, alpha: false, powerPreference: 'high-performance' });
+  /* Мультисэмплинг контекста больше не нужен: сцена идёт в свой HDR-буфер со
+     своим мультисэмплингом, а в холст пишет тонмаппинг — сглаживать там
+     нечего. Заодно профиль качества перестал требовать перезапуска. */
+  const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, depth: false, powerPreference: 'high-performance' });
   if (!gl) throw new Error('Нужен WebGL2. Обнови браузер или включи аппаратное ускорение в настройках Chrome.');
   GL.gl = gl; GL.canvas = canvas;
   GL.aniso = gl.getExtension('EXT_texture_filter_anisotropic');
@@ -3883,6 +4026,8 @@ function initRenderer(canvas) {
   R3.main = program(gl, VS_MAIN, FS_MAIN, 'main');
   R3.sky = program(gl, VS_SKY, FS_SKY, 'sky');
   R3.glow = program(gl, VS_GLOW, FS_GLOW, 'glow');
+  R3.tone = program(gl, VS_TONE, FS_TONE, 'tone');
+  initHDR(gl);
   /* полноэкранный треугольник для неба */
   R3.skyVAO = gl.createVertexArray();
   gl.bindVertexArray(R3.skyVAO);
@@ -3915,15 +4060,16 @@ function resizeGL() {
   GL.canvas.style.width = GL.w + 'px'; GL.canvas.style.height = GL.h + 'px';
   applyRenderSize();
 }
-/* Масштаб рендера. Сцена рисуется в буфер меньшего размера, а на экран его
-   растягивает композитор браузера: буфер отрисовки и есть холст, лишнего
-   прохода и лишней памяти под промежуточный буфер нет, мультисэмплинг
-   разрешается там же, где и раньше. Слой интерфейса (#hud2d, DOM, мини-игры)
-   живёт в своей полной плотности (GL.uiDpr) и от масштаба не зависит. */
+/* Масштаб рендера. Холст держим в полной плотности — в него пишет проход
+   тонмаппинга, и растягивать его нечем; масштабируется буфер сцены (HDR), а
+   тонмаппинг растягивает его до холста одной выборкой с линейной
+   фильтрацией. Слой интерфейса (#hud2d, DOM, мини-игры) живёт в своей
+   плотности (GL.uiDpr) и от масштаба не зависит. */
 function applyRenderSize() {
-  const k = GL.dpr * GL.scale;
-  const w = Math.max(320, Math.round(GL.w * k / 2) * 2), h = Math.max(240, Math.round(GL.h * k / 2) * 2);
-  if (GL.canvas.width !== w || GL.canvas.height !== h) { GL.canvas.width = w; GL.canvas.height = h; }
+  const cw = Math.max(320, Math.round(GL.w * GL.dpr / 2) * 2), ch = Math.max(240, Math.round(GL.h * GL.dpr / 2) * 2);
+  if (GL.canvas.width !== cw || GL.canvas.height !== ch) { GL.canvas.width = cw; GL.canvas.height = ch; }
+  const rw = Math.max(320, Math.round(cw * GL.scale / 2) * 2), rh = Math.max(240, Math.round(ch * GL.scale / 2) * 2);
+  if (GL.gl) resizeHDR(GL.gl, rw, rh);
 }
 
 /* --- Монитор, GPU и авто-масштаб -------------------------------------
@@ -4036,7 +4182,8 @@ const Perf = {
     this._roAt = now;
     const el = $('qualInfo');
     if (!el) return;
-    el.textContent = 'Рендер ' + GL.canvas.width + '×' + GL.canvas.height + ' · масштаб ' + GL.scale.toFixed(2) +
+    el.textContent = 'Рендер ' + HDR.w + '×' + HDR.h + ' ' + HDR.fmtName + (HDR.samples ? '×' + HDR.samples : '') +
+      ' · холст ' + GL.canvas.width + '×' + GL.canvas.height + ' · масштаб ' + GL.scale.toFixed(2) +
       ' · монитор ' + this.hz + ' Гц · бюджет ' + this.budgetMs().toFixed(1) + ' мс · GPU ' +
       (this.tq ? (this.gpuAvg ? this.gpuAvg.toFixed(1) + ' мс' : '…') : 'нет таймера') +
       ' · кадр ' + (this.dtRaw ? this.dtRaw.toFixed(1) : '—') + ' мс · шагов ' + this.steps;
@@ -4057,14 +4204,16 @@ function applyProfile(name, live) {
   resizeAll();
   if (prev.aniso !== Q.aniso) TexReg.setAniso(GL.gl, Q.aniso);
   if (prev.texSS !== Q.texSS) rebuildTextures();
-  if (Q.msaa !== BootQ.msaa || Q.veg.grass !== BootQ.veg.grass || Q.veg.cards !== BootQ.veg.cards)
-    toast('Сглаживание и плотность зелени применятся после перезапуска', 'info', 3200);
+  /* Мультисэмплинг теперь наш собственный (HDR-буфер) и применяется сразу;
+     перезапуска требует только плотность зелени — VEG зашит в геометрию. */
+  if (Q.veg.grass !== BootQ.veg.grass || Q.veg.cards !== BootQ.veg.cards)
+    toast('Плотность зелени применится после перезапуска', 'info', 3200);
 }
 function setQuality(name) { applyProfile(name, true); saveOpts(); }
 
 function setCamera(eye, target) {
   const gl = GL.gl;
-  m4persp(R3.proj, 62 * D2R, GL.canvas.width / GL.canvas.height, 0.12, 460);
+  m4persp(R3.proj, 62 * D2R, HDR.w / HDR.h, 0.12, 460);
   m4look(R3.view, eye[0], eye[1], eye[2], target[0], target[1], target[2], 0, 1, 0);
   R3.eye = eye;
   R3.right = [R3.view[0], R3.view[4], R3.view[8]];
@@ -4090,7 +4239,6 @@ function drawSky() {
   gl.uniform3fv(P.u.uHorizon, Env.L.horizon);
   gl.uniform3fv(P.u.uSunCol, Env.L.sunCol);
   gl.uniform3fv(P.u.uGround, Env.L.ground);
-  gl.uniform1f(P.u.uExposure, Env.exposure);
   gl.uniform1f(P.u.uCloud, Env.cloud);
   gl.uniform1f(P.u.uTime, R3.time);
   gl.bindVertexArray(R3.skyVAO);
@@ -4111,7 +4259,6 @@ function beginMain(lamps) {
   gl.uniform3fv(P.u.uFogCol, Env.L.fog);
   gl.uniform1f(P.u.uFogDens, Env.fogDens);
   gl.uniform1f(P.u.uNight, Env.night);
-  gl.uniform1f(P.u.uExposure, Env.exposure);
   gl.uniform1f(P.u.uGlossMul, Env.glossMul);
   gl.uniform3fv(P.u.uEye, R3.eye);
   gl.uniform1i(P.u.uTex, 0); gl.uniform1i(P.u.uSurf, 1); gl.uniform1i(P.u.uAO, 2); gl.uniform1i(P.u.uDetail, 3);
@@ -8335,19 +8482,57 @@ function drawOverlay2D() {
     }
   }
 }
+/* Тонмаппинг: единственный проход, который пишет в холст. */
+function drawTone() {
+  const gl = GL.gl, P = R3.tone;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.viewport(0, 0, GL.canvas.width, GL.canvas.height);
+  gl.useProgram(P.p);
+  gl.disable(gl.DEPTH_TEST);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, HDR.tex);
+  gl.uniform1i(P.u.uHDR, 0);
+  gl.uniform1f(P.u.uExposure, Env.exposure * QCFG.post.exposure);
+  gl.uniform1f(P.u.uSat, QCFG.post.sat);
+  gl.uniform1f(P.u.uDither, QCFG.post.dither);
+  gl.bindVertexArray(R3.skyVAO);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+  gl.enable(gl.DEPTH_TEST);
+  R3.curGrp = null;                    /* тонмаппинг сбил привязки текстур */
+}
+
+/* Порядок проходов кадра. Смен буфера ровно три: сцена в HDR, разрешение
+   мультисэмпла, тонмаппинг в холст. После сцены глубина больше не нужна, а
+   после разрешения не нужен мультисэмпловый цвет — говорим об этом драйверу
+   через invalidateFramebuffer: на тайловом GPU это прямая экономия обмена с
+   памятью, а не микрооптимизация. */
 function renderFrame() {
   const gl = GL.gl;
   Perf.beginFrame(gl);
   Env.update(hour());
   R3.time = S.t;                       /* облака медленно плывут */
-  gl.viewport(0, 0, GL.canvas.width, GL.canvas.height);
-  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   setCamera([S.cam.x, S.cam.y, S.cam.z], [S.cam.tx, S.cam.ty, S.cam.tz]);
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, HDR.fb);
+  gl.viewport(0, 0, HDR.w, HDR.h);
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   drawSky();
   beginMainLights();
   drawStatic();
   drawDynamic();
   drawGlows();
+  gl.invalidateFramebuffer(gl.FRAMEBUFFER, [gl.DEPTH_ATTACHMENT]);
+
+  if (HDR.samples > 0) {
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, HDR.fb);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, HDR.resolveFb);
+    gl.blitFramebuffer(0, 0, HDR.w, HDR.h, 0, 0, HDR.w, HDR.h, gl.COLOR_BUFFER_BIT, gl.NEAREST);
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, HDR.fb);
+    gl.invalidateFramebuffer(gl.READ_FRAMEBUFFER, [gl.COLOR_ATTACHMENT0]);
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+  }
+  drawTone();
+
   Perf.endFrame(gl);
   drawOverlay2D();
 }
