@@ -1,0 +1,26 @@
+{
+  "enableAllProjectMcpServers": true,
+  "env": {
+    "MCP_TIMEOUT": "300000"
+  },
+  "permissions": {
+    "allow": [
+      "mcp__playwright",
+      "mcp__chrome-devtools",
+      "mcp__context7"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/scripts/mcp/cloud-prepare.sh\"",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  }
+}

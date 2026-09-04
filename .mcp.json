@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "type": "stdio",
+      "command": "bash",
+      "args": ["scripts/mcp/playwright.sh"]
+    },
+    "chrome-devtools": {
+      "type": "stdio",
+      "command": "bash",
+      "args": ["scripts/mcp/chrome-devtools.sh"]
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
+    }
+  }
+}
