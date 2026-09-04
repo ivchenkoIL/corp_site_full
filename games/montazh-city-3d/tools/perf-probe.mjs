@@ -18,18 +18,14 @@
    Если playwright лежит не рядом, укажи путь:
      NODE_PATH=/usr/lib/node_modules node tools/perf-probe.mjs
    ===================================================================== */
-import { createRequire } from 'node:module';
+import { loadPlaywright } from './find-playwright.mjs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs';
 
-const require = createRequire(import.meta.url);
-let playwright;
-try { playwright = require('playwright'); }
-catch { try { playwright = require('playwright-core'); } catch (e) {
-  console.error('Не найден playwright. Поставь: npm i -D playwright, или задай NODE_PATH.');
-  process.exit(2);
-} }
+let playwright, playwrightFrom;
+try { const r = loadPlaywright(); playwright = r.pw; playwrightFrom = r.from; }
+catch (e) { console.error(e.message); process.exit(2); }
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const GAME = path.resolve(HERE, '..', 'index.html');
@@ -223,6 +219,7 @@ const out = {
   when: new Date().toISOString(),
   browser: OPT.browser,
   browserVersion: browser.version(),
+  playwrightFrom,
   viewport: { css: [OPT.width, OPT.height], dpr: OPT.dpr },
   warmupMs: OPT.warmup, measureMs: OPT.measure, profileMs: OPT.profile, minFrames: OPT.minFrames,
   host: { platform: process.platform, arch: process.arch, cpus: (await import('node:os')).cpus().length },

@@ -9,13 +9,14 @@
      node tools/perf-trace.mjs --scene=dense --seconds=12
      node tools/perf-trace.mjs --scene=traffic --out=docs/perf/trace-traffic.json
    ===================================================================== */
-import { createRequire } from 'node:module';
+import { loadPlaywright } from './find-playwright.mjs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs';
 
-const require = createRequire(import.meta.url);
-const playwright = require('playwright');
+let playwright;
+try { playwright = loadPlaywright().pw; }
+catch (e) { console.error(e.message); process.exit(2); }
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const GAME = path.resolve(HERE, '..', 'index.html');
 const INJECT = path.resolve(HERE, 'perf-inject.js');
