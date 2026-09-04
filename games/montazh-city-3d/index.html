@@ -1037,7 +1037,10 @@ const TEX_SS = 2;
 function cv2d(size) {
   const c = document.createElement('canvas');
   c.width = c.height = size * TEX_SS;
-  const x = c.getContext('2d');
+  /* Холст текстуры мы обязательно читаем обратно (зерно, маска альфы,
+     растекание цвета), поэтому сразу просим держать его в памяти: иначе
+     Chrome на каждом getImageData ругается на медленную выкачку из GPU. */
+  const x = c.getContext('2d', { willReadFrequently: true });
   x.scale(TEX_SS, TEX_SS);
   return { c, x, s: size };
 }
@@ -1136,7 +1139,7 @@ function bleedAlpha(d, w, h, passes) {
 
 function texFromCanvas(gl, c, opt) {
   opt = opt || {};
-  const cx = c.getContext('2d');
+  const cx = c.getContext('2d', { willReadFrequently: true });
   const w = c.width, h = c.height;
   const img = cx.getImageData(0, 0, w, h);
   const d = img.data;
@@ -1635,7 +1638,7 @@ function buildTextures(gl) {
 function makeSignTexture(gl, text, color, bg) {
   const w = 512, h = 128;
   const c = document.createElement('canvas'); c.width = w; c.height = h;
-  const x = c.getContext('2d');
+  const x = c.getContext('2d', { willReadFrequently: true });   /* дальше читаем обратно */
   x.fillStyle = bg || '#241a33'; x.fillRect(0, 0, w, h);
   x.strokeStyle = 'rgba(255,255,255,.18)'; x.lineWidth = 4; x.strokeRect(3, 3, w - 6, h - 6);
   let size = 74;
@@ -4012,8 +4015,8 @@ function buildVehicles(gl) {
   VEH.sedan = buildCar(gl, CAR_SPEC.sedan);
   VEH.van = buildCar(gl, CAR_SPEC.van);
   VEH.pickup = buildCar(gl, CAR_SPEC.pickup);
-  /* --- дворовая собака: 0 корпус, 1 голова, 2 челюсть,
-         3/4 передние лапы, 5/6 задние, 7 хвост --- */
+  /* --- дворовая собака: 0 корпус, 1 голова, 2 челюсть, 3/4 передние плечи,
+         5/6 задние бёдра, 7 хвост, 8..11 голени тех же лап --- */
   {
     const m = new Mesh();
     const fur = [.62, .46, .3], dfur = [.5, .36, .24];
@@ -4029,10 +4032,20 @@ function buildVehicles(gl) {
     }
     /* нижняя челюсть: своя кость, пивот в углу пасти (0, 0.005, 0.055) от кости 1 */
     m.ellipsoid(0, -0.015, 0.100, 0.052, 0.026, 0.075, 8, 3, dfur, { part: 2, gloss: 0.18 });
-    /* лапы: каждая в своей кости, геометрия висит от сустава вниз */
-    for (const pt of [3, 4, 5, 6])
-      m.bevelBox(0, -0.32, 0, pt < 5 ? 0.062 : 0.066, 0.32, pt < 5 ? 0.07 : 0.075, fur,
-        { bev: 0.014, r: 0.014, cs: 2, part: pt, gloss: 0.14, skipTop: true });
+    /* Нога из двух звеньев: плечо (бедро) и голень с лапой. Одним бруском
+       нога читалась палкой — сустав нужен, чтобы она подламывалась на ходу.
+       Верх толще низа, поэтому бруски идут с расширением кверху. Сумма звеньев
+       0.175 + 0.145 = 0.32 — ровно от сустава до земли. */
+    const paw = [.42, .32, .22];
+    for (const [pt, lb] of [[3, 8], [4, 9], [5, 10], [6, 11]]) {
+      const fr = pt < 5;
+      m.bevelBox(0, -0.175, 0, fr ? 0.050 : 0.056, 0.175, fr ? 0.056 : 0.062, fur,
+        { bev: 0.014, r: 0.014, cs: 2, part: pt, gloss: 0.14, taper: [1.36, fr ? 1.40 : 1.62], skipTop: true });
+      m.bevelBox(0, -0.145, 0, fr ? 0.046 : 0.044, 0.145, fr ? 0.052 : 0.050, fur,
+        { bev: 0.012, r: 0.012, cs: 2, part: lb, gloss: 0.14, taper: [1.14, 1.18], skipTop: true });
+      m.bevelBox(0, -0.145, 0.014, fr ? 0.062 : 0.060, 0.046, fr ? 0.082 : 0.078, paw,
+        { bev: 0.010, r: 0.016, cs: 2, part: lb, gloss: 0.2 });
+    }
     /* хвост от своего сустава назад-вверх */
     m.tube([[0, 0, 0], [0, 0.10, -0.12], [0.02, 0.20, -0.18]], 0.035, 6, fur, { part: 7, gloss: 0.14 });
     VEH.dog = m.upload(gl);
@@ -7253,7 +7266,9 @@ function drawDynamic() {
 function drawDog3(d) {
   const gl = GL.gl, P = R3.main;
   const v = Math.hypot(d.vx, d.vz), sp = clamp(v / 5.2, 0, 1);
-  const ph = d.phase * 2, amp = 0.28 + sp * 0.62;
+  /* Размах привязан к скорости: стоящая собака стоит на прямых ногах, а не
+     раскорячившись — раньше в размах входила постоянная добавка. */
+  const ph = d.phase * 2, amp = 0.05 + sp * 0.66;
   const be = Math.sin(Math.PI * clamp(d.barkK || 0, 0, 1));      /* колокол лая */
   /* корпус пружинит на бегу и приседает на лае */
   m4compose(BONES[0], d.x, surfY(d.x, d.z) + 0.42 + Math.sin(ph * 2) * 0.03 * sp - be * 0.02, d.z,
@@ -7264,15 +7279,20 @@ function drawDog3(d) {
   /* челюсть: лай и одышка после пробежки */
   m4mul(BONES[2], BONES[1], m4compose(SCRATCH[6], 0, 0.005, 0.055,
     be * 0.55 + (d.pant || 0) * (0.10 + Math.sin(S.t * 9) * 0.06), 0, 0, 1));
-  /* лапы рысью: диагонали работают вместе */
-  for (const [b, ox, oz, off] of [[3, -0.085, 0.17, 0], [4, 0.085, 0.17, Math.PI],
-                                  [5, -0.085, -0.20, Math.PI], [6, 0.085, -0.20, 0]])
-    m4mul(BONES[b], BONES[0], m4compose(SCRATCH[6], ox, -0.10, oz, Math.sin(ph + off) * amp, 0, 0, 1));
+  /* Лапы рысью: диагонали работают вместе. Плечо машет, а сустав ниже (у
+     передних запястье, у задних скакательный) подламывается назад в фазе
+     выноса — без него нога так и остаётся палкой. */
+  for (const [b, lb, ox, oz, off, kn] of [[3, 8, -0.085, 0.17, 0, 0.85], [4, 9, 0.085, 0.17, Math.PI, 0.85],
+                                          [5, 10, -0.085, -0.20, Math.PI, 1.30], [6, 11, 0.085, -0.20, 0, 1.30]]) {
+    m4mul(BONES[b], BONES[0], m4compose(SCRATCH[6], ox, -0.10, oz, -Math.sin(ph + off) * amp, 0, 0, 1));
+    const bend = 0.06 + (0.5 - 0.5 * Math.cos(ph + off)) * amp * kn;
+    m4mul(BONES[lb], BONES[b], m4compose(SCRATCH[6], 0, -0.175, 0, bend, 0, 0, 1));
+  }
   /* хвост: виляет тем шире, чем добрее настроение, и поджимается со страху */
   const wg = clamp(d.wag || 0, 0, 1);
   m4mul(BONES[7], BONES[0], m4compose(SCRATCH[6], 0, 0.02, -0.36,
     0.15 + wg * 0.55 - (d.scare > 0 ? 1.1 : 0), Math.sin(S.t * (6 + wg * 10)) * (0.12 + wg * 0.55), 0, 1));
-  for (let i = 0; i < 8; i++) BONEBUF.set(BONES[i], i * 16);
+  for (let i = 0; i < 12; i++) BONEBUF.set(BONES[i], i * 16);
   gl.uniformMatrix4fv(P.u.uBones, false, BONEBUF);
   drawMesh(VEH.dog, TX.paint, BONES[0], { skin: true });
 }
