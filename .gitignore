@@ -28,3 +28,4 @@ devices.db
 
 # Claude Code: артефакты браузерных MCP (скриншоты, логи консоли)
 .playwright-mcp/
+g3_fuzz.png
