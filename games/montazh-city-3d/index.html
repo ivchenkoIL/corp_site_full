@@ -1666,7 +1666,7 @@ const ROADS_X = [25, 100, 175];          /* дороги «север-юг» */
 /* kind: panel | stucco | brick | indust | garage | office */
 const BUILDINGS = [
   { x: 2.5, z: 38.7, w: 13.2, d: 9.4, h: 8, kind: 'stucco', tint: [.95,.86,.8], sign: { t: 'МОНТАЖ-СЕРВИС', c: '#25e8dc', side: 'S' }, shop: true, name: 'контора' },
-  { x: 2.5, z: 18.7, w: 9.4, d: 5.6, h: 3, kind: 'garage', rows: 3 },
+  { x: 2.5, z: 27.4, w: 9.4, d: 5.6, h: 3, kind: 'garage', rows: 3 },
   { x: 2.5, z: 56.2, w: 10.6, d: 6.2, h: 3, kind: 'garage', rows: 3 },
 
   { x: 31.2, z: 25, w: 28.9, d: 7, h: 15, kind: 'panel', tint: [.92,.9,.95], name: 'ПАНЕЛЬНАЯ 12', entries: [43.7, 61.2], balcony: 'S' },
@@ -1701,12 +1701,12 @@ const BUILDINGS = [
   { x: 183.7, z: 137.5, w: 13.7, d: 7.5, h: 7, kind: 'indust', tint: [.9,.88,.85] },
 
   { x: 37.5, z: 138.1, w: 18.7, d: 8.1, h: 5, kind: 'indust', tint: [.85,.92,.95], sign: { t: 'АВТОМОЙКА «БЛЕСК»', c: '#25e8dc', side: 'N' } },
-  { x: 81.2, z: 139.4, w: 16.2, d: 6.9, h: 3, kind: 'garage', rows: 4 },
+  { x: 75.8, z: 139.4, w: 16.2, d: 6.9, h: 3, kind: 'garage', rows: 4 },
   { x: 131.2, z: 138.7, w: 21.2, d: 7.5, h: 5.5, kind: 'indust', tint: [.95,.9,.82], sign: { t: 'ШИНОМОНТАЖ 24', c: '#ff8a1f', side: 'N' } },
 
   { x: 43.7, z: 3.7, w: 21.2, d: 6.9, h: 15, kind: 'panel', tint: [.9,.94,.9], balcony: 'S' },
   { x: 112.5, z: 3.7, w: 22.5, d: 6.9, h: 15, kind: 'panel', tint: [.94,.9,.94], balcony: 'S' },
-  { x: 156.2, z: 3.7, w: 16.2, d: 6.2, h: 9, kind: 'brick' }
+  { x: 150.8, z: 3.7, w: 16.2, d: 6.2, h: 9, kind: 'brick' }
 ];
 
 const KIOSKS = [
@@ -1926,7 +1926,10 @@ const LY = { patch: 0.028, wet: 0.034, mark: 0.046, iron: 0.056, walk: 0.16 };
    как плинтус, а камни — как камни. У переходов бортик занижен. */
 function curbRun(M, along, road, side, s0, s1) {
   const STONE = 1.9, GAP = 0.055;
-  const off = ROAD_W / 2 + 0.075;
+  /* Камень стоит на проезжей части и заходит краем под плиту тротуара: раньше
+     он лежал ровно по её кромке и верхом совпадал с ней по высоте — две
+     копланарные грани мерцали на любом движении камеры. */
+  const off = ROAD_W / 2 - 0.06;
   for (let s = s0; s < s1 - 0.2; s += STONE) {
     const len = Math.min(STONE, s1 - s) - GAP;
     if (len < 0.5) break;
@@ -1934,11 +1937,11 @@ function curbRun(M, along, road, side, s0, s1) {
     const mid = s + len / 2;
     const cross = along === 'x' ? ROADS_X.some(r => Math.abs(mid - r) < ROAD_W / 2 + 2.4)
                                 : ROADS_Z.some(r => Math.abs(mid - r) < ROAD_W / 2 + 2.4);
-    const h = cross ? 0.055 : 0.16;
+    const h = cross ? 0.055 : 0.19;      /* бортик на 3 см выше тротуара */
     const k = 0.80 + ((Math.floor(mid * 7) % 5) * 0.035);     /* камни чуть разного тона */
     const col = [.80 * k, .79 * k, .84 * k];
-    if (along === 'x') M.sidewalk.box(mid, 0, road + side * off, len, h, 0.16, col, { uv: 1 });
-    else               M.sidewalk.box(road + side * off, 0, mid, 0.16, h, len, col, { uv: 1 });
+    if (along === 'x') M.sidewalk.box(mid, 0, road + side * off, len, h, 0.22, col, { uv: 1 });
+    else               M.sidewalk.box(road + side * off, 0, mid, 0.22, h, len, col, { uv: 1 });
   }
 }
 
@@ -2436,7 +2439,7 @@ function emitTree(x, z, M, p) {
   /* крона */
   const col = t => [lerp(sp.leaf[0][0], sp.leaf[1][0], t), lerp(sp.leaf[0][1], sp.leaf[1][1], t), lerp(sp.leaf[0][2], sp.leaf[1][2], t)];
   const cell = CELL[sp.cell];
-  if (sp.crown === 'column') crownColumn(M.leaves, R, x, z, th, cr, col, cell);
+  if (sp.crown === 'column') crownColumn(M.leaves, R, x, z, th, cr, col, cell, tips);
   else if (sp.crown === 'drop') crownDrop(M.leaves, R, x, z, th, cr, tips, col, cell);
   else if (sp.crown === 'cone') crownCone(M.leaves, R, x, z, h, cr, col);
   else crownDome(M.leaves, R, x, z, th, cr, tips, col, cell);
@@ -2451,46 +2454,65 @@ function emitTree(x, z, M, p) {
   }
 }
 
-/* колонна: узкое веретено карт — тополь (23 карты) */
-function crownColumn(m, R, x, z, th, cr, col, cell) {
-  const tiers = 5;
+/* Пучок листвы: несколько карт крест-накрест вокруг одной точки. Одна карта
+   с любого ракурса читается фанеркой, а крест держит объём — крона перестаёт
+   быть жалюзи, с какой стороны на неё ни смотри. */
+function leafClump(m, R, x, y, z, r, col, cell, wind, n) {
+  n = n || 2;
+  const a0 = R() * TAU;
+  for (let k = 0; k < n; k++) {
+    const c = col(0.30 + R() * 0.70);
+    leafCard(m, x + (R() - .5) * r * 0.55, y + (R() - .5) * r * 0.55, z + (R() - .5) * r * 0.55,
+      a0 + k * (Math.PI / n) + (R() - .5) * 0.30,
+      r * (1.55 + R() * 0.55), r * (1.35 + R() * 0.55), (R() - .5) * 0.55,
+      shade(c, 0.56), c, cell, wind);
+  }
+}
+
+/* колонна: узкое веретено пучков — тополь */
+function crownColumn(m, R, x, z, th, cr, col, cell, tips) {
+  const tiers = 6;
   for (let t = 0; t < tiers; t++) {
     const v = t / (tiers - 1);
-    const y = th * 0.44 + v * th * 0.62;
-    const rr = cr * (0.42 + Math.sin((0.20 + v * 0.74) * Math.PI) * 0.62);
-    const n = Math.max(2, Math.round((t === tiers - 1 ? 3 : 5) * VEG.cards));
+    const y = th * 0.40 + v * th * 0.68;
+    const rr = cr * (0.36 + Math.sin((0.14 + v * 0.82) * Math.PI) * 0.72);
+    const n = Math.max(2, Math.round((t === tiers - 1 ? 2 : 4) * VEG.cards));
     for (let i = 0; i < n; i++) {
-      const a = i / n * TAU + t * 0.55 + R() * 0.4, s = cr * (0.66 + R() * 0.30);
-      const c = col(0.30 + R() * 0.70);
-      leafCard(m, x + Math.cos(a) * rr * 0.55, y + (R() - .5) * 0.6, z + Math.sin(a) * rr * 0.55,
-        a, s * 1.5, s * 2.4, (R() - .5) * 0.22, shade(c, 0.62), c, cell, 0.10 + v * 0.14);
+      const a = i / n * TAU + t * 0.80 + R() * 0.5;
+      leafClump(m, R, x + Math.cos(a) * rr * 0.60, y, z + Math.sin(a) * rr * 0.60,
+        cr * (0.34 + R() * 0.16), col, cell, 0.10 + v * 0.16);
     }
   }
+  /* пучки на концах ветвей: иначе листва висит отдельно от скелета */
+  for (const t of tips || []) leafClump(m, R, t[0], t[1] + 0.14, t[2], cr * 0.28, col, cell, 0.22);
 }
 /* капля с поникшими концами — берёза (19–25 карт) */
 function crownDrop(m, R, x, z, th, cr, tips, col, cell) {
-  const cy = th * 0.94;
-  for (let i = 0; i < 7; i++) {
-    const a = R() * TAU, s = cr * (0.48 + R() * 0.34), c = col(0.35 + R() * 0.6);
-    leafCard(m, x + Math.cos(a) * cr * 0.32, cy + (R() - 0.45) * cr * 0.55, z + Math.sin(a) * cr * 0.32,
-      a, s * 1.7, s * 1.9, 0.14, shade(c, 0.58), c, cell, 0.18);
+  /* Крона тянется по верхней трети ствола, а не висит шариком на макушке:
+     иначе берёза читается голой палкой с комком зелени наверху. */
+  const cy = th * 0.80;
+  for (let i = 0, n = Math.max(5, Math.round(13 * VEG.cards)); i < n; i++) {
+    const v = i / n;
+    const a = R() * TAU, rr = cr * (0.08 + R() * 0.46) * (1 - v * 0.35);
+    leafClump(m, R, x + Math.cos(a) * rr, cy + (v - 0.42) * th * 0.44, z + Math.sin(a) * rr,
+      cr * (0.26 + R() * 0.16), col, cell, 0.14 + v * 0.12);
   }
-  for (const t of tips) for (let k = 0; k < 3; k++) {   /* занавеси у концов ветвей */
-    const a = R() * TAU, s = cr * (0.40 + R() * 0.28), c = col(0.5 + R() * 0.5);
-    leafCard(m, t[0] + (R() - .5) * 0.6, t[1] - s * 0.5, t[2] + (R() - .5) * 0.6,
-      a, s * 1.6, s * 2.2, 0.30 + R() * 0.22, shade(c, 0.60), c, cell, 0.30);
+  for (const t of tips) for (let k = 0; k < 2; k++) {   /* занавеси у концов ветвей */
+    const s = cr * (0.22 + R() * 0.16);
+    leafClump(m, R, t[0] + (R() - .5) * 0.7, t[1] - s * 1.3 - R() * 0.5, t[2] + (R() - .5) * 0.7,
+      s, col, cell, 0.32);
   }
 }
 /* шатёр по сплюснутому эллипсоиду — клён (~27 карт) */
 function crownDome(m, R, x, z, th, cr, tips, col, cell) {
-  const cy = th + cr * 0.26;
-  const cs = [[x, cy, z]].concat(tips.map(t => [t[0] * 0.82 + x * 0.18, t[1] + 0.18, t[2] * 0.82 + z * 0.18]));
+  const cy = th + cr * 0.22;
+  const cs = [[x, cy, z]].concat(tips.map(t => [t[0] * 0.86 + x * 0.14, t[1] + 0.16, t[2] * 0.86 + z * 0.14]));
   for (const c0 of cs) {
-    const n = Math.max(2, Math.round((4 + Math.floor(R() * 2)) * VEG.cards));
+    const n = Math.max(2, Math.round((3 + Math.floor(R() * 2)) * VEG.cards));
     for (let i = 0; i < n; i++) {
-      const a = R() * TAU, s = cr * (0.40 + R() * 0.28), c = col(0.3 + R() * 0.7);
-      leafCard(m, c0[0] + Math.cos(a) * cr * 0.26, c0[1] + (R() - 0.45) * cr * 0.36, c0[2] + Math.sin(a) * cr * 0.26,
-        a, s * 2.1, s * 1.7, (R() - .5) * 0.3, shade(c, 0.56), c, cell, 0.16);
+      const a = R() * TAU, rr = cr * (0.08 + R() * 0.32);
+      leafClump(m, R, c0[0] + Math.cos(a) * rr, c0[1] + (R() - 0.45) * cr * 0.42, c0[2] + Math.sin(a) * rr,
+        cr * (0.28 + R() * 0.14), col, cell, 0.16);
     }
     /* горизонтальная шапка: крона не просвечивает сверху, а камера часто выше */
     const c = col(0.7), s = cr * 0.62, y = c0[1] + cr * 0.24;
@@ -2500,7 +2522,7 @@ function crownDome(m, R, x, z, th, cr, tips, col, cell) {
 }
 /* конус из мутовок — ель (~36 карт, зато без ветвей-труб) */
 function crownCone(m, R, x, z, h, cr, col) {
-  const whorls = 6 + Math.floor(R() * 2);
+  const whorls = 7 + Math.floor(R() * 3);
   for (let w = 0; w < whorls; w++) {
     const v = w / (whorls - 1);
     const y = 0.75 + v * (h - 1.1);
@@ -2512,7 +2534,6 @@ function crownCone(m, R, x, z, h, cr, col) {
         shade(c, 0.62), c, 0.05 + v * 0.10);
       /* вертикальная карта в конце лапы: горизонтальные перья с уровня глаз
          почти не видны, и без этого ель выглядит голой палкой */
-      if (i % 2) continue;
       const c2 = col(0.25 + R() * 0.6);
       leafCard(m, x + Math.cos(a) * len * 0.52, y + len * 0.16, z + Math.sin(a) * len * 0.52,
         a + Math.PI / 2, len * 1.15, len * 0.95, 0.10, shade(c2, 0.55), c2, CELL.fir, 0.05 + v * 0.08);
@@ -3538,8 +3559,15 @@ function makeCharMesh(gl, pal) {
     m.bevelBox(0, 0.10, 0, 0.31, 0.05, 0.16, mul(pal.bag, 0.8),
       { bev: 0.008, r: 0.025, cs: 2, part: BONE.ACC, gloss: 0.2 });
     if (pal.bagStripe) m.box(0, -0.02, 0.078, 0.24, 0.05, 0.008, pal.bagStripe, { part: BONE.ACC, gloss: 0.3 });
-    m.tube([[-0.11, 0.12, 0], [-0.06, 0.30, -0.02], [0.06, 0.30, -0.02], [0.11, 0.12, 0]], 0.014, 6,
+    /* Ремень идёт наискось к левому плечу. Раньше над сумкой висела короткая
+       дужка, которая ни к чему не крепилась, — сумка и читалась приклеенной
+       к бедру. Координаты левого плеча в системе кости сумки: примерно
+       (-0.50, 0.55), потому что сама кость висит на тазе справа. */
+    m.tube([[0.055, 0.11, -0.045], [-0.01, 0.24, -0.115], [-0.17, 0.38, -0.150],
+            [-0.38, 0.49, -0.140], [-0.50, 0.545, -0.060], [-0.53, 0.552, 0.030]], 0.019, 6,
       mul(pal.bag, 0.7), { part: BONE.ACC, gloss: 0.25 });
+    m.bevelBox(-0.505, 0.556, -0.020, 0.085, 0.028, 0.135, mul(pal.bag, 0.62),
+      { bev: 0.008, r: 0.02, cs: 2, part: BONE.ACC, gloss: 0.25 });   /* наплечник */
   }
   return { gpu: m.upload(gl), pal };
 }
@@ -3687,8 +3715,12 @@ function poseCharacter(o) {
     /* базовый мах: на бегу локоть закрывается, руки идут выше */
     let sL = swing2 * (g.arm / g.amp), sR = swing * (g.arm / g.amp);
     let eL = -0.24 - Math.abs(sL) * g.elbow - rn * 0.75, eR = -0.24 - Math.abs(sR) * g.elbow - rn * 0.75;
-    let zL = 0.13 + sp * 0.06 + g.splay + dr * 0.22 - br * 0.02;
-    let zR = -0.13 - sp * 0.06 - g.splay - dr * 0.22 + br * 0.02;
+    /* Разведение рук от корпуса. Знак важен: для левой руки (плечо на -X)
+       положительный поворот по Z уводит кисть внутрь тела — а раньше именно
+       так и было, поэтому на ходу руки тонули в жилете тем глубже, чем
+       быстрее шёл персонаж. */
+    let zL = -(0.155 + sp * 0.075 + g.splay + dr * 0.22) + br * 0.02;
+    let zR =  (0.155 + sp * 0.075 + g.splay + dr * 0.22) - br * 0.02;
     let hL = -0.06, hR = -0.06, yL = 0, yR = 0;
     /* холостые движения */
     if (ik > 0.001) {
@@ -3775,8 +3807,8 @@ function poseCharacter(o) {
   if (act === 'swing')
     m4mul(BONES[BONE.ACC], BONES[BONE.HANDR], m4compose(SCRATCH[7], 0, -0.30, 0.02, 0.25, 0, 0, 1));
   else {
-    const bg = Math.sin(ph) * 0.10 * sp + (iN === 2 ? ik * 0.30 : 0);
-    T(BONES[BONE.ACC], BONES[BONE.HIP], 0.315, -0.02, -0.075, 0.05 + bg, 0, 0.16 - bg * 0.35);
+    const bg = Math.sin(ph) * 0.05 * sp + (iN === 2 ? ik * 0.16 : 0);
+    T(BONES[BONE.ACC], BONES[BONE.HIP], 0.300, -0.06, -0.020, 0.05 + bg, 0, 0.06 - bg * 0.35);
   }
   for (let i = 0; i < NBONE; i++) BONEBUF.set(BONES[i], i * 16);
 }
@@ -5641,6 +5673,15 @@ function moveWithCollision(e, dt, r, isBike) {
     Audio2.thud(); shake(2);
     if (hard.fragile && impact > 3) breakProp(hard);
   }
+  /* Кузов машины — тоже препятствие: раньше Олег проходил сквозь неё насквозь. */
+  for (const c of S.cars) {
+    if (dist2(e.x, e.z, c.x, c.z) > 49) continue;
+    const h = carHit(c, e.x, e.z, r + 0.12);
+    if (!h) continue;
+    e.x += h.nx * h.push; e.z += h.nz * h.push;
+    const vn = e.vx * h.nx + e.vz * h.nz;
+    if (vn < 0) { e.vx -= vn * h.nx; e.vz -= vn * h.nz; }
+  }
   e.x = clamp(e.x, 0.6, W.x - 0.6); e.z = clamp(e.z, 0.6, W.z - 0.6);
   return { impact, hit: hard };
 }
@@ -5678,7 +5719,9 @@ function movePlayerOnFoot(dt) {
     /* Руль у персонажа: A/D разворачивают Олега, камера сама едет за спину.
        W/S — вперёд и назад по его направлению, боком не ходим. */
     const turn = (3.4 - (Input.any(K.sprint) ? 0.9 : 0)) * (1 - drunkF * 0.3);
-    p.yaw += v.r * turn * dt;
+    /* Знак важен: рост yaw поворачивает взгляд влево (вперёд — (sin, cos),
+       экранное «право» — (-cos, sin)), поэтому D должен yaw уменьшать. */
+    p.yaw -= v.r * turn * dt;
     dx = Math.sin(p.yaw) * v.f; dz = Math.cos(p.yaw) * v.f;
   } else {
     /* Свободная камера: движение относительно взгляда. */
@@ -5916,21 +5959,53 @@ function label3(x, y, z, text, color, size) {
 /* ------------------------------------------------------------------ */
 const CAR_TINTS = [[.78,.24,.26],[.28,.46,.72],[.86,.84,.78],[.34,.34,.4],[.8,.62,.26],[.28,.6,.42],[.5,.32,.7]];
 const CAR_KINDS = ['sedan','sedan','van','pickup','sedan'];
+/* Габарит кузова в плане: половина длины берётся из силуэта (кузов строится
+   «длиной по X», потом разворачивается носом по +Z), половина ширины — hw.
+   Нужен и для столкновений с пешеходом, и чтобы машины не въезжали друг в друга. */
+const CAR_BOX = (() => {
+  const o = {};
+  for (const k in CAR_SPEC) {
+    let L = 0;
+    for (const pt of CAR_SPEC[k].body) L = Math.max(L, Math.abs(pt[0]));
+    o[k] = [L, CAR_SPEC[k].hw];
+  }
+  return o;
+})();
+/* Ближайшая точка кузова к точке (x, z) и вектор наружу. */
+function carHit(c, x, z, r) {
+  const dx = x - c.x, dz = z - c.z;
+  const box = CAR_BOX[c.kind] || [2.1, 0.9];
+  const fx = Math.sin(c.yaw), fz = Math.cos(c.yaw);
+  const lo = dx * fx + dz * fz, la = -dx * fz + dz * fx;      /* вдоль и поперёк кузова */
+  const cl = clamp(lo, -box[0], box[0]), ca = clamp(la, -box[1], box[1]);
+  let ex = lo - cl, ez = la - ca, d = Math.hypot(ex, ez);
+  if (d < 1e-4) {                                             /* центр внутри — выходим по ближней грани */
+    const pl = box[0] - Math.abs(lo), pa = box[1] - Math.abs(la);
+    if (pl < pa) { ex = lo >= 0 ? 1 : -1; ez = 0; d = -pl; }
+    else { ex = 0; ez = la >= 0 ? 1 : -1; d = -pa; }
+  } else { ex /= d; ez /= d; }
+  if (d >= r) return null;
+  return { push: r - d, nx: ex * fx - ez * fz, nz: ex * fz + ez * fx };
+}
 function spawnTraffic() {
   S.cars.length = 0;
   const R = mulberry32(4242);
-  for (const z of ROADS_Z) for (let i = 0; i < 5; i++) {
-    const east = i % 2 === 0;
-    S.cars.push({ x: R() * W.x, z: z + (east ? 2.6 : -2.6), yaw: east ? Math.PI / 2 : -Math.PI / 2,
+  /* Раскладываем по полосе с равным шагом и небольшим разбросом: при случайных
+     координатах две машины одной полосы стартовали в полуметре друг от друга
+     и весь проезд ехали слипшись. */
+  const lane = (n, span, put) => {
+    for (let i = 0; i < n; i++) put((i + 0.15 + R() * 0.7) * (span / n));
+  };
+  for (const z of ROADS_Z) for (const east of [true, false])
+    lane(east ? 3 : 2, W.x, s0 => S.cars.push({
+      x: s0, z: z + (east ? 2.6 : -2.6), yaw: east ? Math.PI / 2 : -Math.PI / 2,
       sp: 7 + R() * 4, base: 0, wheel: 0, horn: 0,
-      kind: CAR_KINDS[Math.floor(R() * CAR_KINDS.length)], tint: CAR_TINTS[Math.floor(R() * CAR_TINTS.length)] });
-  }
-  for (const x of ROADS_X) for (let i = 0; i < 4; i++) {
-    const south = i % 2 === 0;
-    S.cars.push({ z: R() * W.z, x: x + (south ? -2.6 : 2.6), yaw: south ? 0 : Math.PI,
+      kind: CAR_KINDS[Math.floor(R() * CAR_KINDS.length)], tint: CAR_TINTS[Math.floor(R() * CAR_TINTS.length)] }));
+  for (const x of ROADS_X) for (const south of [true, false])
+    lane(2, W.z, s0 => S.cars.push({
+      z: s0, x: x + (south ? -2.6 : 2.6), yaw: south ? 0 : Math.PI,
       sp: 7 + R() * 4, base: 0, wheel: 0, horn: 0,
-      kind: CAR_KINDS[Math.floor(R() * CAR_KINDS.length)], tint: CAR_TINTS[Math.floor(R() * CAR_TINTS.length)] });
-  }
+      kind: CAR_KINDS[Math.floor(R() * CAR_KINDS.length)], tint: CAR_TINTS[Math.floor(R() * CAR_TINTS.length)] }));
   for (const c of S.cars) c.base = c.sp;
 }
 function spawnDogs() {
@@ -6081,8 +6156,21 @@ function updateCars(dt) {
     const dx = Math.sin(c.yaw), dz = Math.cos(c.yaw);
     const ahead = (p.x - c.x) * dx + (p.z - c.z) * dz;
     const side = Math.abs(-(p.x - c.x) * dz + (p.z - c.z) * dx);
-    if (ahead > 0 && ahead < 9 && side < 1.8) c.sp = lerp(c.sp, c.base * 0.15, 1 - Math.exp(-5 * dt));
-    else c.sp = lerp(c.sp, c.base, 1 - Math.exp(-1.6 * dt));
+    /* Впереди идущая машина: держим дистанцию. Без этого колонна в полосе
+       съезжается и машины едут одна сквозь другую. Встречные не мешают —
+       их полоса в 5,2 м, а поперечный допуск вдвое меньше. */
+    let gap = 0;
+    for (const o of S.cars) {
+      if (o === c) continue;
+      const ax = (o.x - c.x) * dx + (o.z - c.z) * dz;
+      if (ax <= 0 || ax > 14) continue;
+      if (Math.abs(-(o.x - c.x) * dz + (o.z - c.z) * dx) > 2.0) continue;
+      if (!gap || ax < gap) gap = ax;
+    }
+    let want = c.base;
+    if (gap) want = Math.min(want, Math.max(0, (gap - 5.2) * 2.4));
+    if (ahead > 0 && ahead < 9 && side < 1.8) want = Math.min(want, c.base * 0.15);
+    c.sp = lerp(c.sp, want, 1 - Math.exp(-(want < c.sp ? 5 : 1.6) * dt));
     c.x += dx * c.sp * dt; c.z += dz * c.sp * dt;
     c.wheel += c.sp * dt * 3;
     /* клевок на торможении и крен на повороте — по производным скорости и курса */
@@ -6095,7 +6183,7 @@ function updateCars(dt) {
     const d = dist(c.x, c.z, p.x, p.z);
     if (d < 9 && c.horn <= 0 && Math.random() < 0.5 * dt) { c.horn = 0.7; Audio2.tone(rnd(300, 420), 0.24, 'square', 0.09); }
     c.horn = Math.max(0, c.horn - dt);
-    if (d < 2.1 && p.invuln <= 0) {
+    if (Math.abs(c.sp) > 3.2 && p.invuln <= 0 && carHit(c, p.x, p.z, p.r + 0.1)) {
       const a = Math.atan2(p.x - c.x, p.z - c.z);
       p.vx = Math.sin(a) * 8; p.vz = Math.cos(a) * 8;
       hurt(p.onBike ? 20 : 14, 'Машина оказалась быстрее и тяжелее. Смена окончена.');
