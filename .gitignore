@@ -25,3 +25,6 @@ salon-dashboard/node_modules/
 # Rust (messenger relay)
 messenger/target/
 devices.db
+
+# Claude Code: артефакты браузерных MCP (скриншоты, логи консоли)
+.playwright-mcp/
