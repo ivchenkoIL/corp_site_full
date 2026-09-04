@@ -931,13 +931,13 @@ const S = {
   cam: { x: 0, y: 0, z: 1 },
   view: { w: 1280, h: 720 },
   player: null, bike: null,
-  cars: [], dogs: [], hools: [], grans: [], guards: [], npcs: [], fx: [], marks: [],
+  cars: [], dogs: [], hools: [], grans: [], guards: [], npcs: [], peds: [], fx: [], marks: [],
   heat: 0, mission: null, missionIndex: 0, missionsDone: [],
   partner: { cooldown: 0, eta: 0, active: 0, forgot: false },
   stats: { earned: 0, crashes: 0, fixed: 0, sober: 0, bestQ: 0, fines: 0, dist: 0 },
   flags: { tutorialDone: false, everDrunk: false, warnedDrunk: false, beggarPaid: 0 },
   upgrades: {}, prompt: null, autosave: 0, phoneRing: 0, tutorial: null,
-  paused: false, ended: null
+  paused: false, ended: null, free: false, freeCount: 0
 };
 
 function newPlayer() {
@@ -1459,6 +1459,37 @@ function spawnHools() {
     state: 'idle', t: rnd(0, 3), cool: 0, say: 0, line: '', phase: 0, dir: 0, holds: null, flee: 0
   });
 }
+const PED_LINES = [
+  'Молодой человек, тут вообще-то люди ходят.',
+  'Опять провода тянут…',
+  'А интернет когда починят?',
+  'Осторожнее, я с пакетами!',
+  'Camera смотрит? А то у меня велосипед увели.',
+  'Здрасьте. До свидания.',
+  'Вы из ЖЭКа? Нет? Жаль.'
+];
+const PED_CLOTHES = ['#4a6a8a', '#7a4a6a', '#5a7a4a', '#8a6a3a', '#4a4a7a', '#7a5a4a', '#3a6a6a'];
+function spawnPeds() {
+  S.peds.length = 0;
+  const R = mulberry32(31337);
+  const spots = [];
+  for (const y of ROADS_H) for (let i = 0; i < 8; i++) spots.push([160 + R() * (WORLD.w - 320), y + (R() < .5 ? -1 : 1) * (ROAD_W / 2 + 11)]);
+  for (const x of ROADS_V) for (let i = 0; i < 6; i++) spots.push([x + (R() < .5 ? -1 : 1) * (ROAD_W / 2 + 11), 160 + R() * (WORLD.h - 320)]);
+  spots.push([900, 860], [1100, 900], [760, 640], [1250, 880], [1000, 1700], [1180, 1500],
+             [2150, 1750], [1950, 1450], [2050, 900], [640, 1500], [880, 1980], [2400, 1700]);
+  for (const [x, y] of spots) {
+    if (!freeSpot(x, y, 12)) continue;
+    S.peds.push({
+      x, y, hx: x, hy: y, vx: 0, vy: 0, dir: R() * TAU, phase: R() * 6,
+      t: R() * 3, say: 0, line: '', down: 0, hop: 0,
+      body: PED_CLOTHES[Math.floor(R() * PED_CLOTHES.length)],
+      hair: R() < .3 ? '#d8d8e0' : R() < .5 ? '#2a2a2a' : '#5a4230',
+      cap: R() < .35 ? PED_CLOTHES[Math.floor(R() * PED_CLOTHES.length)] : null,
+      bag: R() < .4, sp: 38 + R() * 34
+    });
+    if (S.peds.length >= 34) break;
+  }
+}
 function spawnGrans() {
   S.grans.length = 0;
   const spots = [[660, 566], [1010, 566], [1330, 566], [1000, 1756], [2210, 1906]];
@@ -1480,6 +1511,12 @@ function updateCars(dt) {
       c.horn = 0.6; Audio2.tone(rnd(300, 420), 0.24, 'square', 0.09);
     }
     c.horn = Math.max(0, c.horn - dt);
+    /* если Олег прямо по курсу — водитель всё же тормозит */
+    if (c.base === undefined) c.base = c.sp;
+    const ahead = (p.x - c.x) * Math.cos(c.a) + (p.y - c.y) * Math.sin(c.a);
+    const side = Math.abs(-(p.x - c.x) * Math.sin(c.a) + (p.y - c.y) * Math.cos(c.a));
+    if (ahead > 0 && ahead < 130 && side < 26) c.sp = lerp(c.sp, c.base * 0.18, 1 - Math.exp(-5 * dt));
+    else c.sp = lerp(c.sp, c.base, 1 - Math.exp(-1.6 * dt));
     if (d < 34 && p.invuln <= 0) {
       const kn = 300;
       const a = Math.atan2(p.y - c.y, p.x - c.x);
@@ -1596,6 +1633,70 @@ function updateHools(dt) {
     }
     h.x = clamp(h.x, 14, WORLD.w - 14); h.y = clamp(h.y, 14, WORLD.h - 14);
     h.vx *= Math.exp(-1.1 * dt); h.vy *= Math.exp(-1.1 * dt);
+  }
+}
+
+function updatePeds(dt) {
+  const p = S.player;
+  const bikeFast = p.onBike && Math.abs(S.bike.speed) > 150;
+  for (const q of S.peds) {
+    q.say = Math.max(0, q.say - dt);
+    q.hop = Math.max(0, q.hop - dt);
+    if (q.down > 0) {                                  /* сбитый прохожий встаёт */
+      q.down -= dt;
+      if (q.down <= 0) { q.say = 3; q.line = pick(['Ну спасибо.', 'Я это запомню.', 'Права купил?']); }
+      continue;
+    }
+    const d = dist(q.x, q.y, p.x, p.y);
+    if (d > 1300) {                                    /* далеко — считаем дёшево, без сетки коллизий */
+      q.t -= dt;
+      if (q.t <= 0) {
+        q.t = rnd(3, 7);
+        const a = dist(q.x, q.y, q.hx, q.hy) > 260 ? Math.atan2(q.hy - q.y, q.hx - q.x) : rnd(0, TAU);
+        q.vx = Math.cos(a) * q.sp; q.vy = Math.sin(a) * q.sp;
+      }
+      q.x = clamp(q.x + q.vx * dt, 14, WORLD.w - 14);
+      q.y = clamp(q.y + q.vy * dt, 14, WORLD.h - 14);
+      q.vx *= Math.exp(-1.6 * dt); q.vy *= Math.exp(-1.6 * dt);
+      continue;
+    }
+    /* отскок от несущегося велосипеда */
+    if (bikeFast && d < 78 && q.hop <= 0) {
+      const a = Math.atan2(q.y - p.y, q.x - p.x);
+      q.vx = Math.cos(a) * 190; q.vy = Math.sin(a) * 190; q.hop = 1.1;
+      if (q.say <= 0) { q.say = 2; q.line = pick(['Э!', 'Куда несёшься!', 'Тут пешеходы!']); }
+    } else if (q.hop <= 0) {
+      q.t -= dt;
+      if (q.t <= 0) {
+        q.t = rnd(2.2, 5.5);
+        const far = dist(q.x, q.y, q.hx, q.hy) > 260;
+        const a = far ? Math.atan2(q.hy - q.y, q.hx - q.x) : rnd(0, TAU);
+        q.vx = Math.cos(a) * q.sp; q.vy = Math.sin(a) * q.sp;
+      }
+      if (d < 150 && q.say <= 0 && Math.random() < 0.12 * dt * 60 / 60) { q.say = 3; q.line = pick(PED_LINES); }
+    }
+    /* наезд */
+    if (d < 22 && bikeFast && q.down <= 0) {
+      q.down = 3.2;
+      const a = Math.atan2(q.y - p.y, q.x - p.x);
+      q.vx = Math.cos(a) * 120; q.vy = Math.sin(a) * 120;
+      S.bike.speed *= 0.45;
+      hurt(4, 'Олег сбил прохожего и сам не устоял.');
+      shake(7); Audio2.thud();
+      addHeat(20, 'Ты сбил прохожего — во дворе это обсудят');
+      witnessed(q.x, q.y);
+      floater(q.x, q.y - 34, pick(['Ой!', 'Ай!', 'Куда!']), '#ff4d5e');
+      toast(pick(['«Я извинился. Мысленно»', '«Пешеход появился внезапно. Как всегда»']), 'bad', 2400);
+    }
+    q.x += q.vx * dt; q.y += q.vy * dt;
+    q.phase += Math.hypot(q.vx, q.vy) * dt * 0.05;
+    if (Math.hypot(q.vx, q.vy) > 1) q.dir = Math.atan2(q.vy, q.vx);
+    for (const sol of solidsNear(q.x, q.y, 14)) {
+      const c = circleRect(q.x, q.y, 10, sol);
+      if (c && !sol.soft) { q.x += c.nx * c.push; q.y += c.ny * c.push; q.vx *= .3; q.vy *= .3; }
+    }
+    q.x = clamp(q.x, 14, WORLD.w - 14); q.y = clamp(q.y, 14, WORLD.h - 14);
+    q.vx *= Math.exp(-1.6 * dt); q.vy *= Math.exp(-1.6 * dt);
   }
 }
 
@@ -1876,13 +1977,63 @@ const MISSIONS = [
   }
 ];
 
+/* после сдачи большого объекта смена продолжается: Тамара звонит бесконечно */
+const FREE_DOORS = [
+  { x: 700, y: 545, label: 'Подъезд №1, «Панельная 12»', cx: 762, cy: 585 },
+  { x: 980, y: 545, label: 'Подъезд №2, «Панельная 12»', cx: 1040, cy: 585 },
+  { x: 1120, y: 545, label: 'Подъезд №1, «Панельная 14»', cx: 1180, cy: 585 },
+  { x: 1330, y: 545, label: 'Подъезд №2, «Панельная 14»', cx: 1390, cy: 585 },
+  { x: 1372, y: 1730, label: 'Магазин «Синий Кит», служебный вход', cx: 1440, cy: 1760 },
+  { x: 1900, y: 640, label: 'Ворота склада «Ящик и Ко»', cx: 1960, cy: 680 },
+  { x: 2210, y: 1870, label: 'БЦ «Панельный Титан», вход', cx: 2120, cy: 1900 }
+];
+const FREE_ZONES = ['ворота', 'въезд во двор', 'детская площадка', 'парковка', 'мусорные баки', 'чёрный ход', 'проходная'];
+const FREE_CLIENTS = ['ohran', 'zaved', 'sklad', 'predsed', 'director'];
+function makeFreeMission(n) {
+  const camera = n % 2 === 1;
+  const who = pick(FREE_CLIENTS);
+  const urgent = n % 4 === 0;
+  const pay = Math.round(clamp(1400 + n * 190, 1400, 4200));
+  if (camera) {
+    const pole = pick(POLES.filter(p => p.mount));
+    const zone = pick(FREE_ZONES);
+    return {
+      id: 'free' + n, title: 'ЗАЯВКА №' + n + ': КАМЕРА', kind: 'camera', pay, zone,
+      site: { x: pole.x, y: pole.y + 40, label: 'Опора ' + pole.mount },
+      client: { who, x: pole.x - 70, y: pole.y + 70, name: CHARS[who].name },
+      tools: ['screw', 'ladder', 'cable', 'ties'],
+      time: urgent ? 300 : 0,
+      brief: [
+        { who: 'tamara', text: 'Олег, ещё одна. Опора ' + pole.mount + ', нужна камера на «' + zone + '». ' + (urgent ? 'И это срочно, у заказчика проверка.' : 'Без спешки, но и без ночёвки.') },
+        { who: 'oleg', text: pick(['Понял. Опора, кронштейн, судьба.', 'Еду. Надеюсь, лестница ещё цела.', 'Ещё одна камера — ещё один взгляд на этот двор.']) }
+      ],
+      done: 'Картинка есть, «' + zone + '» видно. Заказчик кивнул — это максимум эмоций.'
+    };
+  }
+  const d = pick(FREE_DOORS);
+  return {
+    id: 'free' + n, title: 'ЗАЯВКА №' + n + ': ДВЕРЬ', kind: 'door', pay,
+    site: { x: d.x, y: d.y, label: d.label },
+    client: { who, x: d.cx, y: d.cy, name: CHARS[who].name },
+    tools: ['screw', 'tester', 'cable', 'drill'],
+    time: urgent ? 280 : 0,
+    brief: [
+      { who: 'tamara', text: 'Заявка: ' + d.label + '. ' + pick(['Дверь живёт своей жизнью.', 'Замок открывается по настроению.', 'Считыватель молчит, как партизан.', 'Жильцы уже придумали свой способ входа. Он им нравится больше.']) + (urgent ? ' И да, это срочно.' : '') },
+      { who: 'oleg', text: pick(['Значит, снова контроллер и совесть.', 'Еду. Дверь подождёт, люди — нет.', 'Хорошо. Только пусть на этот раз никто не помогает.']) }
+    ],
+    done: 'Дверь открывается, журнал пишет. Всё как надо.'
+  };
+}
+
 function missionDef() { return S.mission ? S.mission.def : null; }
 function missingTools(list) { return (list || []).filter(t => S.player.tools.indexOf(t) < 0); }
 function bagCapacity() { return 6 + (S.upgrades.rack ? 2 : 0); }
 
 function offerMission(idx) {
-  if (idx >= MISSIONS.length) { endGame(true); return; }
-  const def = MISSIONS[idx];
+  if (idx >= MISSIONS.length && !S.free) { endGame(true); return; }
+  let def;
+  if (idx >= MISSIONS.length) { S.freeCount++; def = makeFreeMission(S.freeCount); }
+  else def = MISSIONS[idx];
   S.mission = { def, stage: 'brief', quality: 0, timer: def.time || 0, data: {}, target: null, startedAt: S.t };
   S.phoneRing = 0;
   Audio2.phone();
@@ -2442,7 +2593,7 @@ function startDoorGame(onDone) {
     },
     phaseName() { return ['ЭТАП 1 — РАЗМЕЩЕНИЕ', 'ЭТАП 2 — КОММУТАЦИЯ', 'ЭТАП 3 — ПРОВЕРКА'][this.phase] || 'ГОТОВО'; },
     hint() {
-      if (this.phase === 0) return 'Перетащи оборудование в свои посадочные места: клик по прибору внизу, затем клик по контуру. <b>Мышь</b> или <b>←/→</b> + <b>E</b>.';
+      if (this.phase === 0) return 'Расставь оборудование по местам: клик по прибору внизу, затем клик по контуру. С клавиатуры: <b>←/→</b> — прибор, <b>↑/↓</b> — место, <b>E</b> — поставить. Ошибка стоит качества.';
       if (this.phase === 1) return 'Соедини одинаковые метки: <b>A</b>—питание, <b>B</b>—считыватель, <b>C</b>—кнопка, <b>D</b>—замок. Разные метки = короткое замыкание. Замыканий: <b>' + this.shorts + '/3</b>';
       if (this.phase === 2) return 'Жми <b>«Запустить проверку»</b> — посмотрим, откроется ли дверь и запишется ли проход.';
       return 'Готово.';
@@ -2459,9 +2610,24 @@ function startDoorGame(onDone) {
       const click = Mini.click();
       if (this.phase === 0) {
         /* клавиатура */
-        if (Input.anyHit(K.left)) { this.sel = (this.sel + this.devs.length - 1) % this.devs.length; Audio2.click(); }
-        if (Input.anyHit(K.right)) { this.sel = (this.sel + 1) % this.devs.length; Audio2.click(); }
-        if (Input.anyHit(K.act)) this.tryPlace(this.devs[this.sel].id, this.devs[this.sel].id);
+        const freeDevs = this.devs.filter(d => !d.placed);
+        if (freeDevs.length && this.devs[this.sel].placed) {
+          this.sel = this.devs.indexOf(freeDevs[0]);
+        }
+        if (Input.anyHit(K.left) || Input.anyHit(K.right)) {
+          const dir = Input.anyHit(K.right) ? 1 : -1;
+          for (let i = 0; i < this.devs.length; i++) {
+            this.sel = (this.sel + dir + this.devs.length) % this.devs.length;
+            if (!this.devs[this.sel].placed) break;
+          }
+          Audio2.click();
+        }
+        if (Input.anyHit(K.up) || Input.anyHit(K.down)) {
+          const dir = Input.anyHit(K.down) ? 1 : -1;
+          this.slotSel = (this.slotSel + dir + this.slots.length) % this.slots.length;
+          Audio2.click();
+        }
+        if (Input.anyHit(K.act)) this.tryPlace(this.devs[this.sel].id, this.slots[this.slotSel].id);
         if (click) {
           const tr = this.tray.find(t => hitRect(M.mx, M.my, t) && !this.devs.find(d => d.id === t.id).placed);
           if (tr) { this.held = tr.id; Audio2.click(); }
@@ -2585,9 +2751,10 @@ function startDoorGame(onDone) {
         const dev = this.devs.find(v => v.id === s.id);
         const on = dev.placed;
         c.setLineDash(on ? [] : [7, 5]);
-        c.strokeStyle = on ? '#4be36b' : (this.held === s.id || (this.phase === 0 && this.devs[this.sel].id === s.id) ? '#ffd23f' : 'rgba(185,166,214,.5)');
+        const aimed = this.phase === 0 && (this.held === s.id || this.slots[this.slotSel] === s);
+        c.strokeStyle = on ? '#4be36b' : (aimed ? '#ffd23f' : 'rgba(185,166,214,.5)');
         c.lineWidth = on ? 2 : 2;
-        c.fillStyle = on ? 'rgba(75,227,107,.12)' : 'rgba(255,255,255,.04)';
+        c.fillStyle = on ? 'rgba(75,227,107,.12)' : (aimed ? 'rgba(255,210,63,.12)' : 'rgba(255,255,255,.04)');
         roundRect(0, c, s.x, s.y, s.w, s.h, 6); c.fill(); c.stroke();
         c.setLineDash([]);
         if (on) drawDevice(c, s, dev);
@@ -2639,7 +2806,7 @@ function startDoorGame(onDone) {
       if (this.phase === 0) for (let i = 0; i < this.tray.length; i++) {
         const t = this.tray[i], dev = this.devs.find(v => v.id === t.id);
         if (dev.placed) continue;
-        const act = this.held === t.id || this.sel === i;
+        const act = this.held === t.id || this.devs[this.sel].id === t.id;
         c.fillStyle = act ? 'rgba(255,210,63,.18)' : 'rgba(255,255,255,.06)';
         c.strokeStyle = act ? '#ffd23f' : 'rgba(185,166,214,.5)'; c.lineWidth = 2;
         roundRect(0, c, t.x, t.y, t.w, t.h, 6); c.fill(); c.stroke();
@@ -3651,6 +3818,21 @@ function render() {
       if (h.say > 0) bubble(c, h.x, h.y - 52, h.line);
     }
   });
+  for (const q of S.peds) {
+    if (q.x < cull.x - 60 || q.x > cull.x + cull.w + 60 || q.y < cull.y - 60 || q.y > cull.y + cull.h + 60) continue;
+    list.push({
+      y: q.y, d: () => {
+        if (q.down > 0) {
+          c.save(); c.translate(q.x, q.y); c.rotate(Math.PI / 2 * clamp(q.down / 0.4, 0, 1));
+          drawPerson(c, 0, 0, { phase: 0, dir: q.dir, body: q.body, hair: q.hair, cap: q.cap, pants: '#33334a', bag: q.bag });
+          c.restore();
+        } else {
+          drawPerson(c, q.x, q.y, { phase: q.phase, dir: q.dir, body: q.body, hair: q.hair, cap: q.cap, pants: '#33334a', bag: q.bag });
+        }
+        if (q.say > 0) bubble(c, q.x, q.y - 52, q.line);
+      }
+    });
+  }
   for (const g of S.grans) list.push({
     y: g.y, d: () => {
       drawPerson(c, g.x, g.y, { phase: g.phase, dir: Math.PI / 2, body: '#7a4a8a', hair: '#d8d8e0', pants: '#3a2a4a', skin: '#e2c0a4' });
@@ -4115,6 +4297,7 @@ function saveGame(silent) {
     bike: { x: S.bike.x, y: S.bike.y, cond: S.bike.cond },
     clock: S.clock, day: S.day, heat: S.heat,
     missionIndex: S.missionIndex, missionsDone: S.missionsDone.slice(),
+    free: S.free, freeCount: S.freeCount,
     missionStage: S.mission ? S.mission.stage : null,
     missionQuality: S.mission ? S.mission.quality : 0,
     upgrades: Object.assign({}, S.upgrades),
@@ -4142,6 +4325,7 @@ function loadGame() {
     S.clock = d.clock; S.day = d.day || 1; S.heat = d.heat || 0;
     S.missionIndex = d.missionIndex || 0;
     S.missionsDone = d.missionsDone || [];
+    S.free = !!d.free; S.freeCount = d.freeCount || 0;
     S.upgrades = d.upgrades || {};
     S.stats = Object.assign(S.stats, d.stats || {});
     S.flags = Object.assign(S.flags, d.flags || {});
@@ -4350,8 +4534,14 @@ function screenJournal(back) {
           : i <= S.missionIndex ? '<small>ожидает звонка</small>' : '<small>ещё не открыта</small>') +
       '</div>';
   }).join('');
+  const freeDone = S.missionsDone.filter(d => String(d.id).indexOf('free') === 0);
+  const freeRows = freeDone.length
+    ? '<div class="job done"><b>Свободные заявки</b><small>сдано ' + freeDone.length +
+      ' · заработано ' + fmtMoney(freeDone.reduce((a, b) => a + b.pay, 0)) +
+      ' · среднее качество ' + Math.round(freeDone.reduce((a, b) => a + b.q, 0) / freeDone.length) + '%</small></div>'
+    : '';
   showSheet('<h2>Рабочий телефон</h2><div class="sub">журнал заявок · «Монтаж-Сервис»</div>' +
-    '<div class="jobList">' + rows + '</div>' +
+    '<div class="jobList">' + rows + freeRows + '</div>' +
     '<h3>Статистика смены</h3><div class="stats">' +
     '<i>Заработано всего</i><b>' + fmtMoney(S.stats.earned) + '</b>' +
     '<i>Лучшее качество монтажа</i><b>' + Math.round(S.stats.bestQ) + '%</b>' +
@@ -4572,7 +4762,10 @@ function endGame(win, reason) {
     showSheet('<h1>Смена сдана</h1><div class="sub">звание по итогам: ' + rank + '</div>' +
       '<p><b>Борисыч:</b> «Олег. Объект работает, заказчик доволен, кабель на месте. Я даже не знаю, к чему придраться. Иди домой, завтра новая заявка».</p>' +
       '<p><b>Тамара:</b> «И телефон не выключай. Я всё равно дозвонюсь».</p>' + stats +
-      '<div class="btns"><button class="btn p" id="bAgain">Новая смена</button><button class="btn c" id="bMenu">В меню</button></div>' + DISCLAIMER, 'win');
+      '<div class="note">Сюжет пройден. Можно остаться в районе: Тамара будет присылать бесконечные заявки на двери и камеры, оплата растёт с каждой.</div>' +
+      '<div class="btns"><button class="btn c" id="bFree">Остаться на смене</button>' +
+      '<button class="btn p" id="bAgain">Новая смена</button><button class="btn" id="bMenu">В меню</button></div>' + DISCLAIMER, 'win');
+    wire('bFree', startFreeMode);
   } else {
     showSheet('<h1>Смена сорвана</h1><div class="sub">' + rank + '</div>' +
       '<p>' + (reason || 'Что-то пошло не так, как обычно — просто чуть сильнее.') + '</p>' +
@@ -4581,7 +4774,17 @@ function endGame(win, reason) {
   }
   wire('bAgain', () => startNewGame(true));
   wire('bMenu', screenMenu);
-  Save.wipe();
+  if (win) { S.flags.won = true; saveGame(true); } else Save.wipe();
+}
+
+function startFreeMode() {
+  S.free = true; S.ended = null;
+  closeSheet();
+  S.screen = 'play';
+  S.phoneRing = 2.5;
+  saveGame(true);
+  Dlg.one('tamara', 'Олег, раз ты не ушёл — работаем дальше. Заявки не кончаются, они просто ждут своей очереди.');
+  toast('Свободные заявки: Тамара скоро позвонит', 'good', 3000);
 }
 
 /* ------------------------------------------------------------------ */
@@ -4629,8 +4832,8 @@ function skipTutorial() {
 function resetWorld(fresh) {
   S.player = newPlayer();
   S.bike = newBike();
-  S.heat = 0; S.fx.length = 0; S.marks.length = 0; S.npcs.length = 0; S.guards.length = 0;
-  S.mission = null; S.missionIndex = 0; S.missionsDone = [];
+  S.heat = 0; S.fx.length = 0; S.marks.length = 0; S.npcs.length = 0; S.guards.length = 0; S.peds.length = 0;
+  S.mission = null; S.missionIndex = 0; S.missionsDone = []; S.free = false; S.freeCount = 0;
   S.partner = { cooldown: 0, eta: 0, active: 0, forgot: false };
   S.partnerBonus = false;
   S.clock = START_HOUR * 3600; S.day = 1;
@@ -4638,7 +4841,7 @@ function resetWorld(fresh) {
   S.stats = { earned: 0, crashes: 0, fixed: 0, sober: 0, bestQ: 0, fines: 0, dist: 0 };
   S.flags = { tutorialDone: false, everDrunk: false, warnedDrunk: false, beggarPaid: 0 };
   S.upgrades = {};
-  spawnTraffic(); spawnDogs(); spawnHools(); spawnGrans();
+  spawnTraffic(); spawnDogs(); spawnHools(); spawnGrans(); spawnPeds();
   for (const p of POLES) p.installed = false;
   for (const k of KIOSKS) k.broken = false;
   for (const p of PROPS) p.broken = false;
@@ -4702,7 +4905,7 @@ function updateWorld(dt) {
 
   if (p.onBike) moveBike(dt); else movePlayerOnFoot(dt);
 
-  updateCars(dt); updateDogs(dt); updateHools(dt); updatePartner(dt); updateHeat(dt);
+  updateCars(dt); updateDogs(dt); updateHools(dt); updatePeds(dt); updatePartner(dt); updateHeat(dt);
   for (const g of S.grans) g.say = Math.max(0, g.say - dt);
   updateMission(dt);
 
@@ -4769,6 +4972,18 @@ function frame(ts) {
 }
 function step(dt) {
   S.t += dt;
+  /* если машина не тянет — один раз подсказываем про экономный режим */
+  if (!S.lowFx && !S.flags.perfHinted && S.screen === 'play') {
+    S.perfT = (S.perfT || 0) + dt;
+    S.perfN = (S.perfN || 0) + 1;
+    if (S.perfT > 6) {
+      if (S.perfN / S.perfT < 34) {
+        S.flags.perfHinted = true;
+        toast('Подтормаживает? Esc → Настройки → «Эффекты: экономно»', 'info', 5000);
+      }
+      S.perfT = 0; S.perfN = 0;
+    }
+  }
   Dlg.update(dt);
   updateRadio(dt);
   if (S.screen === 'play' && !Dlg.open) updateWorld(dt);
