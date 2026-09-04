@@ -341,6 +341,18 @@ function m4invRT(o, m) {              /* инверсия для матрицы 
 /* ------------------------------------------------------------------ */
 const GL = { gl: null, canvas: null, w: 1, h: 1, dpr: 1, aniso: null, maxAniso: 1 };
 
+/* Общий кусок: плёночная кривая тона и насыщенность. Одинаковый для неба
+   и для геометрии, иначе горизонт «разъезжается» с туманом. */
+const GLSL_TONE = `
+vec3 tonemap(vec3 x, float sat){
+  x = max(x, vec3(0.0));
+  vec3 c = x / (vec3(1.0) + x);                 /* сжимаем свет, тени не поднимаем */
+  c = c * c * (3.0 - 2.0 * c) * 0.22 + c * 0.78; /* лёгкий плёночный носок */
+  float g = dot(c, vec3(0.299, 0.587, 0.114));
+  c = mix(vec3(g), c, sat);
+  return pow(max(c, 0.0), vec3(0.94));
+}`;
+
 const VS_MAIN = `#version 300 es
 layout(location=0) in vec3 aPos;
 layout(location=1) in vec3 aNor;
@@ -348,41 +360,54 @@ layout(location=2) in vec2 aUV;
 layout(location=3) in vec3 aCol;
 layout(location=4) in float aEmis;
 layout(location=5) in float aPart;
+layout(location=6) in float aGloss;
 uniform mat4 uProj, uView, uModel;
-uniform mat4 uBones[16];
+uniform mat4 uBones[20];
 uniform float uSkin;
-out vec3 vNor; out vec2 vUV; out vec3 vCol; out float vEmis; out vec3 vWorld;
+out vec3 vNor; out vec2 vUV; out vec3 vCol; out float vEmis; out vec3 vWorld; out float vGloss;
 void main(){
   mat4 M = uSkin > 0.5 ? uBones[int(aPart)] : uModel;
   vec4 wp = M * vec4(aPos, 1.0);
   vWorld = wp.xyz;
   vNor = mat3(M) * aNor;
-  vUV = aUV; vCol = aCol; vEmis = aEmis;
+  vUV = aUV; vCol = aCol; vEmis = aEmis; vGloss = aGloss;
   gl_Position = uProj * uView * wp;
 }`;
 
 const FS_MAIN = `#version 300 es
 precision highp float;
-in vec3 vNor; in vec2 vUV; in vec3 vCol; in float vEmis; in vec3 vWorld;
+in vec3 vNor; in vec2 vUV; in vec3 vCol; in float vEmis; in vec3 vWorld; in float vGloss;
 uniform sampler2D uTex;
 uniform vec3 uSunDir, uSunCol, uAmbSky, uAmbGround, uFogCol;
-uniform float uFogDens, uNight, uAlphaMode, uCut, uExposure;
+uniform float uFogDens, uNight, uAlphaMode, uCut, uExposure, uGlossMul;
 uniform vec4 uTint;
 uniform vec3 uEye;
 uniform vec3 uLampPos[8];
 uniform vec3 uLampCol[8];
 uniform int uLampN;
 out vec4 fragColor;
+${GLSL_TONE}
 void main(){
   vec4 t = texture(uTex, vUV);
   if (uAlphaMode > 0.5 && t.a < uCut) discard;      /* листва: альфа-тест */
   vec3 N = normalize(vNor);
+  vec3 V = normalize(uEye - vWorld);
   vec3 base = t.rgb * vCol * uTint.rgb;
+  float gloss = clamp(vGloss * uGlossMul, 0.0, 1.0);
   float ndl = max(dot(N, uSunDir), 0.0);
   vec3 amb = mix(uAmbGround, uAmbSky, N.y * 0.5 + 0.5);
   vec3 fillDir = normalize(vec3(-uSunDir.x, 0.45, -uSunDir.z));
   float fill = max(dot(N, fillDir), 0.0);
-  vec3 lit = base * (amb + uSunCol * ndl + uAmbSky * fill * 0.45);
+  vec3 lit = base * (amb + uSunCol * ndl + uAmbSky * fill * 0.28);
+  /* блик от солнца: краска, стекло, мокрый асфальт */
+  if (gloss > 0.01) {
+    float shin = mix(12.0, 140.0, gloss);
+    vec3 H = normalize(uSunDir + V);
+    float s = pow(max(dot(N, H), 0.0), shin) * smoothstep(0.0, 0.06, ndl);
+    lit += uSunCol * s * gloss * (0.5 + 1.7 * gloss);
+    float fres = pow(1.0 - max(dot(N, V), 0.0), 4.0);
+    lit += uAmbSky * fres * gloss * 0.85;
+  }
   /* точечные источники: фонари, вывески и фары */
   for (int i = 0; i < 8; i++) {
     if (i >= uLampN) break;
@@ -390,8 +415,13 @@ void main(){
     float dl = length(d);
     float att = clamp(1.0 - dl / 16.0, 0.0, 1.0);
     att *= att;
-    float nl = max(dot(N, d / max(dl, 0.001)), 0.0) * 0.75 + 0.25;
+    vec3 L = d / max(dl, 0.001);
+    float nl = max(dot(N, L), 0.0) * 0.75 + 0.25;
     lit += base * uLampCol[i] * nl * att;
+    if (gloss > 0.15) {
+      vec3 H = normalize(L + V);
+      lit += uLampCol[i] * pow(max(dot(N, H), 0.0), mix(12.0, 140.0, gloss)) * gloss * att * 1.4;
+    }
   }
   /* окна и неон: альфа текстуры — маска свечения */
   float winMask = (uAlphaMode > 0.5) ? 0.0 : t.a;
@@ -402,12 +432,7 @@ void main(){
   float d = length(vWorld - uEye);
   float f = 1.0 - exp(-uFogDens * d);
   vec3 col = mix(lit, uFogCol, clamp(f, 0.0, 1.0));
-  col *= uExposure;
-  col = col / (vec3(1.0) + col);                  /* сжатие ярких мест без подъёма теней */
-  float g = dot(col, vec3(0.299, 0.587, 0.114));
-  col = mix(vec3(g), col, 1.14);                  /* насыщенность «под закат» */
-  col = pow(max(col, 0.0), vec3(0.94));
-  fragColor = vec4(col, uTint.a);
+  fragColor = vec4(tonemap(col * uExposure, 1.12), uTint.a);
 }`;
 
 const VS_SKY = `#version 300 es
@@ -424,28 +449,47 @@ const FS_SKY = `#version 300 es
 precision highp float;
 in vec3 vDir;
 uniform vec3 uEye, uSunDir, uZenith, uHorizon, uSunCol, uGround;
-uniform float uExposure;
+uniform float uExposure, uCloud, uTime;
 out vec4 fragColor;
+${GLSL_TONE}
+float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+float vnoise(vec2 p){
+  vec2 i = floor(p), f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(h21(i), h21(i + vec2(1,0)), f.x), mix(h21(i + vec2(0,1)), h21(i + vec2(1,1)), f.x), f.y);
+}
+float fbm(vec2 p){
+  float s = 0.0, a = 0.5;
+  for (int k = 0; k < 5; k++) { s += a * vnoise(p); p *= 2.03; a *= 0.5; }
+  return s;
+}
 void main(){
   vec3 d = normalize(vDir - uEye);
   float h = clamp(d.y * 1.15 + 0.06, -1.0, 1.0);
   vec3 col;
   if (h > 0.0) {
     col = mix(uHorizon, uZenith, pow(h, 0.55));
+    /* облачный слой: плоскость над головой, проекция направления взгляда */
+    float dy = max(d.y, 0.035);
+    vec2 cp = d.xz / dy * 0.55 + vec2(uTime * 0.006, uTime * 0.0035);
+    float n = fbm(cp * 1.5);
+    n = smoothstep(0.52 - uCloud * 0.22, 0.86, n + uCloud * 0.16);
+    float edge = fbm(cp * 3.7) * 0.5 + 0.5;
+    float cov = n * smoothstep(0.0, 0.16, d.y);
+    vec3 cbright = mix(uHorizon, vec3(1.0), 0.55) * (0.75 + 0.55 * edge);
+    vec3 cdark = mix(uZenith, uHorizon, 0.4) * 0.72;
+    float sunlit = pow(max(dot(d, uSunDir), 0.0), 5.0);
+    vec3 cloud = mix(cdark, cbright, edge) + uSunCol * sunlit * 0.5;
+    col = mix(col, cloud, cov * 0.85);
     float sd = max(dot(d, uSunDir), 0.0);
-    col += uSunCol * pow(sd, 220.0) * 3.4;              /* диск */
-    col += uSunCol * pow(sd, 6.0) * 0.42;               /* засветка вокруг */
+    col += uSunCol * pow(sd, 220.0) * 3.4 * (1.0 - cov * 0.8);   /* диск */
+    col += uSunCol * pow(sd, 6.0) * 0.42;                        /* засветка вокруг */
     float band = exp(-abs(d.y) * 9.0);
     col = mix(col, uHorizon * 1.15, band * 0.55);
   } else {
     col = mix(uHorizon * 0.75, uGround, clamp(-h * 2.4, 0.0, 1.0));
   }
-  col *= uExposure;
-  col = col / (vec3(1.0) + col);
-  float g = dot(col, vec3(0.299, 0.587, 0.114));
-  col = mix(vec3(g), col, 1.14);
-  col = pow(max(col, 0.0), vec3(0.94));
-  fragColor = vec4(col, 1.0);
+  fragColor = vec4(tonemap(col * uExposure, 1.12), 1.0);
 }`;
 
 const VS_GLOW = `#version 300 es
@@ -500,24 +544,70 @@ function program(gl, vs, fs, name) {
 /* ------------------------------------------------------------------ */
 /* 2. Меши: сборка геометрии                                            */
 /* ------------------------------------------------------------------ */
-const STRIDE = 13;                       /* pos3 nor3 uv2 col3 emis1 part1 */
+const STRIDE = 14;                       /* pos3 nor3 uv2 col3 emis1 part1 gloss1 */
+
+/* Замкнутый контур скруглённого прямоугольника в плоскости XZ.
+   Точки идут так, чтобы боковые четырёхугольники и верхняя крышка
+   получались лицевой стороной наружу (обход против часовой сверху). */
+function rrLoop(w, d, r, cs) {
+  r = clamp(r, 0.0015, Math.max(0.0015, Math.min(w, d) / 2 - 1e-4));
+  cs = Math.max(1, cs | 0);
+  const hw = w / 2 - r, hd = d / 2 - r;
+  const corners = [[hw, hd], [-hw, hd], [-hw, -hd], [hw, -hd]];
+  const pts = [];
+  let per = 0;
+  for (let ci = 0; ci < 4; ci++) {
+    const [cx, cz] = corners[ci];
+    for (let s = 0; s <= cs; s++) {
+      const a = (ci + s / cs) * (Math.PI / 2);
+      const nx = Math.cos(a), nz = Math.sin(a);
+      pts.push({ x: cx + nx * r, z: cz + nz * r, nx, nz, u: 0 });
+    }
+  }
+  pts.reverse();
+  for (let i = 0; i < pts.length; i++) {
+    pts[i].u = per;
+    const j = (i + 1) % pts.length;
+    per += Math.hypot(pts[j].x - pts[i].x, pts[j].z - pts[i].z);
+  }
+  pts.per = per;
+  return pts;
+}
+
 class Mesh {
-  constructor() { this.v = []; this.i = []; this.n = 0; }
+  constructor() { this.v = []; this.i = []; this.n = 0; this.g = 0; }
+  /* блеск — «состояние материала»: примитивы берут его из opt.gloss */
+  _g(opt) { const p = this.g; if (opt && opt.gloss !== undefined) this.g = opt.gloss; return p; }
   vert(x, y, z, nx, ny, nz, u, vv, r, g, b, e, part) {
-    this.v.push(x, y, z, nx, ny, nz, u, vv, r, g, b, e || 0, part || 0);
+    this.v.push(x, y, z, nx, ny, nz, u, vv, r, g, b, e || 0, part || 0, this.g);
     return this.n++;
   }
-  quad(p0, p1, p2, p3, nx, ny, nz, uv, col, emis, part) {
+  tri(a, b, c) { this.i.push(a, b, c); }
+  /* четырёхугольник с разными нормалями в вершинах */
+  quadN(p0, p1, p2, p3, n0, n1, n2, n3, uv, col, emis, part) {
     const [r, g, b] = col;
-    const a = this.vert(p0[0], p0[1], p0[2], nx, ny, nz, uv[0], uv[1], r, g, b, emis, part);
-    const bb = this.vert(p1[0], p1[1], p1[2], nx, ny, nz, uv[2], uv[3], r, g, b, emis, part);
-    const c = this.vert(p2[0], p2[1], p2[2], nx, ny, nz, uv[4], uv[5], r, g, b, emis, part);
-    const d = this.vert(p3[0], p3[1], p3[2], nx, ny, nz, uv[6], uv[7], r, g, b, emis, part);
+    const a = this.vert(p0[0], p0[1], p0[2], n0[0], n0[1], n0[2], uv[0], uv[1], r, g, b, emis, part);
+    const bb = this.vert(p1[0], p1[1], p1[2], n1[0], n1[1], n1[2], uv[2], uv[3], r, g, b, emis, part);
+    const c = this.vert(p2[0], p2[1], p2[2], n2[0], n2[1], n2[2], uv[4], uv[5], r, g, b, emis, part);
+    const d = this.vert(p3[0], p3[1], p3[2], n3[0], n3[1], n3[2], uv[6], uv[7], r, g, b, emis, part);
     this.i.push(a, bb, c, a, c, d);
+  }
+  /* четырёхугольник с разными цветами в вершинах — мягкие переходы */
+  quadC(p0, p1, p2, p3, nx, ny, nz, uv, c0, c1, c2, c3, emis, part) {
+    const a = this.vert(p0[0], p0[1], p0[2], nx, ny, nz, uv[0], uv[1], c0[0], c0[1], c0[2], emis, part);
+    const b = this.vert(p1[0], p1[1], p1[2], nx, ny, nz, uv[2], uv[3], c1[0], c1[1], c1[2], emis, part);
+    const c = this.vert(p2[0], p2[1], p2[2], nx, ny, nz, uv[4], uv[5], c2[0], c2[1], c2[2], emis, part);
+    const d = this.vert(p3[0], p3[1], p3[2], nx, ny, nz, uv[6], uv[7], c3[0], c3[1], c3[2], emis, part);
+    this.i.push(a, b, c, a, c, d);
+  }
+  quad(p0, p1, p2, p3, nx, ny, nz, uv, col, emis, part) {
+    const n = [nx, ny, nz];
+    this.quadN(p0, p1, p2, p3, n, n, n, n, uv, col, emis, part);
   }
   /* коробка: центр по XZ, основание на y0; uvScale — метров на тайл */
   box(cx, y0, cz, w, h, d, col, opt) {
     opt = opt || {};
+    const gp = this._g(opt);
     const s = opt.uv || 1, e = opt.emis || 0, part = opt.part || 0;
     const x0 = cx - w / 2, x1 = cx + w / 2, z0 = cz - d / 2, z1 = cz + d / 2, y1 = y0 + h;
     const top = opt.topCol || col, side = col;
@@ -539,24 +629,94 @@ class Mesh {
       this.quad([x0,y1,z1],[x1,y1,z1],[x1,y1,z0],[x0,y1,z0], 0,1,0, [uo[0],uo[1], uo[0]+uw,uo[1], uo[0]+uw,uo[1]+ud, uo[0],uo[1]+ud], top, opt.topEmis || 0, part);
     if (opt.bottom === true)
       this.quad([x0,y0,z0],[x1,y0,z0],[x1,y0,z1],[x0,y0,z1], 0,-1,0, [0,0, uw,0, uw,ud, 0,ud], col, 0, part);
+    this.g = gp;
+  }
+  /* Коробка с фасками (и, если нужно, сужением кверху).
+     opt: bev — ширина фаски, r — радиус скругления углов в плане,
+     cs — сегментов на угол, taper — [sx, sz] масштаб верхней грани. */
+  bevelBox(cx, y0, cz, w, h, d, col, opt) {
+    opt = opt || {};
+    const gp = this._g(opt);
+    const bev = Math.min(opt.bev === undefined ? Math.min(w, h, d) * 0.12 : opt.bev, h / 2 - 1e-3, Math.min(w, d) / 2 - 1e-3);
+    const r = Math.max(opt.r || 0, 0.0015), cs = Math.max(1, opt.cs || 2);
+    const tp = opt.taper || [1, 1];
+    const uvS = opt.uv || 1, e = opt.emis || 0, part = opt.part || 0;
+    const top = opt.topCol || col;
+    /* профили колец: [доля высоты, вписка внутрь, признак фаски] */
+    const rings = [
+      { t: 0, in: bev, k: -1 },
+      { t: bev / h, in: 0, k: 0 },
+      { t: 1 - bev / h, in: 0, k: 0 },
+      { t: 1, in: bev, k: 1 }
+    ];
+    const loops = rings.map(rg => {
+      const sx = lerp(1, tp[0], rg.t), sz = lerp(1, tp[1], rg.t);
+      const ww = Math.max(0.002, w * sx - rg.in * 2), dd = Math.max(0.002, d * sz - rg.in * 2);
+      const lp = rrLoop(ww, dd, Math.min(r, Math.min(ww, dd) / 2 - 1e-4), cs);
+      return { lp, y: y0 + h * rg.t, k: rg.k };
+    });
+    const N = loops[0].lp.length;
+    const nrm = (p, k) => {
+      if (!k) return [p.nx, 0, p.nz];
+      const l = Math.hypot(p.nx * 0.62, 0.78, p.nz * 0.62);
+      return [p.nx * 0.62 / l, k * 0.78 / l, p.nz * 0.62 / l];
+    };
+    for (let ri = 0; ri < 3; ri++) {
+      const A = loops[ri], B = loops[ri + 1];
+      for (let i = 0; i < N; i++) {
+        const j = (i + 1) % N;
+        const a0 = A.lp[i], a1 = A.lp[j], b0 = B.lp[i], b1 = B.lp[j];
+        const u0 = a0.u / uvS, u1 = (j === 0 ? A.lp.per : a1.u) / uvS;
+        const v0 = (A.y - y0) / uvS, v1 = (B.y - y0) / uvS;
+        this.quadN([a0.x + cx, A.y, a0.z + cz], [a1.x + cx, A.y, a1.z + cz],
+                   [b1.x + cx, B.y, b1.z + cz], [b0.x + cx, B.y, b0.z + cz],
+                   nrm(a0, A.k), nrm(a1, A.k), nrm(b1, B.k), nrm(b0, B.k),
+                   [u0, v0, u1, v0, u1, v1, u0, v1], col, e, part);
+      }
+    }
+    if (opt.skipTop !== true) {
+      const T = loops[3];
+      const c = this.vert(cx, T.y, cz, 0, 1, 0, 0.5, 0.5, top[0], top[1], top[2], opt.topEmis || e, part);
+      const idx = [];
+      for (let i = 0; i < N; i++) {
+        const p = T.lp[i];
+        idx.push(this.vert(p.x + cx, T.y, p.z + cz, 0, 1, 0, (p.x + cx) / uvS, (p.z + cz) / uvS, top[0], top[1], top[2], opt.topEmis || e, part));
+      }
+      for (let i = 0; i < N; i++) this.tri(c, idx[(i + 1) % N], idx[i]);
+    }
+    if (opt.bottom === true) {
+      const T = loops[0];
+      const c = this.vert(cx, T.y, cz, 0, -1, 0, 0.5, 0.5, col[0], col[1], col[2], e, part);
+      const idx = [];
+      for (let i = 0; i < N; i++) {
+        const p = T.lp[i];
+        idx.push(this.vert(p.x + cx, T.y, p.z + cz, 0, -1, 0, (p.x + cx) / uvS, (p.z + cz) / uvS, col[0], col[1], col[2], e, part));
+      }
+      for (let i = 0; i < N; i++) this.tri(c, idx[i], idx[(i + 1) % N]);
+    }
+    this.g = gp;
   }
   /* горизонтальная площадка (дорога, тротуар, газон) */
-  plate(x0, z0, x1, z1, y, col, uvScale, emis, rot) {
+  plate(x0, z0, x1, z1, y, col, uvScale, emis, rot, gloss) {
+    const gp = this.g; if (gloss !== undefined) this.g = gloss;
     const s = uvScale || 1;
     const u0 = rot ? z0 / s : x0 / s, u1 = rot ? z1 / s : x1 / s;
     const v0 = rot ? x0 / s : z0 / s, v1 = rot ? x1 / s : z1 / s;
     this.quad([x0,y,z1],[x1,y,z1],[x1,y,z0],[x0,y,z0], 0,1,0,
       [u0,v1, u1,v1, u1,v0, u0,v0], col, emis || 0, 0);
+    this.g = gp;
   }
   cyl(cx, y0, cz, r, h, seg, col, opt) {
     opt = opt || {};
+    const gp = this._g(opt);
     const part = opt.part || 0, e = opt.emis || 0;
     const rTop = opt.rTop === undefined ? r : opt.rTop;
     for (let i = 0; i < seg; i++) {
       const a0 = i / seg * TAU, a1 = (i + 1) / seg * TAU;
       const c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
-      this.quad([cx+c0*r,y0,cz+s0*r],[cx+c1*r,y0,cz+s1*r],[cx+c1*rTop,y0+h,cz+s1*rTop],[cx+c0*rTop,y0+h,cz+s0*rTop],
-        (c0+c1)/2, 0, (s0+s1)/2, [i/seg*2,1, (i+1)/seg*2,1, (i+1)/seg*2,0, i/seg*2,0], col, e, part);
+      this.quadN([cx+c0*r,y0,cz+s0*r],[cx+c1*r,y0,cz+s1*r],[cx+c1*rTop,y0+h,cz+s1*rTop],[cx+c0*rTop,y0+h,cz+s0*rTop],
+        [c0,0,s0],[c1,0,s1],[c1,0,s1],[c0,0,s0],
+        [i/seg*2,1, (i+1)/seg*2,1, (i+1)/seg*2,0, i/seg*2,0], col, e, part);
     }
     if (opt.cap !== false) {
       const cy = y0 + h;
@@ -565,7 +725,7 @@ class Mesh {
         const A = this.vert(cx, cy, cz, 0,1,0, .5,.5, col[0],col[1],col[2], e, part);
         const B = this.vert(cx+Math.cos(a0)*rTop, cy, cz+Math.sin(a0)*rTop, 0,1,0, .5+Math.cos(a0)*.5,.5+Math.sin(a0)*.5, col[0],col[1],col[2], e, part);
         const C = this.vert(cx+Math.cos(a1)*rTop, cy, cz+Math.sin(a1)*rTop, 0,1,0, .5+Math.cos(a1)*.5,.5+Math.sin(a1)*.5, col[0],col[1],col[2], e, part);
-        this.i.push(A, B, C);
+        this.i.push(A, C, B);          /* обход против часовой сверху */
       }
     }
     if (opt.capBottom) {
@@ -577,8 +737,140 @@ class Mesh {
         this.i.push(A, B, C);
       }
     }
+    this.g = gp;
   }
-  /* колесо: диск в плоскости XY, ось по Z */
+  /* эллипсоид: головы, плечи, кисти, кроны деревьев */
+  ellipsoid(cx, cy, cz, rx, ry, rz, seg, rings, col, opt) {
+    opt = opt || {};
+    const gp = this._g(opt);
+    const part = opt.part || 0, e = opt.emis || 0;
+    const y0 = opt.cut === undefined ? -1 : opt.cut;   /* обрезка снизу, -1..1 */
+    const grid = [];
+    for (let r0 = 0; r0 <= rings; r0++) {
+      const v = r0 / rings;
+      const phi = Math.acos(clamp(lerp(1, y0, v), -1, 1));
+      const sy = Math.cos(phi), sr = Math.sin(phi);
+      const row = [];
+      for (let s = 0; s <= seg; s++) {
+        const a = s / seg * TAU;
+        const nx = Math.cos(a) * sr, nz = Math.sin(a) * sr;
+        const px = cx + nx * rx, py = cy + sy * ry, pz = cz + nz * rz;
+        let gx = nx / rx, gy = sy / ry, gz = nz / rz;
+        const l = Math.hypot(gx, gy, gz) || 1;
+        row.push(this.vert(px, py, pz, gx / l, gy / l, gz / l, s / seg * 2, v, col[0], col[1], col[2], e, part));
+      }
+      grid.push(row);
+    }
+    for (let r0 = 0; r0 < rings; r0++) for (let s = 0; s < seg; s++) {
+      const a = grid[r0][s], b = grid[r0][s + 1], c = grid[r0 + 1][s + 1], d = grid[r0 + 1][s];
+      if (r0 > 0) this.i.push(a, b, c);
+      if (r0 < rings - 1 || y0 > -0.999) this.i.push(a, c, d);
+    }
+    this.g = gp;
+  }
+  /* Выдавливание замкнутого профиля (в плоскости XY) вдоль оси Z.
+     profile: [[x,y], ...] против часовой при взгляде с +Z.
+     slices:  [{z, sx, sy}] — сечения; масштаб относительно origin. */
+  extrudeZ(profile, slices, col, opt) {
+    opt = opt || {};
+    const gp = this._g(opt);
+    const part = opt.part || 0, e = opt.emis || 0, uvS = opt.uv || 1;
+    const ox = opt.origin ? opt.origin[0] : 0, oy = opt.origin ? opt.origin[1] : 0;
+    const N = profile.length;
+    /* нормали рёбер профиля и их сглаживание по углу */
+    const en = [];
+    let per = 0; const arc = [];
+    for (let i = 0; i < N; i++) {
+      arc.push(per);
+      const j = (i + 1) % N;
+      const dx = profile[j][0] - profile[i][0], dy = profile[j][1] - profile[i][1];
+      const l = Math.hypot(dx, dy) || 1;
+      en.push([dy / l, -dx / l]);
+      per += l;
+    }
+    const cosT = Math.cos((opt.smooth === undefined ? 62 : opt.smooth) * D2R);
+    const vn = [];
+    for (let i = 0; i < N; i++) {
+      const a = en[(i - 1 + N) % N], b = en[i];
+      if (a[0] * b[0] + a[1] * b[1] > cosT) {
+        const x = a[0] + b[0], y = a[1] + b[1], l = Math.hypot(x, y) || 1;
+        vn.push([[x / l, y / l], [x / l, y / l]]);
+      } else vn.push([[a[0], a[1]], [b[0], b[1]]]);   /* острое ребро: своя нормаль */
+    }
+    const P = (s, i) => [ox + (profile[i][0] - ox) * s.sx, oy + (profile[i][1] - oy) * s.sy, s.z];
+    for (let k = 0; k < slices.length - 1; k++) {
+      const A = slices[k], B = slices[k + 1];
+      const zt = Math.abs(B.z - A.z);
+      const tap = Math.abs(B.sx - A.sx) + Math.abs(B.sy - A.sy);
+      /* при сужении наклоняем нормаль наружу-вдоль Z */
+      const zn = tap > 1e-4 ? clamp(tap * 1.6 / Math.max(zt, 0.02), 0, 2.2) : 0;
+      const sgnA = A.z < B.z ? -1 : 1;
+      for (let i = 0; i < N; i++) {
+        const j = (i + 1) % N;
+        const na = vn[i][1], nb = vn[j][0];
+        const mk = (n2, sgn) => {
+          const l = Math.hypot(n2[0], n2[1], zn * sgn) || 1;
+          return [n2[0] / l, n2[1] / l, zn * sgn / l];
+        };
+        const u0 = arc[i] / uvS, u1 = (j === 0 ? per : arc[j]) / uvS;
+        this.quadN(P(A, i), P(A, j), P(B, j), P(B, i),
+          mk(na, sgnA), mk(nb, sgnA), mk(nb, -sgnA), mk(na, -sgnA),
+          [u0, A.z / uvS, u1, A.z / uvS, u1, B.z / uvS, u0, B.z / uvS], col, e, part);
+      }
+    }
+    if (opt.caps !== false) {
+      for (const [s, dir] of [[slices[0], -1], [slices[slices.length - 1], 1]]) {
+        let cx2 = 0, cy2 = 0;
+        for (let i = 0; i < N; i++) { const p = P(s, i); cx2 += p[0]; cy2 += p[1]; }
+        cx2 /= N; cy2 /= N;
+        const c = this.vert(cx2, cy2, s.z, 0, 0, dir, .5, .5, col[0], col[1], col[2], e, part);
+        const idx = [];
+        for (let i = 0; i < N; i++) {
+          const p = P(s, i);
+          idx.push(this.vert(p[0], p[1], p[2], 0, 0, dir, p[0] / uvS, p[1] / uvS, col[0], col[1], col[2], e, part));
+        }
+        for (let i = 0; i < N; i++) {
+          const a = idx[i], b = idx[(i + 1) % N];
+          if (dir > 0) this.i.push(c, a, b); else this.i.push(c, b, a);
+        }
+      }
+    }
+    this.g = gp;
+  }
+  /* труба вдоль ломаной: рамы, поручни, водостоки, кабели */
+  tube(pts, r, seg, col, opt) {
+    opt = opt || {};
+    const gp = this._g(opt);
+    const part = opt.part || 0, e = opt.emis || 0;
+    let up = [0, 1, 0];
+    const rings = [];
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+      let t = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
+      let tl = Math.hypot(t[0], t[1], t[2]) || 1;
+      t = [t[0] / tl, t[1] / tl, t[2] / tl];
+      if (Math.abs(t[0] * up[0] + t[1] * up[1] + t[2] * up[2]) > 0.95) up = [1, 0, 0];
+      let sx = [up[1] * t[2] - up[2] * t[1], up[2] * t[0] - up[0] * t[2], up[0] * t[1] - up[1] * t[0]];
+      let sl = Math.hypot(sx[0], sx[1], sx[2]) || 1;
+      sx = [sx[0] / sl, sx[1] / sl, sx[2] / sl];
+      const sy = [t[1] * sx[2] - t[2] * sx[1], t[2] * sx[0] - t[0] * sx[2], t[0] * sx[1] - t[1] * sx[0]];
+      const rr = Array.isArray(r) ? r[Math.min(i, r.length - 1)] : r;
+      const row = [];
+      for (let s = 0; s <= seg; s++) {
+        const ang = s / seg * TAU, ca = Math.cos(ang), sa = Math.sin(ang);
+        const nx = sx[0] * ca + sy[0] * sa, ny = sx[1] * ca + sy[1] * sa, nz = sx[2] * ca + sy[2] * sa;
+        row.push(this.vert(pts[i][0] + nx * rr, pts[i][1] + ny * rr, pts[i][2] + nz * rr,
+          nx, ny, nz, s / seg * 2, i * 0.5, col[0], col[1], col[2], e, part));
+      }
+      rings.push(row);
+    }
+    for (let i = 0; i < rings.length - 1; i++) for (let s = 0; s < seg; s++) {
+      const a = rings[i][s], b = rings[i][s + 1], c = rings[i + 1][s + 1], d = rings[i + 1][s];
+      this.i.push(a, b, c, a, c, d);
+    }
+    this.g = gp;
+  }
+  /* колесо: диск в плоскости XY, ось по Z (простая версия) */
   wheel(r, width, seg, col, rim, part) {
     for (let side = -1; side <= 1; side += 2) {
       for (let i = 0; i < seg; i++) {
@@ -593,9 +885,96 @@ class Mesh {
     for (let i = 0; i < seg; i++) {
       const a0 = i / seg * TAU, a1 = (i + 1) / seg * TAU;
       const c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
-      this.quad([c0*r,s0*r,-width/2],[c1*r,s1*r,-width/2],[c1*r,s1*r,width/2],[c0*r,s0*r,width/2],
-        (c0+c1)/2, (s0+s1)/2, 0, [0,0, 1,0, 1,1, 0,1], col, 0, part);
+      this.quadN([c0*r,s0*r,-width/2],[c1*r,s1*r,-width/2],[c1*r,s1*r,width/2],[c0*r,s0*r,width/2],
+        [c0,s0,0],[c1,s1,0],[c1,s1,0],[c0,s0,0], [0,0, 1,0, 1,1, 0,1], col, 0, part);
     }
+  }
+  /* автомобильное колесо: шина с плечами и профилем + диск со спицами */
+  wheelDetailed(r, width, seg, tyre, rim, part, opt) {
+    opt = opt || {};
+    const gp = this._g(opt);
+    const hw = width / 2, sh = r * 0.16;              /* скругление плеча шины */
+    const rimR = opt.rimR === undefined ? r * 0.62 : opt.rimR;
+    const spokes = opt.spokes === undefined ? 6 : opt.spokes;
+    const prof = [                                     /* [z, радиус, признак фаски] */
+      [-hw * 0.66, rimR, 1], [-hw, r - sh, 1], [-hw * 0.92, r, 0],
+      [hw * 0.92, r, 0], [hw, r - sh, 1], [hw * 0.66, rimR, 1]
+    ];
+    for (let k = 0; k < prof.length - 1; k++) {
+      const [z0, r0] = prof[k], [z1, r1] = prof[k + 1];
+      const dz = z1 - z0, dr = r1 - r0;
+      const ln = Math.hypot(dz, dr) || 1;
+      const nr = dz / ln, nz = -dr / ln;
+      const dark = k === 0 || k === prof.length - 2 ? 0.65 : 1;
+      const c = [tyre[0] * dark, tyre[1] * dark, tyre[2] * dark];
+      for (let i = 0; i < seg; i++) {
+        const a0 = i / seg * TAU, a1 = (i + 1) / seg * TAU;
+        const c0 = Math.cos(a0), s0 = Math.sin(a0), c1 = Math.cos(a1), s1 = Math.sin(a1);
+        this.quadN([c0*r0,s0*r0,z0],[c1*r0,s1*r0,z0],[c1*r1,s1*r1,z1],[c0*r1,s0*r1,z1],
+          [c0*nr,s0*nr,nz],[c1*nr,s1*nr,nz],[c1*nr,s1*nr,nz],[c0*nr,s0*nr,nz],
+          [i/seg*3,0, (i+1)/seg*3,0, (i+1)/seg*3,1, i/seg*3,1], c, 0, part);
+      }
+    }
+    /* диск: тарелка со спицами и ступицей */
+    for (const side of [-1, 1]) {
+      const z = side * hw * 0.66;
+      const hub = this.vert(0, 0, z + side * 0.012, 0, 0, side, .5, .5, rim[0], rim[1], rim[2], 0, part);
+      const ring = [];
+      for (let i = 0; i <= seg; i++) {
+        const a = i / seg * TAU;
+        const k = ((i % Math.max(1, Math.round(seg / spokes))) === 0) ? 1 : 0.55;
+        ring.push(this.vert(Math.cos(a) * rimR, Math.sin(a) * rimR, z, 0, 0, side,
+          .5 + Math.cos(a) * .5, .5 + Math.sin(a) * .5, rim[0] * k, rim[1] * k, rim[2] * k, 0, part));
+      }
+      for (let i = 0; i < seg; i++) {
+        if (side > 0) this.i.push(hub, ring[i], ring[i + 1]);
+        else this.i.push(hub, ring[i + 1], ring[i]);
+      }
+    }
+    this.g = gp;
+  }
+  /* поворот всей сетки вокруг Y: удобно собирать кузов «длиной по X»,
+     а потом развернуть его носом по +Z */
+  rotY(a) {
+    const c = Math.cos(a), s2 = Math.sin(a);
+    for (let i = 0; i < this.v.length; i += STRIDE) {
+      const x = this.v[i], z = this.v[i + 2];
+      this.v[i] = x * c + z * s2; this.v[i + 2] = -x * s2 + z * c;
+      const nx = this.v[i + 3], nz = this.v[i + 5];
+      this.v[i + 3] = nx * c + nz * s2; this.v[i + 5] = -nx * s2 + nz * c;
+    }
+    return this;
+  }
+  /* сглаживание нормалей: усредняем по совпадающим позициям, если рёбра
+     сходятся под углом меньше порога */
+  smoothNormals(maxDeg) {
+    const cosT = Math.cos((maxDeg === undefined ? 55 : maxDeg) * D2R);
+    const map = new Map();
+    for (let i = 0; i < this.n; i++) {
+      const o = i * STRIDE;
+      const key = (Math.round(this.v[o] * 900) + ',' + Math.round(this.v[o+1] * 900) + ',' + Math.round(this.v[o+2] * 900));
+      let a = map.get(key); if (!a) { a = []; map.set(key, a); }
+      a.push(i);
+    }
+    const out = new Float32Array(this.n * 3);
+    for (const a of map.values()) {
+      for (const i of a) {
+        const o = i * STRIDE;
+        let nx = 0, ny = 0, nz = 0;
+        for (const j of a) {
+          const q = j * STRIDE;
+          if (this.v[o+3] * this.v[q+3] + this.v[o+4] * this.v[q+4] + this.v[o+5] * this.v[q+5] < cosT) continue;
+          nx += this.v[q+3]; ny += this.v[q+4]; nz += this.v[q+5];
+        }
+        const l = Math.hypot(nx, ny, nz) || 1;
+        out[i*3] = nx / l; out[i*3+1] = ny / l; out[i*3+2] = nz / l;
+      }
+    }
+    for (let i = 0; i < this.n; i++) {
+      const o = i * STRIDE;
+      this.v[o+3] = out[i*3]; this.v[o+4] = out[i*3+1]; this.v[o+5] = out[i*3+2];
+    }
+    return this;
   }
   /* затемнение низа — дешёвое «затенение» без карт теней */
   aoByHeight(y0, y1, strength) {
@@ -626,13 +1005,13 @@ class Mesh {
     const big = this.n > 65535;
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, big ? new Uint32Array(this.i) : new Uint16Array(this.i), gl.STATIC_DRAW);
     const S = STRIDE * 4;
-    const attrs = [[0,3,0],[1,3,12],[2,2,24],[3,3,32],[4,1,44],[5,1,48]];
+    const attrs = [[0,3,0],[1,3,12],[2,2,24],[3,3,32],[4,1,44],[5,1,48],[6,1,52]];
     for (const [loc, size, off] of attrs) {
       gl.enableVertexAttribArray(loc);
       gl.vertexAttribPointer(loc, size, gl.FLOAT, false, S, off);
     }
     gl.bindVertexArray(null);
-    return { vao, count: this.i.length, type: big ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, verts: this.n };
+    return { vao, count: this.i.length, type: big ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, verts: this.n, tris: this.i.length / 3 };
   }
 }
 
@@ -640,13 +1019,21 @@ class Mesh {
 /* 3. Процедурные текстуры (рисуются кодом, ничего не загружается)      */
 /* ------------------------------------------------------------------ */
 const TX = {};
+/* Текстуры рисуются в «логической» системе, а холст берём вдвое крупнее:
+   композиция остаётся прежней, но зерно, трещины и подтёки получают вдвое
+   больше пикселей — вблизи стены перестают быть мылом. */
+const TEX_SS = 2;
 function cv2d(size) {
   const c = document.createElement('canvas');
-  c.width = c.height = size;
-  return { c, x: c.getContext('2d'), s: size };
+  c.width = c.height = size * TEX_SS;
+  const x = c.getContext('2d');
+  x.scale(TEX_SS, TEX_SS);
+  return { c, x, s: size };
 }
 function noiseFill(x, s, amt, seed, mono) {
-  const img = x.getImageData(0, 0, s, s), d = img.data, R = mulberry32(seed);
+  /* зерно кладём в настоящем разрешении холста, мимо масштаба контекста */
+  const w = x.canvas.width;
+  const img = x.getImageData(0, 0, w, w), d = img.data, R = mulberry32(seed);
   for (let i = 0; i < d.length; i += 4) {
     const n = (R() - 0.5) * amt * 255;
     if (mono) { d[i] = clamp(d[i] + n, 0, 255); d[i+1] = clamp(d[i+1] + n, 0, 255); d[i+2] = clamp(d[i+2] + n, 0, 255); }
@@ -657,6 +1044,30 @@ function noiseFill(x, s, amt, seed, mono) {
     }
   }
   x.putImageData(img, 0, 0);
+}
+/* вертикальные подтёки: грязь, стекающая от подоконников и с крыши */
+function streaks(x, s, n, seed, col, wmin, wmax, hmin, hmax) {
+  const R = mulberry32(seed);
+  for (let i = 0; i < n; i++) {
+    const px = R() * s, py = R() * s * 0.6;
+    const w = wmin + R() * (wmax - wmin), h = hmin + R() * (hmax - hmin);
+    const g = x.createLinearGradient(0, py, 0, py + h);
+    g.addColorStop(0, 'rgba(' + col + ',0)');
+    g.addColorStop(0.18, 'rgba(' + col + ',' + (0.10 + R() * 0.14).toFixed(3) + ')');
+    g.addColorStop(1, 'rgba(' + col + ',0)');
+    x.fillStyle = g; x.fillRect(px, py, w, h);
+  }
+}
+/* мелкая крошка: щебень в асфальте, вкрапления в бетоне */
+function speckle(x, s, n, seed, colors, rmin, rmax, alpha) {
+  const R = mulberry32(seed);
+  x.globalAlpha = alpha === undefined ? 0.5 : alpha;
+  for (let i = 0; i < n; i++) {
+    x.fillStyle = 'rgb(' + colors[Math.floor(R() * colors.length)] + ')';
+    const r = rmin + R() * (rmax - rmin);
+    x.beginPath(); x.ellipse(R() * s, R() * s, r, r * (0.6 + R() * 0.6), R() * TAU, 0, TAU); x.fill();
+  }
+  x.globalAlpha = 1;
 }
 function blotches(x, s, n, colors, seed, rmin, rmax, alpha) {
   const R = mulberry32(seed);
@@ -701,8 +1112,10 @@ function texFromCanvas(gl, c, opt) {
   } else if (opt.emis !== undefined) {
     for (let i = 3; i < d.length; i += 4) d[i] = 0;
     for (const r of (opt.emis || [])) {
-      const x0 = Math.max(0, Math.floor(r.wx)), x1 = Math.min(w, Math.ceil(r.wx + r.ww));
-      const y0 = Math.max(0, Math.floor(r.wy)), y1 = Math.min(h, Math.ceil(r.wy + r.wh));
+      /* прямоугольники приходят в логических координатах — переводим в пиксели */
+      const k = opt.rectScale === undefined ? TEX_SS : opt.rectScale;
+      const x0 = Math.max(0, Math.floor(r.wx * k)), x1 = Math.min(w, Math.ceil((r.wx + r.ww) * k));
+      const y0 = Math.max(0, Math.floor(r.wy * k)), y1 = Math.min(h, Math.ceil((r.wy + r.wh) * k));
       const on = Math.round(255 * (r.on === undefined ? 1 : r.on));
       for (let yy = y0; yy < y1; yy++) for (let xx = x0; xx < x1; xx++) d[(yy * w + xx) * 4 + 3] = on;
     }
@@ -756,9 +1169,17 @@ function buildTextures(gl) {
     const { c, x } = cv2d(S);
     x.fillStyle = '#3a3542'; x.fillRect(0, 0, S, S);
     blotches(x, S, 40, ['30,28,36', '68,62,76', '52,46,58'], 11, 10, 60, 0.28);
+    speckle(x, S, 900, 15, ['86,80,96', '54,50,62', '110,104,120'], 0.5, 1.7, 0.30);
     noiseFill(x, S, 0.20, 12, true);
     cracks(x, S, 10, 13, 'rgba(24,20,30,.55)', 1.4);
     blotches(x, S, 8, ['18,14,22'], 14, 6, 22, 0.4);
+    /* латки свежего асфальта и масляные пятна */
+    for (let i = 0; i < 3; i++) {
+      const R2 = mulberry32(16 + i), px = R2() * S, py = R2() * S, w = 24 + R2() * 46, h = 18 + R2() * 34;
+      x.fillStyle = 'rgba(26,23,32,.34)'; x.fillRect(px, py, w, h);
+      x.strokeStyle = 'rgba(16,13,20,.5)'; x.lineWidth = 1.5; x.strokeRect(px, py, w, h);
+    }
+    blotches(x, S, 5, ['12,10,16'], 17, 4, 14, 0.5);
     TX.asphalt = texFromCanvas(gl, c, { emis: [] });
   }
   /* --- дорога с разметкой: V поперёк полотна --- */
@@ -768,9 +1189,12 @@ function buildTextures(gl) {
     blotches(x, S, 30, ['2a2632', '5a5468'].map(h => parseInt(h.slice(0,2),16)+','+parseInt(h.slice(2,4),16)+','+parseInt(h.slice(4,6),16)), 21, 12, 70, 0.25);
     noiseFill(x, S, 0.16, 22, true);
     cracks(x, S, 7, 23, 'rgba(22,18,28,.5)', 1.2);
+    speckle(x, S, 700, 25, ['80,74,92', '50,46,58'], 0.5, 1.6, 0.26);
     /* колеи */
     x.fillStyle = 'rgba(20,16,26,.22)';
     x.fillRect(0, S * 0.22, S, S * 0.10); x.fillRect(0, S * 0.68, S, S * 0.10);
+    x.fillStyle = 'rgba(14,11,18,.16)';
+    x.fillRect(0, S * 0.245, S, S * 0.045); x.fillRect(0, S * 0.705, S, S * 0.045);
     /* краевые линии */
     x.fillStyle = 'rgba(236,232,244,.82)';
     x.fillRect(0, S * 0.035, S, 4); x.fillRect(0, S * 0.945, S, 4);
@@ -791,7 +1215,10 @@ function buildTextures(gl) {
       x.beginPath(); x.moveTo(0, i * S / 4); x.lineTo(S, i * S / 4); x.stroke();
     }
     blotches(x, S, 16, ['52,48,60', '120,112,132'], 32, 8, 34, 0.2);
+    speckle(x, S, 520, 34, ['150,142,164', '60,56,70'], 0.4, 1.3, 0.28);
     cracks(x, S, 5, 33, 'rgba(40,34,48,.4)', 1);
+    /* выщербленные углы плит и налипшая грязь */
+    blotches(x, S, 9, ['46,40,52'], 35, 3, 11, 0.42);
     TX.sidewalk = texFromCanvas(gl, c, { emis: [] });
   }
   /* --- панельная стена: 2 этажа × 2 окна на тайл --- */
@@ -806,9 +1233,12 @@ function buildTextures(gl) {
     x.beginPath(); x.moveTo(S / 2, 0); x.lineTo(S / 2, S); x.stroke();
     x.strokeStyle = 'rgba(255,255,255,.18)'; x.lineWidth = 1;
     x.beginPath(); x.moveTo(0, S / 2 + 3); x.lineTo(S, S / 2 + 3); x.stroke();
-    /* потёки от крыши */
+    /* потёки от крыши и ржавые следы от закладных */
     x.fillStyle = 'rgba(80,76,88,.18)';
     for (let i = 0; i < 6; i++) { const px = (i * 47) % S; x.fillRect(px, 0, 6 + (i % 3) * 4, S * (0.2 + (i % 4) * 0.12)); }
+    streaks(x, S, 14, 45, '74,70,84', 3, 11, 40, 130);
+    streaks(x, S, 5, 46, '118,74,44', 2, 6, 24, 80);
+    speckle(x, S, 420, 47, ['196,190,200', '132,126,140'], 0.4, 1.4, 0.22);
     const rects = [];
     for (let r = 0; r < 2; r++) for (let k = 0; k < 2; k++) {
       rects.push(drawWindow(x, k * S / 2 + 26, r * S / 2 + 26, S / 2 - 52, S / 2 - 62, 100 + r * 7 + k));
@@ -823,6 +1253,13 @@ function buildTextures(gl) {
     blotches(x, S, 26, ['160,150,140', '210,200,190', '120,110,105'], 52, 16, 60, 0.18);
     x.fillStyle = 'rgba(120,110,100,.14)';
     for (let i = 0; i < 5; i++) x.fillRect((i * 61) % S, 0, 10, S * (0.25 + (i % 3) * 0.2));
+    streaks(x, S, 12, 55, '112,102,92', 3, 12, 36, 120);
+    /* облупившаяся краска */
+    const Rp = mulberry32(56);
+    for (let i = 0; i < 14; i++) {
+      x.fillStyle = 'rgba(150,138,126,.30)';
+      x.beginPath(); x.ellipse(Rp() * S, Rp() * S, 3 + Rp() * 9, 2 + Rp() * 7, Rp() * TAU, 0, TAU); x.fill();
+    }
     const rects = [];
     for (let r = 0; r < 2; r++) for (let k = 0; k < 2; k++)
       rects.push(drawWindow(x, k * S / 2 + 30, r * S / 2 + 30, S / 2 - 60, S / 2 - 66, 200 + r * 5 + k, { frame: '#8a7f74' }));
@@ -842,6 +1279,11 @@ function buildTextures(gl) {
     }
     noiseFill(x, S, 0.12, 62, true);
     blotches(x, S, 12, ['60,50,46'], 63, 12, 40, 0.16);
+    speckle(x, S, 380, 64, ['190,150,130', '96,66,56'], 0.4, 1.2, 0.2);
+    streaks(x, S, 8, 65, '58,44,38', 3, 10, 30, 110);
+    /* высолы по швам */
+    x.fillStyle = 'rgba(226,220,214,.16)';
+    for (let r = 0; r < 8; r++) x.fillRect(0, r * (S / 8) - 1, S, 2);
     TX.brick = texFromCanvas(gl, c, { emis: [] });
   }
   /* --- промышленный профлист --- */
@@ -971,6 +1413,28 @@ function buildTextures(gl) {
     const { c, x } = cv2d(4);
     x.fillStyle = '#fff'; x.fillRect(0, 0, 4, 4);
     TX.white = texFromCanvas(gl, c, { emis: [] });
+  }
+  /* --- ткань и кожа: тонкое переплетение поверх цвета вершин --- */
+  {
+    const S = 128;
+    const { c, x } = cv2d(S);
+    x.fillStyle = '#ffffff'; x.fillRect(0, 0, S, S);
+    /* переплетение нитей */
+    x.globalAlpha = 0.07;
+    for (let i = 0; i < S; i += 3) {
+      x.fillStyle = '#000';
+      x.fillRect(0, i, S, 1); x.fillRect(i, 0, 1, S);
+    }
+    x.globalAlpha = 1;
+    noiseFill(x, S, 0.05, 733, true);
+    /* редкие потёртости и складки */
+    for (let i = 0; i < 26; i++) {
+      const px = Math.random() * S, py = Math.random() * S;
+      const g = x.createRadialGradient(px, py, 0, px, py, 6 + Math.random() * 14);
+      g.addColorStop(0, 'rgba(0,0,0,.10)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      x.fillStyle = g; x.beginPath(); x.arc(px, py, 20, 0, TAU); x.fill();
+    }
+    TX.cloth = texFromCanvas(gl, c, { emis: [] });
   }
   /* --- «шум» кузова --- */
   {
@@ -1228,6 +1692,133 @@ function roadPlate(m, x0, z0, x1, z1, y, along) {
   else m.quad([x1,y,z0],[x1,y,z1],[x0,y,z1],[x0,y,z0], 0,1,0, [0,1, u1,1, u1,0, 0,0], [1,1,1], 0, 0);
 }
 
+/* Доля окна внутри «клетки» текстуры (по X: слева/справа, по Y: сверху вниз).
+   Нужна, чтобы подоконники и блоки кондиционеров вставали ровно под
+   нарисованные окна, а не куда придётся. */
+const WIN_FRAC = {
+  panel:  [0.203, 0.797, 0.203, 0.719],
+  stucco: [0.234, 0.766, 0.234, 0.719],
+  office: [0.234, 0.766, 0.234, 0.719]
+};
+
+/* Рельеф фасада: пояски между этажами, простенки, подоконники, кондиционеры,
+   спутниковые тарелки и водосточные трубы по углам. Всё это ловит свет и
+   даёт зданию объём — без него дом остаётся коробкой с картинкой. */
+function emitFacadeRelief(b, M, uv, tint) {
+  const step = uv / 2;                       /* шаг этажа и окна в текстуре */
+  if (b.w < step * 1.5 || b.d < step * 1.2 || b.h < step * 1.2) return;
+  const cx = b.x + b.w / 2, cz = b.z + b.d / 2;
+  const con = M.sidewalk;
+  const bandCol = [tint[0] * 0.92, tint[1] * 0.9, tint[2] * 0.94];
+  const R = mulberry32(Math.floor(b.x * 977 + b.z * 131 + b.h * 7));
+  const groundFree = (b.shop || b.entries || b.gate) ? 3.4 : 2.2;
+
+  /* --- междуэтажные пояски: совпадают с нарисованными швами панелей --- */
+  for (let y = b.h - step; y > groundFree; y -= step) {
+    con.box(cx, y - 0.07, cz, b.w + 0.13, 0.14, b.d + 0.13, bandCol, { uv: 2 });
+  }
+  /* --- простенки между колоннами окон --- */
+  const pw = Math.min(0.42, step * 0.16);
+  for (let x = b.x + step; x < b.x + b.w - 0.2; x += step) {
+    for (const sz of [b.z - 0.05, b.z + b.d + 0.05])
+      con.box(x, groundFree, sz, pw, b.h - groundFree, 0.11, bandCol, { uv: 2, skipTop: true });
+  }
+  for (let z = b.z + step; z < b.z + b.d - 0.2; z += step) {
+    for (const sx of [b.x - 0.05, b.x + b.w + 0.05])
+      con.box(sx, groundFree, z, 0.11, b.h - groundFree, pw, bandCol, { uv: 2, skipTop: true });
+  }
+
+  /* --- подоконники, отливы, кондиционеры --- */
+  const wf = WIN_FRAC[b.kind === 'garage' ? 'stucco' : b.kind];
+  if (wf && !b.glassBand) {
+    const [fx0, fx1, fy0, fy1] = wf;
+    const faces = [
+      { n: 'S', z: b.z + b.d, dz: 1, len: b.w, ax: 'x' },
+      { n: 'N', z: b.z, dz: -1, len: b.w, ax: 'x' },
+      { n: 'E', x: b.x + b.w, dx: 1, len: b.d, ax: 'z' },
+      { n: 'W', x: b.x, dx: -1, len: b.d, ax: 'z' }
+    ];
+    for (const f of faces) {
+      const cols = Math.floor(f.len / step);
+      for (let c = 0; c < cols; c++) {
+        for (let r = 0; ; r++) {
+          const yTop = b.h - step * (r + fy0), yBot = b.h - step * (r + fy1);
+          if (yBot < groundFree) break;
+          const w0 = step * (c + fx0), w1 = step * (c + fx1);
+          const ww = w1 - w0, mid = (w0 + w1) / 2;
+          const sill = [tint[0] * 0.98, tint[1] * 0.96, tint[2] * 0.99];
+          if (f.ax === 'x') {
+            const px = b.x + mid, pz = f.z + f.dz * 0.075;
+            con.box(px, yBot - 0.05, pz, ww + 0.18, 0.08, 0.15, sill, { uv: 1.5 });
+            con.box(px, yTop, pz - f.dz * 0.02, ww + 0.20, 0.10, 0.11, sill, { uv: 1.5 });
+            if (R() < 0.14) emitAC(M, px + (R() - 0.5) * 0.4, yBot - 0.60, f.z + f.dz * 0.24, f.ax, f.dz);
+            else if (R() < 0.05) emitDish(M, px, yTop + 0.34, f.z + f.dz * 0.20, f.ax, f.dz);
+          } else {
+            const pz = b.z + mid, px = f.x + f.dx * 0.075;
+            con.box(px, yBot - 0.05, pz, 0.15, 0.08, ww + 0.18, sill, { uv: 1.5 });
+            con.box(px - f.dx * 0.02, yTop, pz, 0.11, 0.10, ww + 0.20, sill, { uv: 1.5 });
+            if (R() < 0.12) emitAC(M, f.x + f.dx * 0.24, yBot - 0.60, pz + (R() - 0.5) * 0.4, f.ax, f.dx);
+          }
+        }
+      }
+    }
+  }
+
+  /* --- водосточные трубы по углам --- */
+  const pipeCol = [.62, .63, .68];
+  for (const [px, pz] of [[b.x + 0.16, b.z + 0.16], [b.x + b.w - 0.16, b.z + 0.16],
+                          [b.x + 0.16, b.z + b.d - 0.16], [b.x + b.w - 0.16, b.z + b.d - 0.16]]) {
+    M.metal.tube([[px, 0.1, pz], [px, b.h + 0.3, pz]], 0.075, 6, pipeCol, { gloss: 0.35 });
+    M.metal.box(px, 0.1, pz, 0.26, 0.16, 0.26, pipeCol, { uv: 1 });
+  }
+}
+
+/* Отмостка: бетонная лента вокруг дома. Заодно даёт контактное притенение —
+   у стены полоса темнее, к краю светлеет, и дом перестаёт «висеть» над землёй. */
+function emitApron(b, M, width, y) {
+  const m = M.sidewalk, w = width, ay = y;
+  const x0 = b.x - 0.15, x1 = b.x + b.w + 0.15, z0 = b.z - 0.15, z1 = b.z + b.d + 0.15;
+  const X0 = x0 - w, X1 = x1 + w, Z0 = z0 - w, Z1 = z1 + w;
+  const dk = [.28, .27, .32], lt = [.88, .87, .91];
+  m.box((X0 + X1) / 2, 0, (Z0 + Z1) / 2, X1 - X0, ay, Z1 - Z0, [.70, .69, .74], { uv: 2, skipTop: true });
+  const U = (a, b2, c, d) => [a[0] / 2, a[1] / 2, b2[0] / 2, b2[1] / 2, c[0] / 2, c[1] / 2, d[0] / 2, d[1] / 2];
+  /* четыре полосы */
+  m.quadC([x0,ay,Z1],[x1,ay,Z1],[x1,ay,z1],[x0,ay,z1], 0,1,0, U([x0,Z1],[x1,Z1],[x1,z1],[x0,z1]), lt, lt, dk, dk, 0, 0);
+  m.quadC([x0,ay,z0],[x1,ay,z0],[x1,ay,Z0],[x0,ay,Z0], 0,1,0, U([x0,z0],[x1,z0],[x1,Z0],[x0,Z0]), dk, dk, lt, lt, 0, 0);
+  m.quadC([x1,ay,z1],[X1,ay,z1],[X1,ay,z0],[x1,ay,z0], 0,1,0, U([x1,z1],[X1,z1],[X1,z0],[x1,z0]), dk, lt, lt, dk, 0, 0);
+  m.quadC([X0,ay,z1],[x0,ay,z1],[x0,ay,z0],[X0,ay,z0], 0,1,0, U([X0,z1],[x0,z1],[x0,z0],[X0,z0]), lt, dk, dk, lt, 0, 0);
+  /* углы */
+  m.quadC([x1,ay,Z1],[X1,ay,Z1],[X1,ay,z1],[x1,ay,z1], 0,1,0, U([x1,Z1],[X1,Z1],[X1,z1],[x1,z1]), lt, lt, lt, dk, 0, 0);
+  m.quadC([X0,ay,Z1],[x0,ay,Z1],[x0,ay,z1],[X0,ay,z1], 0,1,0, U([X0,Z1],[x0,Z1],[x0,z1],[X0,z1]), lt, lt, dk, lt, 0, 0);
+  m.quadC([x1,ay,z0],[X1,ay,z0],[X1,ay,Z0],[x1,ay,Z0], 0,1,0, U([x1,z0],[X1,z0],[X1,Z0],[x1,Z0]), dk, lt, lt, lt, 0, 0);
+  m.quadC([X0,ay,z0],[x0,ay,z0],[x0,ay,Z0],[X0,ay,Z0], 0,1,0, U([X0,z0],[x0,z0],[x0,Z0],[X0,Z0]), lt, dk, lt, lt, 0, 0);
+}
+
+/* наружный блок кондиционера на кронштейне */
+function emitAC(M, x, y, z, ax, dir) {
+  const body = [.86, .87, .88], grid = [.42, .44, .48];
+  if (ax === 'x') {
+    M.metal.bevelBox(x, y, z, 0.78, 0.52, 0.30, body, { bev: 0.03, r: 0.04, cs: 2, uv: 1, gloss: 0.3 });
+    M.metal.cyl(x, y + 0.10, z + dir * 0.16, 0.19, 0.02, 12, grid, { gloss: 0.2 });
+    M.metal.box(x, y - 0.06, z - dir * 0.16, 0.72, 0.05, 0.20, grid, { uv: 1 });
+  } else {
+    M.metal.bevelBox(x, y, z, 0.30, 0.52, 0.78, body, { bev: 0.03, r: 0.04, cs: 2, uv: 1, gloss: 0.3 });
+    M.metal.cyl(x + dir * 0.16, y + 0.10, z, 0.19, 0.02, 12, grid, { gloss: 0.2 });
+    M.metal.box(x - dir * 0.16, y - 0.06, z, 0.20, 0.05, 0.72, grid, { uv: 1 });
+  }
+}
+/* спутниковая тарелка */
+function emitDish(M, x, y, z, ax, dir) {
+  const col = [.88, .88, .9];
+  if (ax === 'x') {
+    M.metal.cyl(x, y, z + dir * 0.10, 0.30, 0.05, 12, col, { gloss: 0.4, rTop: 0.33 });
+    M.metal.tube([[x, y + 0.02, z], [x, y + 0.02, z + dir * 0.34]], 0.022, 5, [.4, .4, .44], { gloss: 0.5 });
+  } else {
+    M.metal.cyl(x + dir * 0.10, y, z, 0.30, 0.05, 12, col, { gloss: 0.4, rTop: 0.33 });
+    M.metal.tube([[x, y + 0.02, z], [x + dir * 0.34, y + 0.02, z]], 0.022, 5, [.4, .4, .44], { gloss: 0.5 });
+  }
+}
+
 function emitBuilding(b, M) {
   const texKey = KIND_TEX[b.kind] || 'stucco';
   const m = M[texKey], uv = UVS[b.kind] || 5;
@@ -1241,6 +1832,8 @@ function emitBuilding(b, M) {
 
   /* цоколь */
   M.sidewalk.box(cx, 0, cz, b.w + 0.3, 0.55, b.d + 0.3, [.72,.7,.76], { uv: 2, skipTop: true });
+  emitApron(b, M, isGarage ? 0.9 : 1.35, 0.185);
+  if (!isGarage) emitFacadeRelief(b, M, uv, tint);
 
   /* кровля с парапетом */
   M.roof.box(cx, wallH, cz, b.w + 0.24, 0.42, b.d + 0.24, [.85,.85,.9], { uv: 3 });
@@ -1360,121 +1953,238 @@ function emitSign(gl, b) {
   Static.signs.push({ tex, gpu: m.upload(gl), pos: [cx, y + hsign / 2, s.side === 'N' ? b.z - 0.4 : b.z + b.d + 0.4], color: s.c });
 }
 
+/* Дерево: ствол-труба со сбегом, скелет ветвей и крона из «листовых карт».
+   Карты стоят под разными углами по сфере — с любой стороны крона выглядит
+   объёмной, а не тремя плоскостями. */
+function emitTree(x, z, M) {
+  const R = mulberry32(Math.floor(x * 91 + z * 57) >>> 0);
+  const h = 3.4 + R() * 2.6, cr = 1.9 + R() * 1.2;
+  const bend = (R() - 0.5) * 0.5, bendZ = (R() - 0.5) * 0.5;
+  const trunk = [];
+  const rad = [];
+  const seg = 5;
+  for (let i = 0; i <= seg; i++) {
+    const t = i / seg;
+    trunk.push([x + bend * t * t, t * h, z + bendZ * t * t]);
+    rad.push(lerp(0.26, 0.10, t) * (0.85 + R() * 0.3));
+  }
+  M.bark.tube(trunk, rad, 7, [.86, .8, .74], { gloss: 0.05 });
+  /* корневые наплывы */
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2 + R();
+    M.bark.tube([[x + Math.cos(a) * 0.34, 0.02, z + Math.sin(a) * 0.34], [x + Math.cos(a) * 0.08, 0.55, z + Math.sin(a) * 0.08]],
+      [0.11, 0.07], 5, [.78, .72, .66], { gloss: 0.05 });
+  }
+  /* ветви */
+  const top = trunk[seg];
+  const nb = 3 + Math.floor(R() * 3);
+  const tips = [];
+  for (let i = 0; i < nb; i++) {
+    const a = i / nb * TAU + R() * 0.9;
+    const l = cr * (0.55 + R() * 0.5), up = 0.5 + R() * 0.7;
+    const tip = [top[0] + Math.cos(a) * l, top[1] + up, top[2] + Math.sin(a) * l];
+    M.bark.tube([top, [(top[0] + tip[0]) / 2, top[1] + up * 0.62, (top[2] + tip[2]) / 2], tip],
+      [0.085, 0.06, 0.035], 5, [.8, .74, .68], { gloss: 0.05 });
+    tips.push(tip);
+  }
+  /* крона: карты листвы по сфере вокруг верхушки */
+  const cy = h + cr * 0.42;
+  const centres = [[x + bend, cy, z + bendZ]].concat(tips.map(t => [t[0] * 0.85 + x * 0.15, t[1] + 0.25, t[2] * 0.85 + z * 0.15]));
+  for (const c of centres) {
+    const n = 4 + Math.floor(R() * 3);
+    for (let i = 0; i < n; i++) {
+      const a = R() * TAU, el = (R() - 0.35) * 1.1;
+      const s = cr * (0.5 + R() * 0.42);
+      const ux = Math.cos(a), uz = Math.sin(a);
+      const px = c[0] + ux * cr * 0.30 * (R() - 0.2), py = c[1] + el * cr * 0.42, pz = c[2] + uz * cr * 0.30 * (R() - 0.2);
+      /* карта в плоскости, развёрнутой на угол a */
+      const g = 0.78 + R() * 0.34;
+      M.leaves.quad([px - ux * s, py - s * 0.8, pz - uz * s], [px + ux * s, py - s * 0.8, pz + uz * s],
+        [px + ux * s, py + s * 0.8, pz + uz * s], [px - ux * s, py + s * 0.8, pz - uz * s],
+        uz, 0.30, -ux, [0, 1, 1, 1, 1, 0, 0, 0], [g * .95, g, g * .78], 0, 0);
+      if (i === 0) {
+        M.leaves.quad([px - s, py + s * 0.45, pz + s], [px + s, py + s * 0.45, pz + s],
+          [px + s, py + s * 0.45, pz - s], [px - s, py + s * 0.45, pz - s],
+          0, 1, 0, [0, 1, 1, 1, 1, 0, 0, 0], [g * .88, g * .95, g * .72], 0, 0);
+      }
+    }
+  }
+}
+
 function emitProp(p, M) {
   const x = p.x, z = p.z;
   switch (p.kind) {
-    case 'tree': {
-      const R = mulberry32(Math.floor(x * 91 + z * 57));
-      const h = 3.2 + R() * 2.4, r = 1.8 + R() * 1.1;
-      M.bark.cyl(x, 0, z, 0.22, h, 6, [.8,.75,.7], { cap: false });
-      const cy = h + r * 0.35;
-      for (let k = 0; k < 3; k++) {
-        const a = k * Math.PI / 3 + R();
-        const dx = Math.cos(a) * r, dz = Math.sin(a) * r;
-        M.leaves.quad([x - dx, cy - r, z - dz], [x + dx, cy - r, z + dz], [x + dx, cy + r, z + dz], [x - dx, cy + r, z - dz],
-          Math.sin(a), 0.35, -Math.cos(a), [0,1, 1,1, 1,0, 0,0], [.85 + R() * .3, .95, .8], 0, 0);
+    case 'tree': emitTree(x, z, M); break;
+    case 'bush': {
+      const R = mulberry32(Math.floor(x * 37 + z * 71) >>> 0);
+      for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI / 4 + R() * 0.5, s = 0.85 + R() * 0.5;
+        const ux = Math.cos(a), uz = Math.sin(a);
+        M.leaves.quad([x - ux * s, 0, z - uz * s], [x + ux * s, 0, z + uz * s],
+          [x + ux * s, s * 1.7, z + uz * s], [x - ux * s, s * 1.7, z - uz * s],
+          uz, 0.3, -ux, [0,1, 1,1, 1,0, 0,0], [.68 + R() * .2, .86, .58], 0, 0);
       }
-      M.leaves.quad([x - r, cy + r * 0.5, z + r], [x + r, cy + r * 0.5, z + r], [x + r, cy + r * 0.5, z - r], [x - r, cy + r * 0.5, z - r],
-        0, 1, 0, [0,1, 1,1, 1,0, 0,0], [.8,.9,.75], 0, 0);
       break;
     }
-    case 'bush':
-      M.leaves.quad([x - 1, 0, z], [x + 1, 0, z], [x + 1, 1.5, z], [x - 1, 1.5, z], 0,0,1, [0,1, 1,1, 1,0, 0,0], [.7,.85,.6], 0, 0);
-      M.leaves.quad([x, 0, z - 1], [x, 0, z + 1], [x, 1.5, z + 1], [x, 1.5, z - 1], 1,0,0, [0,1, 1,1, 1,0, 0,0], [.7,.85,.6], 0, 0);
+    case 'bench': {
+      /* чугунные боковины и деревянные рейки */
+      for (const sx of [-0.86, 0.86]) {
+        M.metal.tube([[x + sx, 0.02, z - 0.26], [x + sx, 0.44, z - 0.24], [x + sx, 0.46, z + 0.24], [x + sx, 0.02, z + 0.26]],
+          0.035, 6, [.34, .36, .42], { gloss: 0.4 });
+        M.metal.tube([[x + sx, 0.44, z - 0.25], [x + sx, 0.96, z - 0.36]], 0.032, 6, [.34, .36, .42], { gloss: 0.4 });
+      }
+      for (let i = 0; i < 4; i++)
+        M.bark.bevelBox(x, 0.44, z - 0.24 + i * 0.16, 1.92, 0.045, 0.12, [.86, .62, .40],
+          { bev: 0.012, r: 0.02, cs: 1, uv: 1, gloss: 0.14 });
+      for (let i = 0; i < 3; i++)
+        M.bark.bevelBox(x, 0.56 + i * 0.15, z - 0.30 - i * 0.028, 1.92, 0.12, 0.045, [.83, .58, .38],
+          { bev: 0.012, r: 0.02, cs: 1, uv: 1, gloss: 0.14 });
       break;
-    case 'bench':
-      M.bark.box(x, 0.42, z, 2, 0.1, 0.55, [.85,.6,.4], { uv: 1 });
-      M.bark.box(x, 0.55, z - 0.28, 2, 0.55, 0.1, [.8,.55,.38], { uv: 1 });
-      M.metal.box(x - 0.85, 0, z, 0.1, 0.45, 0.5, [.4,.42,.48], { uv: .5 });
-      M.metal.box(x + 0.85, 0, z, 0.1, 0.45, 0.5, [.4,.42,.48], { uv: .5 });
-      break;
+    }
     case 'bin':
-      M.metal.cyl(x, 0, z, 0.5, 1.05, 8, [.35,.55,.45], { rTop: 0.56 });
-      M.metal.cyl(x, 1.05, z, 0.6, 0.1, 8, [.28,.42,.36], {});
+      M.metal.cyl(x, 0.06, z, 0.44, 0.94, 12, [.32, .52, .42], { rTop: 0.50, gloss: 0.3 });
+      M.metal.cyl(x, 1.00, z, 0.54, 0.09, 12, [.24, .38, .32], { gloss: 0.35 });
+      M.metal.cyl(x, 0, z, 0.30, 0.07, 8, [.28, .30, .34], { gloss: 0.3 });
+      M.metal.tube([[x - 0.5, 0.62, z], [x - 0.56, 0.80, z], [x - 0.5, 0.96, z]], 0.028, 5, [.3, .32, .36], { gloss: 0.4 });
       break;
     case 'sandbox':
-      M.bark.box(x, 0, z, 4.2, 0.26, 3.2, [.85,.62,.4], { uv: 1.2, skipTop: true });
-      M.ground.plate(x - 1.9, z - 1.4, x + 1.9, z + 1.4, 0.25, [1.35,1.2,.85], 3);
+      for (const [ox, oz, w, d] of [[0, -1.6, 4.2, 0.24], [0, 1.6, 4.2, 0.24], [-2.1, 0, 0.24, 3.2], [2.1, 0, 0.24, 3.2]])
+        M.bark.bevelBox(x + ox, 0, z + oz, w, 0.34, d, [.86, .62, .40], { bev: 0.03, r: 0.04, cs: 1, uv: 1.2, gloss: 0.1 });
+      M.ground.plate(x - 2.0, z - 1.5, x + 2.0, z + 1.5, 0.22, [1.35, 1.2, .85], 3);
       break;
-    case 'swing':
-      M.metal.cyl(x - 1.6, 0, z, 0.08, 2.4, 5, [.8,.55,.4], {});
-      M.metal.cyl(x + 1.6, 0, z, 0.08, 2.4, 5, [.8,.55,.4], {});
-      M.metal.box(x, 2.4, z, 3.4, 0.14, 0.14, [.8,.55,.4], { uv: 1 });
-      M.metal.box(x - 0.7, 1.05, z, 0.07, 1.4, 0.07, [.5,.5,.55], { uv: .4 });
-      M.metal.box(x + 0.7, 1.05, z, 0.07, 1.4, 0.07, [.5,.5,.55], { uv: .4 });
-      M.metal.box(x, 1.0, z, 1.6, 0.1, 0.4, [.85,.35,.35], { uv: .6 });
+    case 'swing': {
+      const C = [.82, .40, .30];
+      for (const sx of [-1.6, 1.6]) {
+        M.metal.tube([[x + sx - 0.55, 0.02, z - 0.5], [x + sx, 2.42, z], [x + sx - 0.55, 0.02, z + 0.5]], 0.055, 6, C, { gloss: 0.4 });
+      }
+      M.metal.tube([[x - 1.72, 2.42, z], [x + 1.72, 2.42, z]], 0.062, 6, C, { gloss: 0.4 });
+      for (const sx of [-0.72, 0.72]) {
+        M.metal.tube([[x + sx - 0.26, 2.38, z], [x + sx - 0.26, 1.06, z]], 0.018, 5, [.5, .5, .56], { gloss: 0.5 });
+        M.metal.tube([[x + sx + 0.26, 2.38, z], [x + sx + 0.26, 1.06, z]], 0.018, 5, [.5, .5, .56], { gloss: 0.5 });
+      }
+      M.bark.bevelBox(x, 0.98, z, 1.5, 0.08, 0.36, [.86, .34, .32], { bev: 0.015, r: 0.03, cs: 1, uv: .6, gloss: 0.2 });
       break;
+    }
     case 'carousel':
-      M.metal.cyl(x, 0, z, 1.5, 0.35, 10, [.4,.42,.5], {});
-      M.metal.cyl(x, 0.35, z, 0.12, 0.9, 6, [.7,.7,.75], {});
+      M.metal.cyl(x, 0, z, 1.5, 0.30, 14, [.38, .40, .48], { gloss: 0.35 });
+      M.metal.cyl(x, 0.30, z, 1.42, 0.08, 14, [.55, .58, .64], { gloss: 0.55 });
+      M.metal.cyl(x, 0.30, z, 0.10, 1.0, 8, [.7, .7, .75], { gloss: 0.6 });
       for (let i = 0; i < 4; i++) {
         const a = i * Math.PI / 2;
-        M.metal.box(x + Math.cos(a) * 0.75, 0.35, z + Math.sin(a) * 0.75, 1.5, 0.1, 0.14, [.9,.7,.35], { uv: .6 });
+        M.metal.tube([[x + Math.cos(a) * 0.10, 1.26, z + Math.sin(a) * 0.10],
+                      [x + Math.cos(a) * 1.32, 1.10, z + Math.sin(a) * 1.32],
+                      [x + Math.cos(a) * 1.36, 0.42, z + Math.sin(a) * 1.36]], 0.036, 6, [.92, .72, .34], { gloss: 0.45 });
       }
       break;
-    case 'pipe':
-      M.metal.cyl(x - 2.8, 0.7, z, 0.7, 5.6, 10, [.62,.64,.7], { cap: false });
+    case 'pipe': {
+      /* теплотрасса в изоляции на опорах */
+      const c = [.66, .68, .74];
+      M.metal.tube([[x - 6, 0.78, z], [x + 6, 0.78, z]], 0.42, 10, c, { gloss: 0.3 });
+      M.metal.tube([[x - 6, 1.34, z], [x + 6, 1.34, z]], 0.34, 10, c, { gloss: 0.3 });
+      for (const ox of [-4.2, 0, 4.2]) {
+        M.metal.box(x + ox, 0, z, 0.28, 0.78, 0.9, [.55, .56, .60], { uv: .8 });
+        M.metal.box(x + ox, 1.12, z, 0.30, 0.10, 0.9, [.5, .52, .56], { uv: .8 });
+      }
       break;
+    }
     case 'barrel':
-      M.metal.cyl(x, 0, z, 0.45, 1.1, 10, [.85,.42,.28], {});
+      M.metal.cyl(x, 0.02, z, 0.42, 1.06, 12, [.82, .40, .26], { gloss: 0.35, rTop: 0.42 });
+      for (const y of [0.28, 0.74]) M.metal.cyl(x, y, z, 0.445, 0.06, 12, [.66, .32, .22], { gloss: 0.4, cap: false });
+      M.metal.cyl(x, 1.06, z, 0.44, 0.05, 12, [.7, .35, .24], { gloss: 0.45 });
       break;
-    case 'pallet':
-      M.bark.box(x, 0, z, 1.6, 0.22, 1.2, [.85,.68,.45], { uv: .8 });
+    case 'pallet': {
+      const w = [.86, .70, .48];
+      for (let i = 0; i < 3; i++) M.bark.box(x, 0.10, z - 0.5 + i * 0.5, 1.6, 0.09, 0.16, w, { uv: .8 });
+      for (let i = 0; i < 3; i++) M.bark.box(x - 0.6 + i * 0.6, 0, z, 0.16, 0.10, 1.2, [.78, .62, .42], { uv: .8 });
+      for (let i = 0; i < 5; i++) M.bark.box(x, 0.19, z - 0.55 + i * 0.28, 1.6, 0.05, 0.18, w, { uv: .8 });
       break;
+    }
     case 'coil':
-      M.metal.cyl(x, 0, z, 1.0, 0.7, 12, [.25,.26,.3], { rTop: 1.0 });
-      M.metal.cyl(x, 0.7, z, 0.35, 0.06, 10, [.2,.9,.85], {});
+      M.metal.cyl(x, 0, z, 0.98, 0.66, 16, [.22, .23, .27], { rTop: 0.98, gloss: 0.25 });
+      M.metal.cyl(x, 0.66, z, 0.62, 0.04, 14, [.16, .17, .20], { gloss: 0.2 });
+      M.metal.cyl(x, 0.70, z, 0.30, 0.05, 10, [.2, .9, .85], { gloss: 0.5 });
       break;
     case 'block':
-      M.sidewalk.box(x, 0, z, 2.8, 1.2, 1.8, [.72,.72,.78], { uv: 1.6 });
+      M.sidewalk.bevelBox(x, 0, z, 2.8, 1.2, 1.8, [.72, .72, .78], { bev: 0.06, r: 0.08, cs: 2, uv: 1.6 });
       break;
     case 'cone':
-      M.metal.cyl(x, 0, z, 0.32, 0.75, 7, [.95,.42,.15], { rTop: 0.06 });
-      M.metal.box(x, 0, z, 0.7, 0.06, 0.7, [.95,.42,.15], { uv: .4 });
+      M.metal.cyl(x, 0.05, z, 0.28, 0.72, 10, [.95, .42, .15], { rTop: 0.05, gloss: 0.3 });
+      M.metal.cyl(x, 0.34, z, 0.20, 0.14, 10, [.95, .95, .97], { cap: false, gloss: 0.4 });
+      M.metal.bevelBox(x, 0, z, 0.66, 0.06, 0.66, [.90, .38, .13], { bev: 0.015, r: 0.05, cs: 2, uv: .4, gloss: 0.3 });
       break;
     case 'board': {
-      M.metal.cyl(x - 0.7, 0, z, 0.06, 2, 4, [.5,.5,.55], {});
-      M.metal.cyl(x + 0.7, 0, z, 0.06, 2, 4, [.5,.5,.55], {});
-      M.sidewalk.box(x, 1.3, z, 1.8, 1.2, 0.1, [.9,.88,.9], { uv: 1 });
+      for (const sx of [-0.7, 0.7]) M.metal.tube([[x + sx, 0, z], [x + sx, 2.0, z]], 0.05, 6, [.48, .5, .56], { gloss: 0.4 });
+      M.sidewalk.bevelBox(x, 1.28, z, 1.86, 1.24, 0.12, [.90, .88, .90], { bev: 0.02, r: 0.03, cs: 1, uv: 1 });
+      M.metal.box(x, 2.50, z, 1.9, 0.08, 0.22, [.6, .62, .68], { uv: .8 });
       break;
     }
     case 'carcass':
-      M.metal.box(x, 0.35, z, 4.2, 1.1, 1.9, [.5,.4,.4], { uv: 2 });
-      M.metal.box(x - 0.3, 1.45, z, 2.2, 0.8, 1.7, [.4,.33,.34], { uv: 1.6 });
-      M.metal.cyl(x - 1.5, 0, z - 1, 0.35, 0.3, 8, [.2,.2,.22], {});
-      M.metal.cyl(x + 1.5, 0, z - 1, 0.35, 0.3, 8, [.2,.2,.22], {});
+      M.metal.bevelBox(x, 0.32, z, 4.0, 1.0, 1.8, [.48, .38, .38], { bev: 0.06, r: 0.10, cs: 2, uv: 2, gloss: 0.2 });
+      M.metal.bevelBox(x - 0.3, 1.32, z, 2.1, 0.74, 1.62, [.40, .32, .33], { bev: 0.06, r: 0.10, cs: 2, uv: 1.6, gloss: 0.2 });
+      for (const [ox, oz] of [[-1.4, -0.85], [-1.4, 0.85], [1.4, 0.85]])
+        M.metal.cyl(x + ox, 0, z + oz, 0.32, 0.28, 10, [.18, .18, .20], { gloss: 0.2 });
+      M.metal.box(x + 1.4, 0, z - 0.85, 0.5, 0.30, 0.4, [.35, .3, .3], { uv: .6 });
       break;
     case 'fence': {
       const len = p.len || 12;
-      for (let i = 0; i <= len; i += 2.2) M.metal.cyl(x + i, 0, z, 0.06, 1.6, 4, [.55,.58,.64], {});
-      M.metal.box(x + len / 2, 1.2, z, len, 0.08, 0.08, [.55,.58,.64], { uv: 2 });
-      M.metal.box(x + len / 2, 0.5, z, len, 0.08, 0.08, [.55,.58,.64], { uv: 2 });
+      const C = [.55, .58, .64];
+      for (let i = 0; i <= len; i += 2.2) M.metal.tube([[x + i, 0, z], [x + i, 1.62, z]], 0.055, 6, C, { gloss: 0.45 });
+      for (const y of [1.22, 0.52]) M.metal.tube([[x, y, z], [x + len, y, z]], 0.035, 6, C, { gloss: 0.45 });
+      for (let i = 0; i < len; i += 0.42) M.metal.tube([[x + i, 0.42, z], [x + i, 1.34, z]], 0.014, 4, [.5, .52, .58], { gloss: 0.4 });
       break;
     }
   }
 }
 
 function emitPole(p, M) {
-  const h = p.lamp ? 7.2 : 6.2;
-  M.metal.cyl(p.x, 0, p.z, 0.16, h, 8, [.62,.64,.7], { rTop: 0.11 });
-  M.sidewalk.box(p.x, 0, p.z, 0.7, 0.25, 0.7, [.7,.7,.75], { uv: .6 });
+  const h = p.lamp ? 7.4 : 6.2;
+  const C = [.60, .62, .68];
+  /* ствол со сбегом, фундаментный блок и фланец */
+  M.metal.cyl(p.x, 0.18, p.z, 0.17, h, 10, C, { rTop: 0.105, gloss: 0.35 });
+  M.sidewalk.bevelBox(p.x, 0, p.z, 0.72, 0.26, 0.72, [.70, .70, .75], { bev: 0.04, r: 0.05, cs: 2, uv: .6 });
+  M.metal.cyl(p.x, 0.24, p.z, 0.24, 0.05, 10, [.5, .52, .58], { gloss: 0.4 });
+  /* лючок и хомут кабеля */
+  M.metal.box(p.x, 0.8, p.z + 0.16, 0.16, 0.36, 0.06, [.5, .52, .58], { uv: .4, gloss: 0.4 });
+  M.metal.cyl(p.x, 3.4, p.z, 0.135, 0.07, 10, [.52, .54, .60], { gloss: 0.4 });
   if (p.lamp) {
-    M.metal.box(p.x + 0.6, h - 0.1, p.z, 1.4, 0.12, 0.12, [.62,.64,.7], { uv: .8 });
-    M.metal.box(p.x + 1.25, h - 0.42, p.z, 0.75, 0.3, 0.42, [.5,.52,.58], { uv: .6 });
-    M.white.box(p.x + 1.25, h - 0.44, p.z, 0.62, 0.06, 0.32, [1,.92,.72], { uv: 1, emis: 1 });
-    Static.lamps.push({ x: p.x + 1.25, y: h - 0.5, z: p.z });
+    /* изогнутый кронштейн и светильник-«кобра» */
+    M.metal.tube([[p.x, h - 0.05, p.z], [p.x + 0.55, h + 0.28, p.z], [p.x + 1.30, h + 0.30, p.z]], 0.065, 7, C, { gloss: 0.4 });
+    M.metal.bevelBox(p.x + 1.52, h + 0.06, p.z, 0.86, 0.26, 0.40, [.48, .50, .56],
+      { bev: 0.05, r: 0.08, cs: 2, uv: .6, gloss: 0.45, taper: [0.72, 0.8] });
+    M.white.bevelBox(p.x + 1.52, h + 0.01, p.z, 0.72, 0.06, 0.34, [1, .92, .72],
+      { bev: 0.015, r: 0.06, cs: 2, uv: 1, emis: 1, gloss: 0.8, skipTop: true, bottom: true });
+    Static.lamps.push({ x: p.x + 1.52, y: h - 0.05, z: p.z });
   } else {
-    M.metal.box(p.x, h - 0.5, p.z, 0.5, 0.16, 0.16, [.55,.58,.64], { uv: .5 });
+    M.metal.tube([[p.x, h - 0.55, p.z], [p.x + 0.46, h - 0.55, p.z]], 0.045, 6, [.55, .58, .64], { gloss: 0.4 });
+    M.metal.box(p.x + 0.52, h - 0.72, p.z, 0.12, 0.34, 0.30, [.52, .54, .60], { uv: .5, gloss: 0.4 });
   }
 }
 
 function emitKiosk(k, M) {
   const cx = k.x + k.w / 2, cz = k.z + k.d / 2, h = 2.9;
-  M.stucco.box(cx, 0, cz, k.w, h, k.d, [.8,.78,.85], { uv: 2.5, skipTop: true });
-  M.roof.box(cx, h, cz, k.w + 0.35, 0.22, k.d + 0.35, [.75,.72,.8], { uv: 1.6 });
-  M.shopGlass.quad([k.x + 0.35, 0.9, k.z + k.d + 0.03], [k.x + k.w - 0.35, 0.9, k.z + k.d + 0.03],
-    [k.x + k.w - 0.35, 2.2, k.z + k.d + 0.03], [k.x + 0.35, 2.2, k.z + k.d + 0.03],
-    0, 0, 1, [0,1, 1.2,1, 1.2,0, 0,0], [1,1,1], 0, 0);
+  /* корпус со скошенными углами и цоколем */
+  M.stucco.bevelBox(cx, 0.12, cz, k.w, h - 0.12, k.d, [.80, .78, .85],
+    { bev: 0.05, r: 0.10, cs: 2, uv: 2.5, skipTop: true });
+  M.sidewalk.bevelBox(cx, 0, cz, k.w + 0.14, 0.16, k.d + 0.14, [.66, .66, .70], { bev: 0.03, r: 0.06, cs: 2, uv: 1 });
+  /* карниз и вынос кровли */
+  M.roof.bevelBox(cx, h - 0.06, cz, k.w + 0.42, 0.26, k.d + 0.42, [.74, .71, .79],
+    { bev: 0.05, r: 0.10, cs: 2, uv: 1.6 });
+  M.metal.box(cx, h + 0.20, cz, k.w + 0.10, 0.16, k.d + 0.10, [.55, .52, .60], { uv: 1.2, gloss: 0.3 });
+  /* витрина с рамой и полкой-прилавком */
+  const zf = k.z + k.d + 0.03;
+  M.shopGlass.quad([k.x + 0.35, 0.95, zf], [k.x + k.w - 0.35, 0.95, zf],
+    [k.x + k.w - 0.35, 2.20, zf], [k.x + 0.35, 2.20, zf],
+    0, 0, 1, [0, 1, 1.2, 1, 1.2, 0, 0, 0], [1, 1, 1], 0, 0);
+  for (const [y, hh] of [[0.88, 0.10], [2.18, 0.10]])
+    M.metal.box(cx, y, zf + 0.02, k.w - 0.5, hh, 0.10, [.46, .48, .54], { uv: .8, gloss: 0.4 });
+  for (const sx of [-1, 1])
+    M.metal.box(cx + sx * (k.w / 2 - 0.36), 0.95, zf + 0.02, 0.09, 1.28, 0.10, [.46, .48, .54], { uv: .8, gloss: 0.4 });
+  M.metal.bevelBox(cx, 0.80, zf + 0.16, k.w - 0.6, 0.09, 0.34, [.62, .60, .66],
+    { bev: 0.02, r: 0.03, cs: 1, uv: .8, gloss: 0.35 });
+  /* окошко выдачи */
+  M.metal.box(cx + k.w * 0.28, 1.06, zf + 0.03, 0.44, 0.34, 0.05, [.30, .32, .38], { uv: .5, gloss: 0.5 });
+  /* решётка на боковом окне и ящик кондиционера */
+  M.metal.box(k.x - 0.04, 1.6, cz, 0.06, 0.7, 0.9, [.40, .42, .48], { uv: .6, gloss: 0.4 });
 }
 
 function buildWorld(gl) {
@@ -1533,8 +2243,25 @@ function buildWorld(gl) {
   M.white.plate(38, 47, 52, 47.16, 0.06, [.4,.9,.88], 1);
   M.white.plate(38, 56.84, 52, 57, 0.06, [.4,.9,.88], 1);
 
-  /* ямы */
-  for (const p of POTHOLES) M.white.plate(p.x - p.r, p.z - p.r, p.x + p.r, p.z + p.r, 0.045, [.12,.1,.14], 1);
+  /* ямы: неровный контур, скошенные стенки и тёмное дно */
+  for (const p of POTHOLES) {
+    const RP = mulberry32(Math.floor(p.x * 71 + p.z * 137) >>> 0);
+    const n = 10, rim = [], bot = [];
+    for (let i = 0; i < n; i++) {
+      const a = i / n * TAU, rr = p.r * (0.74 + RP() * 0.46);
+      rim.push([p.x + Math.cos(a) * rr, 0.064, p.z + Math.sin(a) * rr]);
+      bot.push([p.x + Math.cos(a) * rr * 0.58, 0.042, p.z + Math.sin(a) * rr * 0.58]);
+    }
+    const wall = [.34, .32, .38], floor = [.10, .09, .13];
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
+      M.asphalt.quad(rim[j], rim[i], bot[i], bot[j], 0, 1, 0,
+        [rim[j][0]/2, rim[j][2]/2, rim[i][0]/2, rim[i][2]/2, bot[i][0]/2, bot[i][2]/2, bot[j][0]/2, bot[j][2]/2], wall, 0, 0);
+    }
+    const c0 = M.asphalt.vert(p.x, 0.042, p.z, 0, 1, 0, p.x / 2, p.z / 2, floor[0], floor[1], floor[2], 0, 0);
+    const idx = bot.map(b2 => M.asphalt.vert(b2[0], b2[1], b2[2], 0, 1, 0, b2[0] / 2, b2[2] / 2, floor[0], floor[1], floor[2], 0, 0));
+    for (let i = 0; i < n; i++) M.asphalt.tri(c0, idx[(i + 1) % n], idx[i]);
+  }
 
   /* --- объекты --- */
   for (const b of BUILDINGS) emitBuilding(b, M);
@@ -1568,13 +2295,13 @@ function buildWorld(gl) {
 const R3 = {
   main: null, sky: null, glow: null, skyVAO: null, glowVAO: null,
   proj: m4(), view: m4(), model: m4(), invVP: m4(), tmp: m4(), tmp2: m4(),
-  eye: [0, 0, 0], right: [1, 0, 0], up: [0, 1, 0], fwd: [0, 0, -1]
+  eye: [0, 0, 0], right: [1, 0, 0], up: [0, 1, 0], fwd: [0, 0, -1], time: 0
 };
 
 const Env = {
   sun: [0.4, 0.6, 0.5], sunCol: [1, .86, .66], ambSky: [.32, .34, .46], ambGround: [.2, .17, .2],
   fog: [.55, .42, .5], fogDens: 0.0075, night: 0, zenith: [.24, .3, .55], horizon: [1, .55, .35], ground: [.16, .12, .2],
-  exposure: 2.0,
+  exposure: 2.0, cloud: 0.34, glossMul: 1,
   update(hour) {
     const dayT = clamp((hour - 5.5) / 13, 0, 1);
     const alt = Math.sin(dayT * Math.PI) * 72 * D2R;
@@ -1594,10 +2321,12 @@ const Env = {
     const dayCol = [1, .93, .82], sunsetCol = [1, .58, .34], nightCol = [.30, .34, .55];
     for (let i = 0; i < 3; i++) {
       const warm = lerp(dayCol[i], sunsetCol[i], low);
-      this.sunCol[i] = lerp(warm * 1.05, nightCol[i] * 0.30, n);
+      this.sunCol[i] = lerp(warm * 1.34, nightCol[i] * 0.30, n);
     }
-    const skyDay = [.46, .54, .72], skySunset = [.66, .42, .60], skyNight = [.13, .14, .27];
-    const grDay = [.32, .29, .28], grSunset = [.38, .23, .27], grNight = [.10, .09, .16];
+    /* Рассеянного света намеренно немного: иначе освещённая и теневая стороны
+       сливаются и дом выглядит плоской картинкой. */
+    const skyDay = [.29, .35, .50], skySunset = [.44, .28, .42], skyNight = [.115, .125, .245];
+    const grDay = [.20, .18, .18], grSunset = [.25, .15, .18], grNight = [.09, .08, .14];
     for (let i = 0; i < 3; i++) {
       this.ambSky[i] = lerp(lerp(skyDay[i], skySunset[i], low), skyNight[i], n);
       this.ambGround[i] = lerp(lerp(grDay[i], grSunset[i], low), grNight[i], n);
@@ -1611,7 +2340,10 @@ const Env = {
       this.fog[i] = this.horizon[i] * 0.72 + (i === 2 ? 0.07 : 0.05) * (1 - n);
     }
     this.fogDens = lerp(0.0026, 0.0085, n) + low * 0.0016;
-    this.exposure = lerp(2.6, 1.45, n);            /* днём ярче, ночью честно темно */
+    this.exposure = lerp(2.35, 1.5, n);            /* днём ярче, ночью честно темно */
+    /* к вечеру облака гуще, а поверхности «влажнее» и сильнее бликуют */
+    this.cloud = 0.42 + low * 0.24;
+    this.glossMul = lerp(1, 1.45, n);
   }
 };
 
@@ -1684,6 +2416,8 @@ function drawSky() {
   gl.uniform3fv(P.u.uSunCol, Env.sunCol);
   gl.uniform3fv(P.u.uGround, Env.ground);
   gl.uniform1f(P.u.uExposure, Env.exposure);
+  gl.uniform1f(P.u.uCloud, Env.cloud);
+  gl.uniform1f(P.u.uTime, R3.time);
   gl.bindVertexArray(R3.skyVAO);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
   gl.enable(gl.DEPTH_TEST);
@@ -1703,6 +2437,7 @@ function beginMain(lamps) {
   gl.uniform1f(P.u.uFogDens, Env.fogDens);
   gl.uniform1f(P.u.uNight, Env.night);
   gl.uniform1f(P.u.uExposure, Env.exposure);
+  gl.uniform1f(P.u.uGlossMul, Env.glossMul);
   gl.uniform3fv(P.u.uEye, R3.eye);
   gl.uniform1i(P.u.uTex, 0);
   gl.uniform4f(P.u.uTint, 1, 1, 1, 1);
@@ -1769,224 +2504,527 @@ function drawStatic() {
 
 
 /* ------------------------------------------------------------------ */
-/* 8. Персонажи: низкополигональные модели со скелетом                  */
+/* 8. Персонажи: модели со скелетом                                     */
 /* ------------------------------------------------------------------ */
-/* кости: 0 таз, 1 корпус, 2 голова, 3 шапка, 4/5 левая рука, 6/7 правая,
-   8/9 левая нога, 10/11 правая, 12 сумка/аксессуар                     */
-const BONE = { HIP:0, TORSO:1, HEAD:2, CAP:3, ARMLU:4, ARMLD:5, ARMRU:6, ARMRD:7, LEGLU:8, LEGLD:9, LEGRU:10, LEGRD:11, ACC:12 };
-const BONEBUF = new Float32Array(16 * 16);
-const BONES = []; for (let i = 0; i < 16; i++) BONES.push(m4());
+/* Кости. Геометрия каждой части нарисована в системе своей кости и
+   свисает вниз от сустава — так конечности гнутся в нужных местах.     */
+const BONE = {
+  HIP: 0, SPINE: 1, CHEST: 2, HEAD: 3, CAP: 4,
+  ARMLU: 5, ARMLD: 6, HANDL: 7, ARMRU: 8, ARMRD: 9, HANDR: 10,
+  LEGLU: 11, LEGLD: 12, FOOTL: 13, LEGRU: 14, LEGRD: 15, FOOTR: 16, ACC: 17
+};
+const NBONE = 18;
+const BONEBUF = new Float32Array(20 * 16);
+const BONES = []; for (let i = 0; i < 20; i++) BONES.push(m4());
+
+/* размеры скелета в метрах: рост ≈ 1.76 при основании таза 0.96 */
+const RIG = {
+  root: 0.96, sit: 0.60,
+  spine: 0.06, chest: 0.24, neck: 0.24,      /* подъёмы суставов корпуса */
+  shoulder: [0.19, 0.20], upperArm: 0.30, foreArm: 0.27,
+  hip: [0.105, -0.06], thigh: 0.44, shin: 0.38
+};
 
 function makeCharMesh(gl, pal) {
   const m = new Mesh();
   const skin = pal.skin, shirt = pal.shirt, pants = pal.pants, hair = pal.hair;
-  /* таз */
-  m.box(0, -0.16, 0, 0.30, 0.20, 0.20, pants, { uv: 1, part: BONE.HIP });
-  /* корпус: чуть сужается кверху */
-  m.box(0, 0, 0, 0.36, 0.56, 0.22, shirt, { uv: 1, part: BONE.TORSO });
-  if (pal.vest) {                       /* сигнальный жилет */
-    m.box(0, 0.10, 0.115, 0.30, 0.30, 0.02, pal.vest, { uv: 1, part: BONE.TORSO });
-    m.box(0, 0.10, -0.115, 0.30, 0.30, 0.02, pal.vest, { uv: 1, part: BONE.TORSO });
-    m.box(0, 0.30, 0.118, 0.30, 0.05, 0.02, [.95,.95,.95], { uv: 1, part: BONE.TORSO });
-    m.box(0, 0.30, -0.118, 0.30, 0.05, 0.02, [.95,.95,.95], { uv: 1, part: BONE.TORSO });
+  const bw = pal.build === undefined ? 1 : pal.build;        /* полнота */
+  const sh = pal.shoes || [.16, .15, .19];
+  const sleeve = pal.sleeve || shirt;
+  const mul = (c, k) => [c[0] * k, c[1] * k, c[2] * k];
+  const CLOTH = 0.05, SKIN_G = 0.2, BOOT = 0.3;
+
+  /* ---------- таз и корпус ---------- */
+  m.bevelBox(0, -0.13, 0, 0.30 * bw, 0.24, 0.20 * bw, pants,
+    { bev: 0.045, r: 0.05, cs: 2, part: BONE.HIP, gloss: CLOTH, uv: 0.6, bottom: true });
+  /* ремень */
+  m.bevelBox(0, 0.075, 0, 0.305 * bw + 0.008, 0.045, 0.205 * bw + 0.008, pal.belt || mul(pants, 0.55),
+    { bev: 0.012, r: 0.05, cs: 2, part: BONE.HIP, gloss: 0.35, skipTop: true });
+  if (pal.buckle) m.bevelBox(0, 0.08, 0.104 * bw, 0.05, 0.035, 0.02, pal.buckle,
+    { bev: 0.008, r: 0.008, cs: 1, part: BONE.HIP, gloss: 0.8 });
+
+  /* живот: слегка сужается кверху, юбка для тех, кто в юбке */
+  if (pal.skirt) {
+    m.bevelBox(0, -0.30, 0, 0.34 * bw, 0.42, 0.26 * bw, pal.skirt,
+      { bev: 0.03, r: 0.07, cs: 2, part: BONE.HIP, gloss: CLOTH, uv: 0.5, taper: [0.78, 0.78], skipTop: true, bottom: true });
   }
-  /* шея и голова */
-  m.box(0, 0, 0, 0.10, 0.07, 0.10, skin, { uv: 1, part: BONE.HEAD });
-  m.box(0, 0.06, 0, 0.20, 0.23, 0.21, skin, { uv: 1, part: BONE.HEAD });
-  /* лицо: глаза и рот тёмными накладками */
-  m.box(-0.05, 0.14, 0.107, 0.045, 0.03, 0.01, [.12,.1,.14], { uv: 1, part: BONE.HEAD });
-  m.box(0.05, 0.14, 0.107, 0.045, 0.03, 0.01, [.12,.1,.14], { uv: 1, part: BONE.HEAD });
-  m.box(0, 0.085, 0.107, 0.07, 0.015, 0.01, [.45,.25,.25], { uv: 1, part: BONE.HEAD });
-  /* волосы / шапка */
+  m.bevelBox(0, 0, 0, 0.32 * bw, 0.25, 0.21 * bw, shirt,
+    { bev: 0.04, r: 0.06, cs: 2, part: BONE.SPINE, gloss: CLOTH, uv: 0.6, taper: [1.06, 1.04], skipTop: true });
+  /* грудь и плечевой пояс */
+  m.bevelBox(0, -0.02, 0, 0.35 * bw, 0.30, 0.23 * bw, shirt,
+    { bev: 0.045, r: 0.07, cs: 2, part: BONE.CHEST, gloss: CLOTH, uv: 0.6, taper: [1.02, 0.94], skipTop: true });
+  for (const sx of [-1, 1])
+    m.ellipsoid(sx * 0.175 * bw, 0.20, 0, 0.075, 0.075, 0.098, 8, 5, shirt, { part: BONE.CHEST, gloss: CLOTH });
+  /* воротник */
+  m.bevelBox(0, 0.215, 0, 0.155, 0.045, 0.135, pal.collar || mul(shirt, 0.82),
+    { bev: 0.012, r: 0.04, cs: 2, part: BONE.CHEST, gloss: CLOTH, skipTop: true });
+
+  if (pal.vest) {                        /* сигнальный жилет: цельная манишка */
+    const v = pal.vest, refl = [1.45, 1.45, 1.5];
+    m.bevelBox(0, -0.035, 0, 0.365 * bw, 0.275, 0.245 * bw, v,
+      { bev: 0.02, r: 0.07, cs: 2, part: BONE.CHEST, gloss: 0.22, uv: 0.5, taper: [1.0, 0.96], skipTop: true });
+    for (const y of [0.035, 0.135])       /* световозвращающие полосы вокруг */
+      m.bevelBox(0, y, 0, 0.372 * bw, 0.038, 0.252 * bw, refl,
+        { bev: 0.005, r: 0.07, cs: 2, part: BONE.CHEST, gloss: 0.5, skipTop: true });
+    m.box(0, -0.02, 0.125 * bw, 0.014, 0.245, 0.008, mul(v, 0.55), { part: BONE.CHEST, gloss: 0.3 });  /* молния */
+    for (const sx of [-1, 1])             /* плечевые лямки */
+      m.box(sx * 0.115 * bw, 0.235, 0, 0.075, 0.02, 0.20 * bw, v, { part: BONE.CHEST, gloss: 0.22 });
+  }
+
+  /* ---------- шея и голова ---------- */
+  m.cyl(0, -0.02, 0, 0.048, 0.10, 8, mul(skin, 0.9), { part: BONE.HEAD, cap: false, gloss: SKIN_G });
+  m.ellipsoid(0, 0.155, 0.004, 0.090, 0.118, 0.100, 12, 8, skin, { part: BONE.HEAD, gloss: SKIN_G });
+  /* челюсть и подбородок */
+  m.ellipsoid(0, 0.094, 0.006, 0.070, 0.050, 0.076, 10, 5, skin, { part: BONE.HEAD, gloss: SKIN_G });
+  /* нос */
+  m.bevelBox(0, 0.112, 0.086, 0.024, 0.046, 0.030, skin, { bev: 0.007, r: 0.007, cs: 1, part: BONE.HEAD, gloss: SKIN_G });
+  /* уши */
+  for (const sx of [-1, 1])
+    m.ellipsoid(sx * 0.089, 0.146, -0.004, 0.015, 0.030, 0.021, 6, 4, skin, { part: BONE.HEAD, gloss: SKIN_G });
+  /* глаза: белок и зрачок, чуть утоплены */
+  for (const sx of [-1, 1]) {
+    m.ellipsoid(sx * 0.037, 0.150, 0.076, 0.021, 0.014, 0.014, 7, 4, [.93, .92, .91], { part: BONE.HEAD, gloss: 0.55 });
+    m.ellipsoid(sx * 0.039, 0.148, 0.086, 0.0085, 0.0095, 0.006, 6, 3, pal.eyes || [.16, .13, .12], { part: BONE.HEAD, gloss: 0.7 });
+    m.box(sx * 0.038, 0.165, 0.079, 0.040, 0.009, 0.014, mul(hair, 0.8), { part: BONE.HEAD, gloss: 0.05 });
+  }
+  /* рот */
+  m.box(0, 0.086, 0.082, 0.044, 0.009, 0.012, [.5, .27, .26], { part: BONE.HEAD, gloss: 0.25 });
+  if (pal.beard) {
+    m.bevelBox(0, 0.048, 0.014, 0.118, 0.066, 0.102, pal.beard,
+      { bev: 0.012, r: 0.03, cs: 2, part: BONE.HEAD, gloss: 0.04, skipTop: true });
+  }
+
+  /* ---------- волосы, шапка, платок ---------- */
   if (pal.cap) {
-    m.box(0, 0.245, 0, 0.215, 0.07, 0.225, pal.cap, { uv: 1, part: BONE.CAP });
-    m.box(0, 0.245, 0.14, 0.19, 0.03, 0.09, pal.cap, { uv: 1, part: BONE.CAP });
+    m.ellipsoid(0, 0.153, -0.004, 0.099, 0.122, 0.108, 12, 6, pal.cap, { part: BONE.CAP, cut: 0.15, gloss: 0.12 });
+    m.bevelBox(0, 0.168, -0.004, 0.198, 0.020, 0.216, mul(pal.cap, 0.92),
+      { bev: 0.006, r: 0.09, cs: 3, part: BONE.CAP, gloss: 0.14, skipTop: true });   /* околыш */
+    m.bevelBox(0, 0.170, 0.108, 0.150, 0.014, 0.090, mul(pal.cap, 0.8),
+      { bev: 0.005, r: 0.04, cs: 2, part: BONE.CAP, gloss: 0.16 });   /* козырёк */
+  } else if (pal.scarf) {
+    m.ellipsoid(0, 0.150, -0.006, 0.104, 0.124, 0.112, 12, 6, pal.scarf, { part: BONE.CAP, cut: 0.12, gloss: 0.1 });
+    for (const sx of [-1, 1])            /* щёчные отвороты */
+      m.bevelBox(sx * 0.088, 0.070, -0.014, 0.034, 0.110, 0.150, pal.scarf,
+        { bev: 0.01, r: 0.02, cs: 2, part: BONE.CAP, gloss: 0.1, skipTop: true });
+    m.bevelBox(0, 0.096, -0.088, 0.150, 0.090, 0.048, pal.scarf,
+      { bev: 0.012, r: 0.03, cs: 2, part: BONE.CAP, gloss: 0.1, skipTop: true });   /* затылок */
+    m.bevelBox(0, 0.040, 0.052, 0.062, 0.050, 0.048, pal.scarf,
+      { bev: 0.012, r: 0.02, cs: 2, part: BONE.CAP, gloss: 0.1 });                  /* узелок под подбородком */
   } else {
-    m.box(0, 0.245, -0.01, 0.205, 0.06, 0.215, hair, { uv: 1, part: BONE.CAP });
-    m.box(0, 0.15, -0.10, 0.19, 0.16, 0.03, hair, { uv: 1, part: BONE.CAP });
+    m.ellipsoid(0, 0.152, -0.004, 0.097, 0.119, 0.105, 12, 6, hair, { part: BONE.CAP, cut: pal.bald ? 0.55 : 0.20, gloss: 0.14 });
+    if (!pal.bald) m.bevelBox(0, 0.12, -0.072, 0.165, 0.10, 0.055, hair,
+      { bev: 0.014, r: 0.03, cs: 2, part: BONE.CAP, gloss: 0.14, skipTop: true });
   }
-  /* руки */
-  for (const [u, d, sgn] of [[BONE.ARMLU, BONE.ARMLD, -1], [BONE.ARMRU, BONE.ARMRD, 1]]) {
-    m.box(0, -0.13, 0, 0.10, 0.28, 0.11, shirt, { uv: 1, part: u });
-    m.box(0, -0.12, 0, 0.09, 0.26, 0.10, pal.sleeve || shirt, { uv: 1, part: d });
-    m.box(0, -0.27, 0, 0.085, 0.09, 0.09, skin, { uv: 1, part: d });
+
+  /* ---------- руки ---------- */
+  for (const [u, d, hnd] of [[BONE.ARMLU, BONE.ARMLD, BONE.HANDL], [BONE.ARMRU, BONE.ARMRD, BONE.HANDR]]) {
+    m.ellipsoid(0, 0.005, 0, 0.055, 0.05, 0.058, 8, 4, shirt, { part: u, gloss: CLOTH });
+    m.bevelBox(0, -0.30, 0, 0.098, 0.31, 0.104, shirt,
+      { bev: 0.022, r: 0.03, cs: 2, part: u, gloss: CLOTH, uv: 0.5, taper: [1.06, 1.06], skipTop: true });
+    m.bevelBox(0, -0.27, 0, 0.084, 0.28, 0.088, sleeve,
+      { bev: 0.02, r: 0.028, cs: 2, part: d, gloss: CLOTH, uv: 0.5, taper: [1.14, 1.14], skipTop: true });
+    if (pal.cuff) m.bevelBox(0, -0.275, 0, 0.09, 0.03, 0.094, pal.cuff,
+      { bev: 0.006, r: 0.028, cs: 2, part: d, gloss: 0.12, skipTop: true });
+    /* кисть: ладонь и обобщённые пальцы */
+    m.ellipsoid(0, -0.045, 0.004, 0.040, 0.048, 0.026, 7, 4, skin, { part: hnd, gloss: SKIN_G });
+    m.bevelBox(0, -0.115, 0.004, 0.062, 0.075, 0.042, skin,
+      { bev: 0.012, r: 0.018, cs: 2, part: hnd, gloss: SKIN_G, skipTop: true });
   }
-  /* ноги */
-  for (const [u, d] of [[BONE.LEGLU, BONE.LEGLD], [BONE.LEGRU, BONE.LEGRD]]) {
-    m.box(0, -0.21, 0, 0.135, 0.42, 0.15, pants, { uv: 1, part: u });
-    m.box(0, -0.21, 0, 0.12, 0.42, 0.13, pants, { uv: 1, part: d });
-    m.box(0, -0.42, 0.03, 0.14, 0.09, 0.24, pal.shoes || [.15,.14,.18], { uv: 1, part: d });
+
+  /* ---------- ноги ---------- */
+  for (const [u, d, f] of [[BONE.LEGLU, BONE.LEGLD, BONE.FOOTL], [BONE.LEGRU, BONE.LEGRD, BONE.FOOTR]]) {
+    m.bevelBox(0, -0.45, 0, 0.145 * bw, 0.46, 0.155 * bw, pants,
+      { bev: 0.028, r: 0.045, cs: 2, part: u, gloss: CLOTH, uv: 0.5, taper: [0.86, 0.88], skipTop: true });
+    m.bevelBox(0, -0.40, -0.004, 0.122 * bw, 0.41, 0.132 * bw, pants,
+      { bev: 0.024, r: 0.04, cs: 2, part: d, gloss: CLOTH, uv: 0.5, taper: [0.86, 0.9], skipTop: true });
+    /* ботинок: подошва, союзка, задник */
+    m.bevelBox(0, -0.075, 0.052, 0.115, 0.085, 0.245, sh,
+      { bev: 0.018, r: 0.035, cs: 2, part: f, gloss: BOOT, skipTop: true });
+    m.bevelBox(0, -0.088, 0.048, 0.122, 0.028, 0.255, mul(sh, 0.55),
+      { bev: 0.008, r: 0.035, cs: 2, part: f, gloss: 0.1, skipTop: true, bottom: true });
+    m.bevelBox(0, -0.028, -0.038, 0.108, 0.075, 0.10, sh,
+      { bev: 0.014, r: 0.03, cs: 2, part: f, gloss: BOOT });
   }
-  /* аксессуар: сумка монтажника или пакет */
-  if (pal.bag) m.box(0, 0, 0, 0.30, 0.24, 0.16, pal.bag, { uv: 1, part: BONE.ACC });
-  if (pal.bagStripe) m.box(0, 0.06, 0.085, 0.24, 0.05, 0.02, pal.bagStripe, { uv: 1, part: BONE.ACC });
+
+  /* ---------- сумка монтажника ---------- */
+  if (pal.bag) {
+    m.bevelBox(0, -0.12, 0, 0.30, 0.24, 0.15, pal.bag,
+      { bev: 0.018, r: 0.025, cs: 2, part: BONE.ACC, gloss: 0.18, uv: 0.4 });
+    m.bevelBox(0, 0.10, 0, 0.31, 0.05, 0.16, mul(pal.bag, 0.8),
+      { bev: 0.008, r: 0.025, cs: 2, part: BONE.ACC, gloss: 0.2 });
+    if (pal.bagStripe) m.box(0, -0.02, 0.078, 0.24, 0.05, 0.008, pal.bagStripe, { part: BONE.ACC, gloss: 0.3 });
+    m.tube([[-0.11, 0.12, 0], [-0.06, 0.30, -0.02], [0.06, 0.30, -0.02], [0.11, 0.12, 0]], 0.014, 6,
+      mul(pal.bag, 0.7), { part: BONE.ACC, gloss: 0.25 });
+  }
   return { gpu: m.upload(gl), pal };
 }
 
 const CHAR_MESHES = {};
 function buildCharacters(gl) {
   const P = {
-    oleg:   { skin: [.95,.72,.55], shirt: [.36,.40,.56], pants: [.28,.30,.44], hair: [.42,.28,.17], cap: [.26,.26,.34], vest: [1.25,.62,.14], bag: [.36,.26,.2], bagStripe: [1.3,1.0,.3], shoes: [.22,.2,.25] },
-    sanya:  { skin: [.93,.71,.54], shirt: [.18,.68,.66], pants: [.26,.26,.38], hair: [.34,.24,.15], cap: [.09,.44,.42], vest: [.28,1.15,1.1], bag: [.3,.4,.42] },
-    tamara: { skin: [.98,.78,.64], shirt: [.72,.2,.46], pants: [.32,.2,.4], hair: [.62,.22,.34] },
-    boris:  { skin: [.92,.71,.56], shirt: [.45,.42,.52], pants: [.3,.3,.36], hair: [.75,.75,.78] },
-    hool:   { skin: [.9,.68,.52], shirt: [.24,.24,.32], pants: [.19,.19,.27], hair: [.17,.17,.22], cap: [.4,.17,.55] },
-    gran:   { skin: [.96,.8,.68], shirt: [.6,.34,.68], pants: [.36,.26,.42], hair: [1.05,1.05,1.1] },
-    guard:  { skin: [.9,.7,.55], shirt: [.44,.15,.18], pants: [.24,.22,.28], hair: [.28,.28,.32], cap: [.92,.2,.27], vest: [1.15,.34,.38] },
-    client: { skin: [.93,.74,.59], shirt: [.28,.46,.64], pants: [.3,.3,.4], hair: [.42,.33,.22] }
+    oleg:   { skin: [.95,.72,.55], shirt: [.34,.38,.54], sleeve: [.30,.34,.50], pants: [.26,.28,.42], hair: [.42,.28,.17],
+              cap: [.24,.24,.32], vest: [1.25,.62,.14], bag: [.36,.26,.2], bagStripe: [1.3,1.0,.3], shoes: [.20,.18,.23],
+              belt: [.18,.14,.12], buckle: [.85,.72,.35], collar: [.28,.31,.46], cuff: [.28,.31,.46] },
+    sanya:  { skin: [.93,.71,.54], shirt: [.16,.62,.60], sleeve: [.14,.55,.54], pants: [.24,.24,.36], hair: [.34,.24,.15],
+              cap: [.09,.42,.40], vest: [.28,1.15,1.1], bag: [.3,.4,.42], shoes: [.18,.2,.24], build: 1.06,
+              belt: [.16,.16,.2], collar: [.13,.5,.5] },
+    tamara: { skin: [.98,.78,.64], shirt: [.72,.2,.46], sleeve: [.66,.18,.42], pants: [.32,.2,.4], hair: [.62,.22,.34],
+              shoes: [.28,.14,.22], collar: [.8,.28,.54], eyes: [.2,.3,.2], belt: [.35,.12,.26], buckle: [.9,.8,.4] },
+    boris:  { skin: [.92,.71,.56], shirt: [.45,.42,.52], sleeve: [.40,.38,.48], pants: [.3,.3,.36], hair: [.78,.78,.8],
+              beard: [.8,.8,.82], build: 1.16, shoes: [.2,.19,.2], bald: true, belt: [.2,.18,.16] },
+    hool:   { skin: [.9,.68,.52], shirt: [.22,.22,.30], sleeve: [.19,.19,.27], pants: [.17,.17,.25], hair: [.15,.15,.2],
+              cap: [.38,.16,.52], shoes: [.9,.9,.92], build: 0.96, belt: [.12,.12,.16] },
+    gran:   { skin: [.96,.8,.68], shirt: [.6,.34,.68], sleeve: [.55,.3,.62], pants: [.36,.26,.42], hair: [1.05,1.05,1.1],
+              scarf: [.86,.34,.42], skirt: [.34,.24,.4], build: 1.1, shoes: [.24,.2,.24] },
+    guard:  { skin: [.9,.7,.55], shirt: [.40,.13,.16], sleeve: [.36,.12,.15], pants: [.22,.2,.26], hair: [.26,.26,.3],
+              cap: [.86,.18,.25], vest: [1.15,.34,.38], shoes: [.14,.13,.16], build: 1.08, belt: [.1,.1,.12], buckle: [.8,.8,.85] },
+    client: { skin: [.93,.74,.59], shirt: [.26,.44,.62], sleeve: [.23,.4,.58], pants: [.3,.3,.4], hair: [.42,.33,.22],
+              shoes: [.2,.18,.2], collar: [.9,.92,.95], belt: [.2,.16,.14] }
   };
   const pedColors = [
     [.38,.56,.8], [.68,.38,.62], [.46,.68,.42], [.8,.6,.32], [.4,.4,.74], [.74,.46,.4], [.32,.62,.62], [.66,.66,.4]
   ];
   for (const k in P) CHAR_MESHES[k] = makeCharMesh(gl, P[k]);
   CHAR_MESHES.peds = pedColors.map((c, i) => makeCharMesh(gl, {
-    skin: [.95 - i * 0.03, .74 - i * 0.03, .58], shirt: c,
+    skin: [.95 - i * 0.03, .74 - i * 0.03, .58], shirt: c, sleeve: [c[0] * .9, c[1] * .9, c[2] * .9],
     pants: [.28 + (i % 3) * .06, .28, .38], hair: i % 3 === 0 ? [1.0,1.0,1.05] : [.36,.26,.17],
-    cap: i % 4 === 0 ? c : null, bag: i % 3 === 1 ? [.78,.72,.64] : null
+    cap: i % 4 === 0 ? c : null, bag: i % 3 === 1 ? [.78,.72,.64] : null,
+    skirt: i % 4 === 2 ? [c[0] * .7, c[1] * .7, c[2] * .8] : null,
+    build: 0.94 + (i % 4) * 0.06, bald: i === 5,
+    shoes: [.18 + (i % 3) * .05, .17, .21], belt: [.2,.18,.2]
   }));
 }
 
 /* --- поза --- */
 const SCRATCH = []; for (let i = 0; i < 8; i++) SCRATCH.push(m4());
 function poseCharacter(o) {
-  /* o: {x,y,z,yaw,phase,speed,sit,lean,down,swing,arms} */
+  /* o: {x,y,z,yaw,phase,speed,sit,lean,down,armL,armR,headYaw,headPitch,scale} */
   const yaw = o.yaw || 0, ph = o.phase || 0, sp = clamp(o.speed || 0, 0, 1);
-  const bob = Math.sin(ph * 2) * 0.022 * sp;
+  const bob = Math.sin(ph * 2) * 0.026 * sp;
   const down = o.down || 0;
-  const root = m4compose(SCRATCH[0], o.x, (o.y || 0) + (o.sit ? 0.52 : 0.92) + bob - down * 0.75, o.z, down * 1.4, yaw, 0, o.scale || 1);
+  const root = m4compose(SCRATCH[0], o.x, (o.y || 0) + (o.sit ? RIG.sit : RIG.root) + bob - down * 0.78,
+    o.z, down * 1.4, yaw, Math.sin(ph) * 0.035 * sp, o.scale || 1);
   const T = (out, parent, dx, dy, dz, rx, ry, rz) =>
     m4mul(out, parent, m4compose(SCRATCH[7], dx, dy, dz, rx || 0, ry || 0, rz || 0, 1));
 
   T(BONES[BONE.HIP], root, 0, 0, 0, 0, 0, 0);
-  const lean = (o.lean || 0) + sp * 0.10;
-  T(BONES[BONE.TORSO], BONES[BONE.HIP], 0, 0.30, 0, lean, 0, 0);
-  T(BONES[BONE.HEAD], BONES[BONE.TORSO], 0, 0.30, 0, -lean * 0.6 + (o.headPitch || 0), o.headYaw || 0, 0);
+  const lean = (o.lean || 0) + sp * 0.12;
+  const twist = Math.sin(ph) * 0.10 * sp;
+  T(BONES[BONE.SPINE], BONES[BONE.HIP], 0, RIG.spine, 0, lean * 0.42, -twist * 0.4, 0);
+  T(BONES[BONE.CHEST], BONES[BONE.SPINE], 0, RIG.chest, 0, lean * 0.58, twist, 0);
+  T(BONES[BONE.HEAD], BONES[BONE.CHEST], 0, RIG.neck, 0,
+    -lean * 0.7 + (o.headPitch || 0), (o.headYaw || 0) - twist * 0.5, 0);
   T(BONES[BONE.CAP], BONES[BONE.HEAD], 0, 0, 0, 0, 0, 0);
 
-  const swing = Math.sin(ph) * (0.15 + sp * 0.65);
-  const swing2 = Math.sin(ph + Math.PI) * (0.15 + sp * 0.65);
-  if (o.sit) {                          /* поза на велосипеде */
-    T(BONES[BONE.ARMLU], BONES[BONE.TORSO], -0.20, 0.26, 0, -1.05, 0, 0.15);
-    T(BONES[BONE.ARMLD], BONES[BONE.ARMLU], 0, -0.28, 0, -0.35, 0, 0);
-    T(BONES[BONE.ARMRU], BONES[BONE.TORSO], 0.20, 0.26, 0, -1.05, 0, -0.15);
-    T(BONES[BONE.ARMRD], BONES[BONE.ARMRU], 0, -0.28, 0, -0.35, 0, 0);
+  const swing = Math.sin(ph) * (0.15 + sp * 0.72);
+  const swing2 = Math.sin(ph + Math.PI) * (0.15 + sp * 0.72);
+  const SX = RIG.shoulder[0], SY = RIG.shoulder[1];
+  if (o.sit) {                          /* поза на велосипеде: руки на руле */
+    T(BONES[BONE.ARMLU], BONES[BONE.CHEST], -SX, SY, 0.02, -1.02, 0, 0.16);
+    T(BONES[BONE.ARMLD], BONES[BONE.ARMLU], 0, -RIG.upperArm, 0, -0.40, 0, 0);
+    T(BONES[BONE.HANDL], BONES[BONE.ARMLD], 0, -RIG.foreArm, 0, 0.55, 0, 0);
+    T(BONES[BONE.ARMRU], BONES[BONE.CHEST], SX, SY, 0.02, -1.02, 0, -0.16);
+    T(BONES[BONE.ARMRD], BONES[BONE.ARMRU], 0, -RIG.upperArm, 0, -0.40, 0, 0);
+    T(BONES[BONE.HANDR], BONES[BONE.ARMRD], 0, -RIG.foreArm, 0, 0.55, 0, 0);
     const pedal = ph * 1.4;
-    T(BONES[BONE.LEGLU], BONES[BONE.HIP], -0.11, 0, 0.02, -1.15 + Math.sin(pedal) * 0.55, 0, 0);
-    T(BONES[BONE.LEGLD], BONES[BONE.LEGLU], 0, -0.42, 0, 1.0 - Math.sin(pedal) * 0.5, 0, 0);
-    T(BONES[BONE.LEGRU], BONES[BONE.HIP], 0.11, 0, 0.02, -1.15 + Math.sin(pedal + Math.PI) * 0.55, 0, 0);
-    T(BONES[BONE.LEGRD], BONES[BONE.LEGRU], 0, -0.42, 0, 1.0 - Math.sin(pedal + Math.PI) * 0.5, 0, 0);
+    for (const [u, d, f, off] of [[BONE.LEGLU, BONE.LEGLD, BONE.FOOTL, 0], [BONE.LEGRU, BONE.LEGRD, BONE.FOOTR, Math.PI]]) {
+      const t = -1.12 + Math.sin(pedal + off) * 0.52;
+      const k = 1.05 - Math.sin(pedal + off) * 0.48;
+      T(BONES[u], BONES[BONE.HIP], (u === BONE.LEGLU ? -1 : 1) * RIG.hip[0], RIG.hip[1], 0.03, t, 0, 0);
+      T(BONES[d], BONES[u], 0, -RIG.thigh, 0, k, 0, 0);
+      T(BONES[f], BONES[d], 0, -RIG.shin, 0, clamp(-(t + k) * 0.7, -0.5, 0.7), 0, 0);
+    }
   } else {
     const aL = o.armL !== undefined ? o.armL : swing2;
     const aR = o.armR !== undefined ? o.armR : swing;
-    T(BONES[BONE.ARMLU], BONES[BONE.TORSO], -0.23, 0.24, 0, aL, 0, 0.12);
-    T(BONES[BONE.ARMLD], BONES[BONE.ARMLU], 0, -0.28, 0, -0.25 - Math.abs(aL) * 0.4, 0, 0);
-    T(BONES[BONE.ARMRU], BONES[BONE.TORSO], 0.23, 0.24, 0, aR, 0, -0.12);
-    T(BONES[BONE.ARMRD], BONES[BONE.ARMRU], 0, -0.28, 0, -0.25 - Math.abs(aR) * 0.4, 0, 0);
-    T(BONES[BONE.LEGLU], BONES[BONE.HIP], -0.11, -0.06, 0, swing, 0, 0);
-    T(BONES[BONE.LEGLD], BONES[BONE.LEGLU], 0, -0.42, 0, Math.max(0, -swing) * 0.9, 0, 0);
-    T(BONES[BONE.LEGRU], BONES[BONE.HIP], 0.11, -0.06, 0, swing2, 0, 0);
-    T(BONES[BONE.LEGRD], BONES[BONE.LEGRU], 0, -0.42, 0, Math.max(0, -swing2) * 0.9, 0, 0);
+    T(BONES[BONE.ARMLU], BONES[BONE.CHEST], -SX, SY, 0, aL, 0, 0.13 + sp * 0.06);
+    T(BONES[BONE.ARMLD], BONES[BONE.ARMLU], 0, -RIG.upperArm, 0, -0.24 - Math.abs(aL) * 0.55, 0, 0);
+    T(BONES[BONE.HANDL], BONES[BONE.ARMLD], 0, -RIG.foreArm, 0, -0.06, 0, 0);
+    T(BONES[BONE.ARMRU], BONES[BONE.CHEST], SX, SY, 0, aR, 0, -0.13 - sp * 0.06);
+    T(BONES[BONE.ARMRD], BONES[BONE.ARMRU], 0, -RIG.upperArm, 0, -0.24 - Math.abs(aR) * 0.55, 0, 0);
+    T(BONES[BONE.HANDR], BONES[BONE.ARMRD], 0, -RIG.foreArm, 0, -0.06, 0, 0);
+    for (const [u, d, f, s] of [[BONE.LEGLU, BONE.LEGLD, BONE.FOOTL, swing], [BONE.LEGRU, BONE.LEGRD, BONE.FOOTR, swing2]]) {
+      const knee = Math.max(0, -s) * 1.05 + sp * 0.06;
+      T(BONES[u], BONES[BONE.HIP], (u === BONE.LEGLU ? -1 : 1) * RIG.hip[0], RIG.hip[1], 0, s, 0, 0);
+      T(BONES[d], BONES[u], 0, -RIG.thigh, 0, knee, 0, 0);
+      /* стопа старается остаться горизонтальной, с перекатом на носок */
+      T(BONES[f], BONES[d], 0, -RIG.shin, 0, clamp(-(s + knee) * 0.85 + Math.max(0, s) * 0.5, -0.45, 0.6), 0, 0);
+    }
   }
   /* сумка на боку */
-  T(BONES[BONE.ACC], BONES[BONE.HIP], 0.26, 0.12, -0.05, 0, 0, 0.2);
-  for (let i = 0; i < 13; i++) BONEBUF.set(BONES[i], i * 16);
+  T(BONES[BONE.ACC], BONES[BONE.HIP], 0.205, -0.01, -0.05, 0.05, 0, 0.20);
+  for (let i = 0; i < NBONE; i++) BONEBUF.set(BONES[i], i * 16);
 }
 
 function drawCharacter(mesh, o) {
   const gl = GL.gl, P = R3.main;
   poseCharacter(o);
   gl.uniformMatrix4fv(P.u.uBones, false, BONEBUF);
-  drawMesh(mesh.gpu, TX.white, BONES[0], { skin: true, tint: o.tint });
+  drawMesh(mesh.gpu, TX.cloth || TX.white, BONES[0], { skin: true, tint: o.tint });
 }
 
 /* ------------------------------------------------------------------ */
 /* 9. Велосипед и транспорт                                             */
 /* ------------------------------------------------------------------ */
 const VEH = {};
+
+/* Кузова собираются из бокового силуэта: профиль в плоскости XY (длина по X,
+   высота по Y) выдавливается по ширине, потом вся сетка разворачивается
+   носом по +Z. Так получается настоящая форма машины, а не две коробки. */
+const CAR_SPEC = {
+  sedan: {
+    wr: 0.32, hw: 0.86, gw: 0.76, wheels: [[-0.86, 1.32], [0.86, 1.32], [-0.86, -1.30], [0.86, -1.30]],
+    body: [
+      [-2.05, 0.26], [-1.92, 0.18], [-0.70, 0.16], [0.70, 0.16], [1.92, 0.18], [2.02, 0.28],
+      [2.12, 0.46], [2.13, 0.66], [2.06, 0.80],
+      [1.20, 0.86], [0.66, 0.90], [0.30, 0.93],
+      [-1.35, 0.95], [-1.80, 0.93], [-2.00, 0.88], [-2.11, 0.70], [-2.12, 0.46], [-2.07, 0.30]
+    ],
+    glass: [
+      [-1.66, 0.90], [0.32, 0.90], [0.00, 1.20], [-0.32, 1.36],
+      [-1.05, 1.38], [-1.42, 1.24], [-1.66, 1.02]
+    ],
+    roof: [-0.68, 1.38, 0.80],           /* центр, верх, длина ровного участка крыши */
+    arches: [[1.31, 0.44], [-1.30, 0.44]],
+    doors: [0.18, -1.02], hood: [1.25, 0.87], trunk: [-1.75, 0.93]
+  },
+  van: {
+    wr: 0.36, hw: 0.95, gw: 0.90, wheels: [[-0.94, 1.42], [0.94, 1.42], [-0.94, -1.44], [0.94, -1.44]],
+    body: [
+      [-2.35, 0.28], [-2.20, 0.20], [-0.80, 0.18], [0.80, 0.18], [2.10, 0.20], [2.22, 0.30],
+      [2.34, 0.52], [2.36, 0.74], [2.30, 0.92],
+      [1.62, 0.98], [1.30, 1.02],
+      [1.02, 1.42], [0.80, 2.02], [-2.10, 2.04], [-2.32, 1.92],
+      [-2.38, 0.90], [-2.40, 0.50], [-2.34, 0.30]
+    ],
+    glass: [
+      [-2.28, 1.06], [1.06, 1.06], [1.02, 1.44], [0.82, 1.92], [-2.22, 1.94], [-2.30, 1.62]
+    ],
+    roof: [-0.64, 2.04, 2.86],
+    arches: [[1.41, 0.48], [-1.43, 0.48]],
+    doors: [0.30, -0.90], hood: [1.70, 1.00], trunk: null, tall: true
+  },
+  pickup: {
+    wr: 0.34, hw: 0.90, gw: 0.80, wheels: [[-0.89, 1.36], [0.89, 1.36], [-0.89, -1.36], [0.89, -1.36]],
+    body: [
+      [-2.20, 0.28], [-2.05, 0.20], [-0.70, 0.18], [0.70, 0.18], [2.00, 0.20], [2.12, 0.30],
+      [2.24, 0.52], [2.26, 0.74], [2.18, 0.90],
+      [1.34, 0.96], [1.02, 1.00],
+      [-0.10, 1.02], [-0.16, 1.16], [-2.14, 1.16], [-2.20, 1.02],
+      [-2.26, 0.80], [-2.28, 0.50], [-2.22, 0.30]
+    ],
+    glass: [
+      [-0.14, 1.04], [1.06, 1.04], [0.86, 1.50], [-0.16, 1.52]
+    ],
+    roof: [0.35, 1.52, 1.02],
+    arches: [[1.35, 0.46], [-1.35, 0.46]],
+    doors: [0.42, null], hood: [1.62, 0.98], trunk: null, bed: [-1.15, 1.02, 2.0]
+  }
+};
+
+function buildCar(gl, spec) {
+  const body = new Mesh();                 /* «длиной по X», развернём в конце */
+  const PAINT = [1, 1, 1];                 /* красится оттенком при отрисовке */
+  const DARK = [.18, .18, .21], CHROME = [.72, .74, .80], GLASS = [.16, .21, .30];
+  const hw = spec.hw, gw = spec.gw;
+  const sl = (w, tapXY) => [
+    { z: -w, sx: tapXY[0], sy: tapXY[1] }, { z: -w * 0.9, sx: 1, sy: 1 },
+    { z: w * 0.9, sx: 1, sy: 1 }, { z: w, sx: tapXY[0], sy: tapXY[1] }
+  ];
+  /* --- корпус --- */
+  body.extrudeZ(spec.body, sl(hw, [0.975, 0.955]), PAINT,
+    { origin: [0, 0.58], uv: 1.6, gloss: 0.62, part: 0, smooth: 46 });
+  /* --- остекление: тёмное стекло, поверх него стойки и крыша --- */
+  body.extrudeZ(spec.glass, sl(gw, [0.94, 0.94]), GLASS,
+    { origin: [0, 1.05], uv: 1, gloss: 0.95, part: 0, smooth: 30 });
+  /* крыша */
+  body.bevelBox(spec.roof[0], spec.roof[1] - 0.055, 0, spec.roof[2], 0.06, gw * 2.03, PAINT,
+    { bev: 0.022, r: 0.10, cs: 3, part: 0, gloss: 0.6, uv: 1.4 });
+  /* стойки по краям остекления */
+  {
+    const g = spec.glass, n = g.length;
+    for (const sz of [-1, 1]) {
+      const z = sz * (gw + 0.014);
+      for (let i = 1; i < n; i++) {
+        const a = g[i], b = g[(i + 1) % n];
+        if (a[1] <= g[0][1] + 0.02 && b[1] <= g[0][1] + 0.02) continue;
+        /* тонкая наклонная стойка вдоль ребра остекления */
+        body.tube([[a[0], a[1], z], [b[0], b[1], z]], 0.035, 6, PAINT, { part: 0, gloss: 0.6 });
+      }
+      /* центральная стойка */
+      if (spec.doors[1] !== null) {
+        const yTop = spec.roof[1] - 0.05;
+        body.tube([[spec.doors[1], spec.glass[0][1], z], [spec.doors[1] - 0.05, yTop, z]], 0.04, 6, PAINT, { part: 0, gloss: 0.6 });
+      }
+    }
+  }
+  /* --- бамперы --- */
+  for (const [x, w] of [[spec.body[6][0] - 0.04, 0.26], [spec.body[16][0] + 0.04, 0.24]]) {
+    body.bevelBox(x, 0.30, 0, w, 0.30, hw * 2.02, DARK,
+      { bev: 0.05, r: 0.08, cs: 2, part: 0, gloss: 0.3, taper: [0.9, 1] });
+  }
+  /* --- решётка и фары --- */
+  const fx = spec.body[7][0];
+  body.bevelBox(fx - 0.03, 0.60, 0, 0.10, 0.20, hw * 1.15, DARK,
+    { bev: 0.02, r: 0.05, cs: 2, part: 0, gloss: 0.4 });
+  for (let i = 0; i < 3; i++)
+    body.box(fx + 0.01, 0.63 + i * 0.055, 0, 0.05, 0.022, hw * 1.12, CHROME, { part: 0, gloss: 0.85 });
+  for (const sz of [-1, 1]) {
+    body.bevelBox(fx - 0.06, 0.62, sz * hw * 0.66, 0.14, 0.17, 0.34, [1, .96, .86],
+      { bev: 0.025, r: 0.05, cs: 2, part: 0, gloss: 0.9, emis: 0.35 });
+    body.bevelBox(spec.body[16][0] + 0.05, 0.60, sz * hw * 0.66, 0.10, 0.16, 0.30, [1, .26, .2],
+      { bev: 0.02, r: 0.04, cs: 2, part: 0, gloss: 0.8, emis: 0.5 });
+    /* повторители в бампере */
+    body.box(fx - 0.02, 0.40, sz * hw * 0.78, 0.05, 0.07, 0.20, [1, .62, .18], { part: 0, gloss: 0.7, emis: 0.25 });
+  }
+  /* номерные знаки */
+  body.box(fx - 0.05, 0.42, 0, 0.03, 0.11, 0.42, [.88, .89, .86], { part: 0, gloss: 0.4 });
+  body.box(spec.body[16][0] + 0.06, 0.44, 0, 0.03, 0.11, 0.42, [.88, .89, .86], { part: 0, gloss: 0.4 });
+  /* --- арки колёс --- */
+  for (const [ax, ar] of spec.arches) {
+    for (const sz of [-1, 1]) {
+      const pts = [];
+      for (let i = 0; i <= 8; i++) {
+        const a = Math.PI * (0.06 + 0.88 * i / 8);
+        pts.push([ax + Math.cos(a) * ar, spec.wr + Math.sin(a) * ar, sz * (hw - 0.03)]);
+      }
+      body.tube(pts, 0.045, 6, PAINT, { part: 0, gloss: 0.5 });
+    }
+  }
+  /* --- двери: расшивка, ручки, зеркала, пороги --- */
+  for (const sz of [-1, 1]) {
+    const z = sz * (hw + 0.005);
+    for (const dx of spec.doors) {
+      if (dx === null) continue;
+      body.box(dx, 0.55, z, 0.018, 0.62, 0.02, [.12, .12, .14], { part: 0, gloss: 0.2 });
+      body.bevelBox(dx - 0.30, 0.78, z - sz * 0.005, 0.20, 0.045, 0.05, CHROME,
+        { bev: 0.008, r: 0.015, cs: 2, part: 0, gloss: 0.85 });
+    }
+    body.box(0.2, 0.24, z - sz * 0.03, 2.2, 0.09, 0.06, DARK, { part: 0, gloss: 0.25 });   /* порог */
+    /* зеркало на стойке */
+    const mz = spec.glass[1][0];
+    body.box(mz - 0.06, spec.glass[0][1] + 0.06, z + sz * 0.06, 0.07, 0.035, 0.10, DARK, { part: 0, gloss: 0.4 });
+    body.bevelBox(mz - 0.06, spec.glass[0][1] + 0.02, z + sz * 0.14, 0.10, 0.13, 0.06, PAINT,
+      { bev: 0.02, r: 0.02, cs: 2, part: 0, gloss: 0.6 });
+  }
+  /* --- крышка капота и багажника: расшивка --- */
+  body.box(spec.hood[0], spec.hood[1], 0, 1.1, 0.012, hw * 1.7, [.1, .1, .12], { part: 0, gloss: 0.3 });
+  if (spec.trunk) body.box(spec.trunk[0], spec.trunk[1], 0, 0.5, 0.012, hw * 1.7, [.1, .1, .12], { part: 0, gloss: 0.3 });
+  /* кузов пикапа: борта */
+  if (spec.bed) {
+    const [bx, by, bl] = spec.bed;
+    for (const sz of [-1, 1])
+      body.bevelBox(bx, by, sz * (hw - 0.09), bl, 0.34, 0.10, PAINT, { bev: 0.02, r: 0.03, cs: 2, part: 0, gloss: 0.55 });
+    body.bevelBox(bx - bl / 2 - 0.05, by, 0, 0.10, 0.34, hw * 1.82, PAINT, { bev: 0.02, r: 0.03, cs: 2, part: 0, gloss: 0.55 });
+    body.plate(bx - bl / 2, -(hw - 0.14), bx + bl / 2, hw - 0.14, by + 0.005, [.42, .42, .46], 0.5, 0, false, 0.2);
+  }
+  /* багажник на крыше у фургона */
+  if (spec.tall) {
+    for (const sz of [-1, 1])
+      body.tube([[spec.roof[0] - 1.3, spec.roof[1] + 0.06, sz * gw * 0.72], [spec.roof[0] + 1.3, spec.roof[1] + 0.06, sz * gw * 0.72]],
+        0.028, 6, CHROME, { part: 0, gloss: 0.8 });
+    body.box(spec.roof[0], spec.roof[1] + 0.02, 0, 0.10, 0.06, gw * 1.5, CHROME, { part: 0, gloss: 0.8 });
+  }
+  /* выхлоп */
+  body.tube([[spec.body[16][0] + 0.10, 0.26, -hw * 0.55], [spec.body[16][0] - 0.06, 0.26, -hw * 0.55]], 0.035, 6, [.4, .4, .44], { part: 0, gloss: 0.7 });
+
+  body.aoByHeight(0.15, 1.0, 0.22);
+  body.rotY(-Math.PI / 2);                 /* нос — в сторону +Z */
+
+  const m = new Mesh();
+  m.merge(body, 0, 0, 0);
+  for (let i = 0; i < 4; i++)
+    m.wheelDetailed(spec.wr, 0.22, 14, [.11, .11, .13], [.70, .72, .78], 1 + i, { spokes: 5, rimR: spec.wr * 0.60, gloss: 0.45 });
+  return m.upload(gl);
+}
+
 function buildVehicles(gl) {
   /* --- велосипед: 0 рама, 1 переднее колесо, 2 заднее --- */
   {
     const m = new Mesh();
-    const F = [1.0,.24,.3];
-    m.box(0, 0.42, 0, 0.07, 0.07, 1.02, F, { uv: 1, part: 0 });
-    m.box(-0.02, 0.62, -0.30, 0.06, 0.42, 0.06, F, { uv: 1, part: 0 });
-    m.box(0.0, 0.30, 0.36, 0.06, 0.52, 0.06, F, { uv: 1, part: 0 });
-    m.box(0, 0.72, -0.32, 0.24, 0.06, 0.10, [.32,.32,.4], { uv: 1, part: 0 });   /* седло */
-    m.box(0, 0.95, 0.38, 0.52, 0.05, 0.05, [.2,.2,.24], { uv: 1, part: 0 });      /* руль */
-    m.box(0, 0.72, 0.37, 0.05, 0.46, 0.05, [.35,.35,.4], { uv: 1, part: 0 });
-    m.box(0, 0.36, -0.02, 0.10, 0.10, 0.10, [.25,.25,.3], { uv: 1, part: 0 });    /* каретка */
-    m.box(0, 0.60, -0.42, 0.22, 0.04, 0.30, [.4,.4,.45], { uv: 1, part: 0 });     /* багажник */
-    m.box(0, 0.92, 0.40, 0.10, 0.09, 0.12, [1,.9,.6], { uv: 1, emis: 1, part: 0 });/* фара */
-    m.wheel(0.34, 0.05, 14, [.16,.16,.2], [.75,.76,.82], 1);
-    m.wheel(0.34, 0.05, 14, [.16,.16,.2], [.75,.76,.82], 2);
+    const F = [.86, .20, .26], STEEL = [.62, .64, .70], DARK = [.16, .16, .19];
+    const wb = 0.52;                       /* колёса на ±0.52 по Z */
+    /* рама: труба по ломаной — верхняя, подседельная, нижняя, перья */
+    m.tube([[0, 0.92, 0.30], [0, 0.86, -0.24]], 0.024, 7, F, { gloss: 0.6 });          /* верхняя */
+    m.tube([[0, 0.86, -0.24], [0, 0.34, -0.02]], 0.024, 7, F, { gloss: 0.6 });         /* подседельная */
+    m.tube([[0, 0.92, 0.30], [0, 0.36, -0.01]], 0.026, 7, F, { gloss: 0.6 });          /* нижняя */
+    for (const sx of [-0.055, 0.055]) {
+      m.tube([[sx * 0.6, 0.34, -0.02], [sx, 0.34, -wb]], 0.014, 6, F, { gloss: 0.6 }); /* нижние перья */
+      m.tube([[0, 0.86, -0.24], [sx, 0.34, -wb]], 0.012, 6, F, { gloss: 0.6 });        /* верхние перья */
+      m.tube([[sx * 1.1, 0.92, 0.30], [sx * 1.1, 0.34, wb]], 0.014, 6, STEEL, { gloss: 0.75 }); /* вилка */
+    }
+    m.cyl(0, 0.30, -0.02, 0.045, 0.08, 10, DARK, { gloss: 0.5 });                      /* каретка */
+    /* руль и вынос */
+    m.tube([[0, 0.92, 0.30], [0, 1.06, 0.30]], 0.020, 7, STEEL, { gloss: 0.75 });
+    m.tube([[-0.26, 1.06, 0.30], [-0.20, 1.06, 0.34], [0.20, 1.06, 0.34], [0.26, 1.06, 0.30]], 0.017, 7, STEEL, { gloss: 0.75 });
+    for (const sx of [-1, 1]) m.cyl(sx * 0.235, 1.045, 0.30, 0.021, 0.03, 8, DARK, { gloss: 0.2 });
+    /* седло и подседельный штырь */
+    m.tube([[0, 0.86, -0.24], [0, 1.00, -0.26]], 0.014, 6, STEEL, { gloss: 0.8 });
+    m.bevelBox(0, 0.99, -0.28, 0.10, 0.05, 0.30, [.20, .20, .24], { bev: 0.018, r: 0.04, cs: 3, gloss: 0.35, taper: [1.6, 0.8] });
+    /* педали и звезда */
+    m.cyl(0, 0.26, -0.02, 0.09, 0.012, 12, [.55, .56, .62], { gloss: 0.8 });
+    for (const sx of [-1, 1]) {
+      m.box(sx * 0.09, 0.24, -0.02, 0.03, 0.16, 0.03, STEEL, { gloss: 0.7 });
+      m.bevelBox(sx * 0.09, 0.15, -0.02, 0.07, 0.02, 0.12, DARK, { bev: 0.005, r: 0.01, cs: 1, gloss: 0.3 });
+    }
+    /* цепь */
+    m.tube([[0.02, 0.30, -0.02], [0.02, 0.30, -wb]], 0.010, 5, [.35, .36, .40], { gloss: 0.6 });
+    /* багажник, крылья, фара */
+    m.box(0, 0.70, -0.50, 0.22, 0.03, 0.34, [.45, .46, .52], { gloss: 0.5 });
+    for (const [zc, r] of [[wb, 0.36], [-wb, 0.36]])
+      m.tube([[0, r + 0.05, zc - 0.16], [0, r + 0.10, zc], [0, r + 0.05, zc + 0.16]], 0.055, 4, [.30, .31, .36], { gloss: 0.4 });
+    m.bevelBox(0, 1.00, 0.38, 0.09, 0.08, 0.10, [1, .93, .68], { bev: 0.015, r: 0.02, cs: 2, emis: 1, gloss: 0.9 });
+    /* колёса со спицами */
+    for (const part of [1, 2])
+      m.wheelDetailed(0.34, 0.045, 16, [.12, .12, .15], [.78, .80, .86], part, { spokes: 8, rimR: 0.29, gloss: 0.5 });
     VEH.bike = m.upload(gl);
   }
   /* --- машины --- */
-  const carDef = (len, wid, hgt, cabZ, cabLen, cabH, van) => {
-    const m = new Mesh();
-    const body = [1,1,1];
-    m.box(0, 0.34, 0, wid, hgt, len, body, { uv: 2, part: 0 });
-    m.box(0, 0.34 + hgt, cabZ, wid * 0.92, cabH, cabLen, body, { uv: 2, part: 0 });
-    /* стёкла */
-    const gy = 0.36 + hgt, gh = cabH * 0.62;
-    m.box(0, gy, cabZ + cabLen / 2 + 0.005, wid * 0.84, gh, 0.02, [.34,.42,.6], { uv: 1, part: 0 });
-    m.box(0, gy, cabZ - cabLen / 2 - 0.005, wid * 0.84, gh, 0.02, [.34,.42,.6], { uv: 1, part: 0 });
-    m.box(wid * 0.465, gy, cabZ, 0.02, gh, cabLen * 0.86, [.34,.42,.6], { uv: 1, part: 0 });
-    m.box(-wid * 0.465, gy, cabZ, 0.02, gh, cabLen * 0.86, [.34,.42,.6], { uv: 1, part: 0 });
-    /* бамперы, фары, фонари */
-    m.box(0, 0.26, len / 2 - 0.05, wid * 0.98, 0.16, 0.14, [.55,.55,.62], { uv: 1, part: 0 });
-    m.box(0, 0.26, -len / 2 + 0.05, wid * 0.98, 0.16, 0.14, [.55,.55,.62], { uv: 1, part: 0 });
-    for (const sx of [-1, 1]) {
-      m.box(sx * wid * 0.33, 0.52, len / 2 - 0.02, 0.26, 0.13, 0.06, [1,.95,.8], { uv: 1, emis: 1, part: 0 });
-      m.box(sx * wid * 0.33, 0.52, -len / 2 + 0.02, 0.26, 0.13, 0.06, [1,.25,.2], { uv: 1, emis: 1, part: 0 });
-    }
-    if (van) m.box(0, 0.34 + hgt + cabH, cabZ, wid * 0.8, 0.06, cabLen * 0.8, [.9,.9,.92], { uv: 1, part: 0 });
-    for (let i = 0; i < 4; i++) m.wheel(0.33, 0.20, 12, [.14,.14,.17], [.7,.7,.78], 1 + i);
-    return m.upload(gl);
-  };
-  VEH.sedan = carDef(4.2, 1.75, 0.42, -0.15, 2.0, 0.62, false);
-  VEH.van   = carDef(4.8, 1.95, 0.52, -0.25, 3.0, 0.95, true);
-  VEH.pickup= carDef(4.6, 1.85, 0.46, 0.55, 1.7, 0.66, false);
+  VEH.sedan = buildCar(gl, CAR_SPEC.sedan);
+  VEH.van = buildCar(gl, CAR_SPEC.van);
+  VEH.pickup = buildCar(gl, CAR_SPEC.pickup);
   /* --- дворовая собака: 0 корпус, 1 голова, 2/3 лапы --- */
   {
     const m = new Mesh();
-    const fur = [.62,.46,.3];
-    m.box(0, -0.16, 0, 0.26, 0.30, 0.78, fur, { uv: 1, part: 0 });
-    m.box(0, -0.05, -0.42, 0.10, 0.10, 0.26, fur, { uv: 1, part: 0 });
-    m.box(0, 0, 0, 0.24, 0.24, 0.28, fur, { uv: 1, part: 1 });
-    m.box(0, 0.02, 0.16, 0.14, 0.12, 0.14, [.5,.36,.24], { uv: 1, part: 1 });
-    m.box(-0.08, 0.14, -0.02, 0.07, 0.12, 0.05, fur, { uv: 1, part: 1 });
-    m.box(0.08, 0.14, -0.02, 0.07, 0.12, 0.05, fur, { uv: 1, part: 1 });
-    m.box(-0.05, 0.05, 0.13, 0.035, 0.035, 0.02, [.1,.1,.12], { uv: 1, part: 1 });
-    m.box(0.05, 0.05, 0.13, 0.035, 0.035, 0.02, [.1,.1,.12], { uv: 1, part: 1 });
-    for (const sx of [-0.09, 0.09]) {
-      m.box(sx, -0.30, 0, 0.08, 0.34, 0.08, fur, { uv: 1, part: 2 });
-      m.box(sx, -0.30, 0, 0.08, 0.34, 0.08, fur, { uv: 1, part: 3 });
+    const fur = [.62, .46, .3], dfur = [.5, .36, .24];
+    m.ellipsoid(0, -0.10, 0, 0.15, 0.16, 0.36, 10, 6, fur, { part: 0, gloss: 0.14 });
+    m.ellipsoid(0, -0.08, -0.26, 0.12, 0.13, 0.16, 9, 5, fur, { part: 0, gloss: 0.14 });
+    m.tube([[0, 0.02, -0.36], [0, 0.12, -0.48], [0.02, 0.22, -0.54]], 0.035, 6, fur, { part: 0, gloss: 0.14 });
+    m.ellipsoid(0, 0.02, 0.04, 0.11, 0.11, 0.14, 9, 5, fur, { part: 1, gloss: 0.14 });
+    m.ellipsoid(0, -0.01, 0.16, 0.062, 0.055, 0.09, 8, 4, dfur, { part: 1, gloss: 0.18 });
+    m.ellipsoid(0, 0.005, 0.235, 0.026, 0.022, 0.02, 6, 3, [.14, .12, .14], { part: 1, gloss: 0.6 });
+    for (const sx of [-1, 1]) {
+      m.bevelBox(sx * 0.072, 0.10, -0.02, 0.045, 0.10, 0.055, fur, { bev: 0.012, r: 0.012, cs: 2, part: 1, gloss: 0.14 });
+      m.ellipsoid(sx * 0.048, 0.048, 0.128, 0.017, 0.016, 0.012, 6, 3, [.1, .1, .12], { part: 1, gloss: 0.75 });
+    }
+    for (const sx of [-0.085, 0.085]) {
+      m.bevelBox(sx, -0.34, 0.16, 0.062, 0.30, 0.07, fur, { bev: 0.014, r: 0.014, cs: 2, part: 2, gloss: 0.14, skipTop: true });
+      m.bevelBox(sx, -0.34, -0.18, 0.066, 0.30, 0.075, fur, { bev: 0.014, r: 0.014, cs: 2, part: 3, gloss: 0.14, skipTop: true });
     }
     VEH.dog = m.upload(gl);
   }
   /* --- камера видеонаблюдения (ставится на опоры) --- */
   {
     const m = new Mesh();
-    m.box(0, 0, 0, 0.10, 0.10, 0.34, [.85,.86,.9], { uv: 1, part: 0 });
-    m.box(0, 0, 0.22, 0.16, 0.16, 0.14, [.75,.76,.82], { uv: 1, part: 0 });
-    m.cyl(0, -0.05, 0.30, 0.06, 0.10, 8, [.1,.1,.12], { part: 0 });
-    m.box(0.0, 0.10, 0.10, 0.05, 0.06, 0.05, [1,.2,.2], { uv: 1, emis: 1, part: 0 });
+    const CASE = [.84, .85, .89];
+    m.bevelBox(0, -0.055, 0.02, 0.105, 0.11, 0.32, CASE, { bev: 0.018, r: 0.03, cs: 3, gloss: 0.55 });
+    m.bevelBox(0, -0.075, -0.16, 0.14, 0.15, 0.10, [.74, .75, .80], { bev: 0.02, r: 0.03, cs: 2, gloss: 0.5 });
+    m.cyl(0, 0, 0.185, 0.052, 0.05, 12, [.20, .20, .24], { gloss: 0.6, rTop: 0.048 });
+    m.ellipsoid(0, 0.025, 0.215, 0.042, 0.042, 0.03, 10, 5, [.10, .12, .18], { gloss: 0.95 });
+    m.box(0, 0.10, 0.16, 0.16, 0.02, 0.22, [.70, .71, .76], { gloss: 0.5 });   /* козырёк */
+    m.box(0.0, 0.035, -0.06, 0.035, 0.02, 0.03, [1, .22, .2], { emis: 1, gloss: 0.7 });
+    m.tube([[0, -0.06, -0.20], [0, -0.02, -0.30]], 0.012, 5, [.2, .2, .24], { gloss: 0.5 });
     VEH.cam = m.upload(gl);
   }
 }
-const CAR_WHEELS = {
-  sedan: [[-0.78, 1.35], [0.78, 1.35], [-0.78, -1.35], [0.78, -1.35]],
-  van:   [[-0.88, 1.5], [0.88, 1.5], [-0.88, -1.5], [0.88, -1.5]],
-  pickup:[[-0.83, 1.45], [0.83, 1.45], [-0.83, -1.45], [0.83, -1.45]]
-};
+
 function drawVehicle(kind, x, y, z, yaw, wheelPhase, tint) {
   const gl = GL.gl, P = R3.main;
+  const spec = CAR_SPEC[kind];
   m4compose(BONES[0], x, y, z, 0, yaw, 0, 1);
-  const wl = CAR_WHEELS[kind];
   for (let i = 0; i < 4; i++) {
-    const [ox, oz] = wl[i];
-    m4mul(BONES[1 + i], BONES[0], m4compose(SCRATCH[7], ox, 0.33 - y, oz, 0, Math.PI / 2, -wheelPhase, 1));
+    const [ox, oz] = spec.wheels[i];
+    m4mul(BONES[1 + i], BONES[0], m4compose(SCRATCH[7], ox, spec.wr - y, oz, 0, Math.PI / 2, -wheelPhase, 1));
   }
   for (let i = 0; i < 5; i++) BONEBUF.set(BONES[i], i * 16);
   gl.uniformMatrix4fv(P.u.uBones, false, BONEBUF);
@@ -2001,7 +3039,6 @@ function drawBike(x, y, z, yaw, wheelPhase, lean) {
   gl.uniformMatrix4fv(P.u.uBones, false, BONEBUF);
   drawMesh(VEH.bike, TX.paint, BONES[0], { skin: true });
 }
-
 
 /* ------------------------------------------------------------------ */
 /* 10. Звук: Web Audio, всё синтезируется на лету                       */
@@ -2178,6 +3215,19 @@ const Save = {
   has() { try { return !!localStorage.getItem(SAVE_KEY); } catch (e) { return false; } }
 };
 Save.test();
+/* Настройки хранятся отдельно от сохранения смены: «стереть сохранение»
+   не должно сбрасывать выбранное управление и режим эффектов. */
+Save.readOpts = function () {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY + '_opt');
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    return (d && typeof d === 'object') ? d : null;
+  } catch (e) { return null; }
+};
+Save.writeOpts = function (o) {
+  try { localStorage.setItem(SAVE_KEY + '_opt', JSON.stringify(o)); return true; } catch (e) { return false; }
+};
 
 
 /* ------------------------------------------------------------------ */
@@ -3345,8 +4395,7 @@ const Input = {
 const K = {
   up: ['KeyW','ArrowUp'], down: ['KeyS','ArrowDown'], left: ['KeyA','ArrowLeft'], right: ['KeyD','ArrowRight'],
   sprint: ['ShiftLeft','ShiftRight'], act: ['KeyE'], brake: ['Space'], tool: ['KeyF'],
-  map: ['KeyM'], pause: ['Escape'], radio: ['KeyQ'], phone: ['KeyR'], partner: ['KeyC'],
-  camL: ['KeyQ'], camR: ['KeyE']
+  map: ['KeyM'], pause: ['Escape'], radio: ['KeyQ'], phone: ['KeyR'], partner: ['KeyC']
 };
 function requestLock() {
   try {
@@ -3387,8 +4436,8 @@ const S = {
   partner: { cooldown: 0, eta: 0, active: 0, forgot: false }, partnerBonus: false,
   stats: { earned: 0, crashes: 0, fixed: 0, sober: 0, bestQ: 0, fines: 0, dist: 0 },
   flags: {}, upgrades: {}, autosave: 0, phoneRing: 0, tutorial: null,
-  ended: null, free: false, freeCount: 0, lowFx: false,
-  cam: { yaw: Math.PI * 0.5, pitch: 0.34, dist: 6.2, x: 0, y: 2, z: 0, tx: 0, ty: 1.4, tz: 0 }
+  ended: null, free: false, freeCount: 0, lowFx: false, camFollow: true,
+  cam: { yaw: Math.PI * 0.5, pitch: 0.34, dist: 6.2, x: 0, y: 2, z: 0, tx: 0, ty: 1.4, tz: 0, manual: 0 }
 };
 function newPlayer() {
   return {
@@ -3540,18 +4589,29 @@ function inputVec() {
 }
 function movePlayerOnFoot(dt) {
   const p = S.player, v = inputVec();
-  const yaw = S.cam.yaw;
-  /* направление относительно камеры */
-  const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
-  const rx = Math.cos(yaw), rz = -Math.sin(yaw);
-  let dx = fx * v.f + rx * v.r, dz = fz * v.f + rz * v.r;
   const drunkF = p.drunk / 100;
+  let dx, dz;
+  if (S.camFollow) {
+    /* Руль у персонажа: A/D разворачивают Олега, камера сама едет за спину.
+       W/S — вперёд и назад по его направлению, боком не ходим. */
+    const turn = (3.4 - (Input.any(K.sprint) ? 0.9 : 0)) * (1 - drunkF * 0.3);
+    p.yaw += v.r * turn * dt;
+    dx = Math.sin(p.yaw) * v.f; dz = Math.cos(p.yaw) * v.f;
+  } else {
+    /* Свободная камера: движение относительно взгляда. */
+    const yaw = S.cam.yaw;
+    const fx = -Math.sin(yaw), fz = -Math.cos(yaw);
+    const rx = Math.cos(yaw), rz = -Math.sin(yaw);
+    dx = fx * v.f + rx * v.r; dz = fz * v.f + rz * v.r;
+  }
   const sprint = Input.any(K.sprint) && p.stamina > 3 && v.len > 0;
   let maxSp = (sprint ? BAL.sprint : BAL.walk) * (1 - drunkF * 0.22) * (p.stamina < 15 ? 0.72 : 1) * (p.health < 30 ? 0.85 : 1);
 
   if (Input.anyHit(K.brake) && p.dodgeCd <= 0 && p.stamina >= BAL.dodgeCost && v.len > 0) {
     p.dodge = 0.26; p.dodgeCd = 0.85; p.stamina -= BAL.dodgeCost; p.invuln = 0.34;
-    p.vx = dx * 9; p.vz = dz * 9; Audio2.noise(0.12, 0.13, 300, 1800);
+    let ddx = dx, ddz = dz;
+    if (Math.hypot(ddx, ddz) < 0.2) { ddx = Math.sin(p.yaw); ddz = Math.cos(p.yaw); }
+    p.vx = ddx * 9; p.vz = ddz * 9; Audio2.noise(0.12, 0.13, 300, 1800);
     fx3(p.x, 0.2, p.z, 'dust', 7);
   }
   const acc = BAL.walkAcc * (p.dodge > 0 ? 0.2 : 1);
@@ -3564,7 +4624,7 @@ function movePlayerOnFoot(dt) {
   p.vx *= fr; p.vz *= fr;
   if (sprint) p.stamina = clamp(p.stamina - BAL.stamDrain * dt, 0, 100);
   else p.stamina = clamp(p.stamina + BAL.stamRegen * (v.len > 0 ? 0.45 : 1) * dt * staminaMult(), 0, 100);
-  if (v.len > 0) { p.yaw = angLerp(p.yaw, Math.atan2(dx, dz), 1 - Math.exp(-16 * dt)); }
+  if (!S.camFollow && v.len > 0) p.yaw = angLerp(p.yaw, Math.atan2(dx, dz), 1 - Math.exp(-16 * dt));
   p.phase += Math.hypot(p.vx, p.vz) * dt * 3.4;
   moveWithCollision(p, dt, p.r, false);
   p.dodge = Math.max(0, p.dodge - dt); p.dodgeCd = Math.max(0, p.dodgeCd - dt);
@@ -3657,10 +4717,22 @@ function tryMountBike() {
 function updateCamera(dt) {
   const c = S.cam, p = S.player;
   if (Input.locked || Input.rdrag) {
+    if (Math.abs(Input.dx) > 0.5 || Math.abs(Input.dy) > 0.5) c.manual = 1.6;
     c.yaw -= Input.dx * 0.0027;
     c.pitch = clamp(c.pitch + Input.dy * 0.0022, -0.35, 1.15);
   }
   if (Input.wheel) c.dist = clamp(c.dist + Input.wheel * 0.6, 2.6, 9);
+  /* Камера за спиной: сама доворачивается туда, куда смотрит Олег.
+     Мышь временно перехватывает управление, потом обзор плавно возвращается. */
+  if (S.camFollow) {
+    c.manual = Math.max(0, c.manual - dt);
+    if (c.manual <= 0) {
+      const speed = p.onBike ? Math.abs(S.bike.speed) : Math.hypot(p.vx, p.vz);
+      const k = 5.0 + clamp(speed, 0, 8) * 0.55;
+      c.yaw = angLerp(c.yaw, p.yaw + Math.PI, 1 - Math.exp(-k * dt));
+      c.pitch = lerp(c.pitch, p.onBike ? 0.20 : 0.26, 1 - Math.exp(-2.2 * dt));
+    }
+  }
 
   const tgtDist = c.dist * (p.onBike ? 1.15 : 1);
   const ty = (p.onBike ? 1.25 : 1.35);
@@ -4828,6 +5900,7 @@ function drawOverlay2D() {
 function renderFrame() {
   const gl = GL.gl;
   Env.update(hour());
+  R3.time = S.t;                       /* облака медленно плывут */
   gl.viewport(0, 0, GL.canvas.width, GL.canvas.height);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   setCamera([S.cam.x, S.cam.y, S.cam.z], [S.cam.tx, S.cam.ty, S.cam.tz]);
@@ -4964,7 +6037,7 @@ function screenMenu() {
     (Save.available ? '' : '<div class="note">localStorage недоступен — прогресс не сохранится.</div>') +
     '<div class="cols" style="margin-top:18px">' +
     '<div><h3>Что делать</h3><p>Получить заявку → забрать комплект на складе → доехать → смонтировать в мини-игре → проверить → сдать заказчику → купить улучшения.</p></div>' +
-    '<div><h3>Камера</h3><p>Мышь вращает камеру (клик по экрану захватывает курсор, <b>Esc</b> отпускает). Колесо — приближение. <b>WASD</b> — движение относительно камеры.</p></div>' +
+    '<div><h3>Камера</h3><p>Камера едет за спиной: <b>A/D</b> разворачивают Олега, и обзор поворачивается вместе с ним. <b>W/S</b> — вперёд и назад, колесо — приближение. Мышь осматривается вручную, потом камера сама возвращается за спину.</p></div>' +
     '</div>' + DISCLAIMER, 'menu');
   wire('bNew', () => { if (Save.has()) confirmSheet('Начать новую смену? Старое сохранение будет стёрто.', () => { Save.wipe(); startNewGame(true); }, screenMenu); else startNewGame(true); });
   wire('bCont', () => { if (loadGame()) { closeSheet(); S.screen = 'play'; toast('Смена продолжается', 'good'); } else startNewGame(true); });
@@ -4978,8 +6051,9 @@ function confirmSheet(text, yes, no) {
 }
 function screenControls(back) {
   showSheet('<h2>Управление</h2><div class="cols"><div class="keys">' +
-    '<kbd>W A S D</kbd><span>движение относительно камеры</span>' +
-    '<kbd>Мышь</kbd><span>обзор: клик — захват курсора, либо зажать правую кнопку</span>' +
+    '<kbd>W / S</kbd><span>идти вперёд и назад</span>' +
+    '<kbd>A / D</kbd><span>повернуть Олега; камера сама едет за спину</span>' +
+    '<kbd>Мышь</kbd><span>осмотреться вручную (клик — захват курсора или зажать правую кнопку); через секунду камера возвращается за спину</span>' +
     '<kbd>Колесо</kbd><span>приблизить / отдалить камеру</span>' +
     '<kbd>Shift</kbd><span>ускорение / разгон</span>' +
     '<kbd>Space</kbd><span>тормоз на велосипеде, рывок пешком</span>' +
@@ -4989,11 +6063,12 @@ function screenControls(back) {
     '<kbd>1 … 8</kbd><span>выбрать инструмент в сумке</span>' +
     '<kbd>M</kbd><span>карта района</span>' +
     '<kbd>R</kbd><span>рабочий телефон: журнал заявок</span>' +
-    '<kbd>Q</kbd><span>радиостанция (без захвата курсора — поворот камеры)</span>' +
+    '<kbd>Q</kbd><span>переключить радиостанцию</span>' +
     '<kbd>C</kbd><span>вызвать напарника Саню</span>' +
     '<kbd>Esc</kbd><span>пауза / отпустить курсор</span>' +
     '</div></div>' +
     '<div class="note">В мини-игре камеры: <b>A/D</b> — поворот, <b>W/S</b> — наклон, <b>Z/X</b> — зум, <b>F</b> — отогнать того, кто раскачивает опору, <b>E</b> — подтвердить ракурс.</div>' +
+    '<div class="note">В настройках можно переключить обзор на <b>свободную камеру</b>: тогда <b>WASD</b> двигают относительно взгляда, а камеру крутите только мышью.</div>' +
     '<div class="btns"><button class="btn c" id="bBack">Назад</button></div>');
   wire('bBack', back || closeSheet);
 }
@@ -5004,16 +6079,18 @@ function screenSettings(back) {
     '<div class="btns">' +
     '<button class="btn ' + (Audio2.muted ? 'p' : '') + '" id="bMute">' + (Audio2.muted ? 'Включить звук' : 'Выключить звук') + '</button>' +
     '<button class="btn" id="bStation">Станция: ' + Audio2.stations[Audio2.station].name + '</button>' +
+    '<button class="btn" id="bCam">Камера: ' + (S.camFollow ? 'за спиной' : 'свободная') + '</button>' +
     '<button class="btn' + (S.lowFx ? ' p' : '') + '" id="bLow">Эффекты: ' + (S.lowFx ? 'экономно' : 'полные') + '</button>' +
     '<button class="btn" id="bWipe">Стереть сохранение</button>' +
     '<button class="btn c" id="bBack">Назад</button></div>' +
-    '<p style="color:#b9a6d6;font-size:12px">«Экономно» снижает разрешение рендера и убирает часть эффектов — помогает на слабых видеокартах.</p>');
+    '<p style="color:#b9a6d6;font-size:12px"><b>За спиной</b> — A/D разворачивают Олега, камера следует сама. <b>Свободная</b> — WASD относительно взгляда, камера только мышью. «Экономно» снижает разрешение рендера и убирает часть эффектов.</p>');
   const sfx = $('sSfx'), mus = $('sMus');
-  sfx.addEventListener('input', () => { Audio2.setSfx(sfx.value / 100); $('vSfx').textContent = sfx.value; });
-  mus.addEventListener('input', () => { Audio2.setMus(mus.value / 100); $('vMus').textContent = mus.value; });
-  wire('bMute', () => { Audio2.mute(!Audio2.muted); screenSettings(back); });
-  wire('bStation', () => { Audio2.nextStation(); Radio.timer = 0; screenSettings(back); });
-  wire('bLow', () => { S.lowFx = !S.lowFx; $('scan').style.display = S.lowFx ? 'none' : 'block'; resizeAll(); screenSettings(back); });
+  sfx.addEventListener('input', () => { Audio2.setSfx(sfx.value / 100); $('vSfx').textContent = sfx.value; saveOpts(); });
+  mus.addEventListener('input', () => { Audio2.setMus(mus.value / 100); $('vMus').textContent = mus.value; saveOpts(); });
+  wire('bMute', () => { Audio2.mute(!Audio2.muted); saveOpts(); screenSettings(back); });
+  wire('bStation', () => { Audio2.nextStation(); Radio.timer = 0; saveOpts(); screenSettings(back); });
+  wire('bCam', () => { S.camFollow = !S.camFollow; S.cam.manual = 0; saveOpts(); screenSettings(back); });
+  wire('bLow', () => { S.lowFx = !S.lowFx; $('scan').style.display = S.lowFx ? 'none' : 'block'; saveOpts(); resizeAll(); screenSettings(back); });
   wire('bWipe', () => confirmSheet('Стереть сохранение полностью?', () => { Save.wipe(); toast('Сохранение стёрто', 'info'); screenSettings(back); }, () => screenSettings(back)));
   wire('bBack', back || closeSheet);
 }
@@ -5281,6 +6358,22 @@ function startFreeMode() {
 /* ------------------------------------------------------------------ */
 /* 27. Сохранение и обучение                                            */
 /* ------------------------------------------------------------------ */
+/* Настройки интерфейса: живут отдельно от прогресса смены. */
+function saveOpts() {
+  Save.writeOpts({ camFollow: !!S.camFollow, lowFx: !!S.lowFx, station: Audio2.station,
+                   sfx: Audio2.sfxVol, mus: Audio2.musVol, muted: !!Audio2.muted });
+}
+function loadOpts() {
+  const o = Save.readOpts();
+  if (!o) return;
+  if (typeof o.camFollow === 'boolean') S.camFollow = o.camFollow;
+  if (typeof o.lowFx === 'boolean') S.lowFx = o.lowFx;
+  if (typeof o.sfx === 'number') Audio2.setSfx(clamp(o.sfx, 0, 1));
+  if (typeof o.mus === 'number') Audio2.setMus(clamp(o.mus, 0, 1));
+  if (typeof o.station === 'number' && Audio2.stations[o.station]) Audio2.station = o.station | 0;
+  if (o.muted) Audio2.mute(true);
+}
+
 function saveGame(silent) {
   const p = S.player;
   const data = {
@@ -5321,8 +6414,8 @@ function loadGame() {
   } catch (e) { toast('Сохранение повреждено, начинаем заново', 'bad', 3600); Save.wipe(); return false; }
 }
 const TUTORIAL = [
-  { text: 'Осмотрись: двигай мышью (клик — захват курсора, или зажми правую кнопку)', check: t => t.looked > 1.2 },
-  { text: 'Пройдись: W A S D', check: t => t.moved > 6 },
+  { text: 'Повернись: A и D — камера едет за спиной сама', check: t => t.turned > 1.1 },
+  { text: 'Пройдись вперёд: W', check: t => t.moved > 6 },
   { text: 'Ускорься: зажми Shift на ходу', check: t => t.sprint > 0.9 },
   { text: 'Велосипед рядом — подойди и нажми E', check: () => S.player.onBike },
   { text: 'Прокатись немного вперёд', check: t => t.rode > 25 },
@@ -5334,6 +6427,7 @@ function updateTutorial(dt) {
   const T = S.tutorial, p = S.player;
   T.wait = (T.wait || 0) + dt;
   T.looked = (T.looked || 0) + (Math.abs(Input.dx) + Math.abs(Input.dy) > 2 ? dt : 0);
+  T.turned = (T.turned || 0) + ((Input.any(K.left) || Input.any(K.right)) ? dt : 0);
   const sp = Math.hypot(p.vx, p.vz);
   if (!p.onBike) T.moved += sp * dt;
   if (Input.any(K.sprint) && sp > 1) T.sprint += dt;
@@ -5378,7 +6472,7 @@ function startNewGame(withTutorial) {
   Mini.close(); Dlg.closeAll(); resetWorld(true); closeSheet();
   S.screen = 'play'; Audio2.init(); Audio2.resume();
   if (withTutorial) {
-    S.tutorial = { step: 0, moved: 0, sprint: 0, rode: 0, braked: false, mapOpened: false, wait: 0, looked: 0 };
+    S.tutorial = { step: 0, moved: 0, sprint: 0, rode: 0, braked: false, mapOpened: false, wait: 0, looked: 0, turned: 0 };
     Dlg.seq([
       { who: 'oleg', text: 'Пять вечера. Город розовеет, спина ноет, смена только начинается.' },
       { who: 'tamara', text: 'Олег, ты живой? Отлично. Осмотрись, проверь велосипед — и жди заявку. Она уже едет к тебе быстрее, чем ты к ней.' },
@@ -5499,6 +6593,7 @@ function boot() {
     const step = t => { const el = $('loadStep'); if (el) el.textContent = t; };
     const gl = initRenderer($('gl'));
     initHud2();
+    loadOpts();
     resizeAll();
     step('генерируем текстуры');
     buildTextures(gl);
