@@ -1,107 +1,107 @@
 <!DOCTYPE html>
 <!-- ОГЛАВЛЕНИЕ:НАЧАЛО (пересобирается: node tools/toc.mjs) -->
 <!--
-  МОНТАЖ-СИТИ 3D — карта файла. Один файл, 10205 строк, без сборки и без
+  МОНТАЖ-СИТИ 3D — карта файла. Один файл, 10363 строк, без сборки и без
   зависимостей. Целиком его читать не надо: ниже строки, по которым видно,
   где что лежит. Диапазоны пересобираются командой `node tools/toc.mjs`,
   проверить актуальность — `node tools/toc.mjs --check`.
 
   Крупно:
-      120-  286  CSS: HUD, диалоги, экраны, мини-игры
-      288-  361  разметка: canvas #gl, слой HUD, диалог, экраны, загрузка
-      362-10202  вся игра: один IIFE, ничего не торчит в window
+      120-  324  CSS: HUD, диалоги, экраны, мини-игры
+      326-  399  разметка: canvas #gl, слой HUD, диалог, экраны, загрузка
+      400-10360  вся игра: один IIFE, ничего не торчит в window
 
   По ролям:
-    рендер ·············· 678-1343, 4317-5018, 9073-9362
-    текстуры ············ 1818-2831
-    геометрия ··········· 1344-1817, 3085-3091, 3092-3463, 3464-4316, 5479-5783
-    геометрия+анимация ·· 5019-5478
-    жители+анимация ····· 7761-8304
-    физика ·············· 3001-3084, 7449-7646
-    камера ·············· 7647-7703
-    данные мира ········· 2832-3000
-    состояние ··········· 7323-7375, 7376-7448
-    игровая логика ······ 8305-8555, 8556-9013
-    интерфейс ··········· 5974-6062, 6276-6381, 6382-7133, 7134-7254, 7704-7760, 9014-9072, 9363-9458, 9459-9834
-    ввод ················ 7255-7322
-    звук ················ 5784-5928
-    сохранение ·········· 5929-5973, 9835-9930
-    основа ·············· 372-593, 594-677
-    цикл ················ 9931-10201
+    рендер ·············· 716-1381, 4355-5056, 9206-9498
+    текстуры ············ 1856-2869
+    геометрия ··········· 1382-1855, 3123-3129, 3130-3501, 3502-4354, 5517-5821
+    геометрия+анимация ·· 5057-5516
+    жители+анимация ····· 7889-8437
+    физика ·············· 3039-3122, 7568-7765
+    камера ·············· 7766-7822
+    данные мира ········· 2870-3038
+    состояние ··········· 7441-7494, 7495-7567
+    игровая логика ······ 8438-8688, 8689-9146
+    интерфейс ··········· 6012-6100, 6394-6499, 6500-7251, 7252-7372, 7823-7888, 9147-9205, 9499-9594, 9595-9985
+    ввод ················ 7373-7440
+    звук ················ 5822-5966
+    сохранение ·········· 5967-6011, 9986-10081
+    основа ·············· 410-631, 632-715
+    цикл ················ 10082-10359
 
   Разделы подряд:
-      372-  593  Конфигурация качества и производительности
+      410-  631  Конфигурация качества и производительности
                    QCFG — все числа качества: профили, авто-масштаб, частота монитора, текстуры, цвет; Q — активный профиль
-      594-  677  0. Утилиты и математика
+      632-  715  0. Утилиты и математика
                    мелочи и матрицы 4×4 в column-major, как их ждёт GL; lin1/lin3 — sRGB в линейный свет
-      678- 1343  1. WebGL: контекст, шейдеры, буферы
+      716- 1381  1. WebGL: контекст, шейдеры, буферы
                    GLSL целиком: VS/FS_MAIN (нормали из surf, triplanar, detail), VS/FS_SKY, VS/FS_GLOW, компиляция и разбор юниформ
-     1344- 1817  2. Меши: сборка геометрии
+     1382- 1855  2. Меши: сборка геометрии
                    класс Mesh: box, bevelBox, cyl, ellipsoid, extrudeZ, tube, wheel, сглаживание нормалей, upload в VAO
-     1818- 2831  3. Процедурные текстуры (рисуются кодом, ничего не загружается)
+     1856- 2869  3. Процедурные текстуры (рисуются кодом, ничего не загружается)
                    комплекты карт из canvas 2D: albedo (sRGB) + нормаль по Собелю из высот + roughness/metalness + AO; TEXTURE_2D_ARRAY по группам; генерация заданиями между кадрами
-     2832- 3000  4. Район: данные (всё в метрах)
+     2870- 3038  4. Район: данные (всё в метрах)
                    дома, киоски, опоры, точки интереса, реквизит, ямы; surfY и isRoad
-     3001- 3084  5. Столкновения: список AABB + равномерная сетка
+     3039- 3122  5. Столкновения: список AABB + равномерная сетка
                    равномерная сетка 8 м поверх списка AABB
-     3085- 3091  6. Генерация геометрии района
+     3123- 3129  6. Генерация геометрии района
                    Static.batches, Static.signs, Static.lamps — то, что рисуется каждый кадр
-     3092- 3463  Дорога: бордюрный камень, чугун, разметка и обстановка
+     3130- 3501  Дорога: бордюрный камень, чугун, разметка и обстановка
                    бордюр, люки, лужи, разметка, фасадный рельеф, кондиционеры, вывески
-     3464- 4316  Растительность: атлас, карты, ветер
+     3502- 4354  Растительность: атлас, карты, ветер
                    атлас листвы с альфа-тестом, кроны, ветер через атрибут aPart; в конце buildWorld собирает все батчи
-                   └ 4090-4316  сборка батчей района в Static.batches
-     4317- 5018  7. Рендерер
+                   └ 4128-4354  сборка батчей района в Static.batches
+     4355- 5056  7. Рендерер
                    R3, Env (солнце и время суток), initRenderer, resizeGL/applyRenderSize (масштаб рендера), Perf (монитор, GPU, авто-масштаб), applyProfile, drawSky, beginMain, bindMaterial/drawMesh, drawStatic
-     5019- 5478  8. Персонажи: модели со скелетом
+     5057- 5516  8. Персонажи: модели со скелетом
                    скелет на 20 костях, походки и позы; makeCharMesh строит, poseCharacter анимирует
-                   └ 5289-5478  позы и анимация скелета
-     5479- 5783  9. Велосипед и транспорт
+                   └ 5327-5516  позы и анимация скелета
+     5517- 5821  9. Велосипед и транспорт
                    кузова машин, велосипед, собака — те же кости, только меньше
-     5784- 5928  10. Звук: Web Audio, всё синтезируется на лету
+     5822- 5966  10. Звук: Web Audio, всё синтезируется на лету
                    осцилляторы, шумы и три радиостанции; ни одного загруженного файла
-     5929- 5973  11. Сохранение
+     5967- 6011  11. Сохранение
                    формат сохранения в localStorage; настройки лежат отдельным ключом
-     5974- 6062  12. Диалоги и портреты
+     6012- 6100  12. Диалоги и портреты
                    очередь реплик, портреты рисуются на canvas
-     6063- 6275  12а. Личный телефон: книжка и звонки
-     6276- 6381  13. Мини-игры монтажа (двумерные схемы поверх сцены)
+     6101- 6393  12а. Личный телефон: книжка и звонки
+     6394- 6499  13. Мини-игры монтажа (двумерные схемы поверх сцены)
                    общий каркас мини-игр поверх сцены
-     6382- 7133  23. Мини-игра «Монтаж двери» (условная схема)
+     6500- 7251  23. Мини-игра «Монтаж двери» (условная схема)
                    что происходит по E и по F рядом с объектом
-     7134- 7254  14. Радио и бегущая строка
+     7252- 7372  14. Радио и бегущая строка
                    станции, диджей, объявления и бегущая строка
-     7255- 7322  15. Ввод: клавиатура, мышь, обзор от третьего лица
+     7373- 7440  15. Ввод: клавиатура, мышь, обзор от третьего лица
                    клавиатура, мышь, захват курсора; Input.hit — нажатия за кадр
-     7323- 7375  16. Состояние игры
+     7441- 7494  16. Состояние игры
                    S — всё изменяемое состояние смены; BAL — баланс; TOOLS — инструменты
-     7376- 7448  17. Эффекты, тосты, показатели
+     7495- 7567  17. Эффекты, тосты, показатели
                    искры, всплывающий текст, тосты, деньги, репутация, розыск
-     7449- 7646  18. Движение Олега и велосипеда
+     7568- 7765  18. Движение Олега и велосипеда
                    скольжение по AABB, велосипед с креном и заносом
-     7647- 7703  19. Камера от третьего лица
+     7766- 7822  19. Камера от третьего лица
                    камера за спиной с ручным осмотром и возвратом
-     7704- 7760  20. Двумерный слой поверх сцены: реплики, метки, указатели
+     7823- 7888  20. Двумерный слой поверх сцены: реплики, метки, указатели
                    реплики, метки и стрелка к цели рисуются на canvas 2D поверх WebGL
-     7761- 8304  21. Жители района
+     7889- 8437  21. Жители района
                    машины, собаки, хулиганы, бабушки, прохожие; charPose — общий сборщик позы
-                   └ 7939-8304  сборка позы жителя для рендера
-     8305- 8555  22. Заявки
+                   └ 8067-8437  сборка позы жителя для рендера
+     8438- 8688  22. Заявки
                    сценарные заявки и генератор свободных
-     8556- 9013  Бригада: Ваня объясняет один раз, Костя делает на глаз и уезжает
+     8689- 9146  Бригада: Ваня объясняет один раз, Костя делает на глаз и уезжает
                    ход заявки от брифинга до сдачи, мини-игры монтажа, финальная оборона кабеля
-     9014- 9072  23. Взаимодействие
+     9147- 9205  23. Взаимодействие
                    что происходит по E и по F рядом с объектом
-     9073- 9362  24. Тени, маркеры и отрисовка кадра
+     9206- 9498  24. Тени, маркеры и отрисовка кадра
                    drawDynamic, drawGlows, drawOverlay2D и renderFrame — порядок проходов кадра
-                   └ 9325-9362  порядок проходов кадра
-     9363- 9458  25. Интерфейс
+                   └ 9461-9498  порядок проходов кадра
+     9499- 9594  25. Интерфейс
                    HUD, миникарта
-     9459- 9834  26. Экраны
+     9595- 9985  26. Экраны
                    меню, пауза, карта, журнал, магазин, финал
-     9835- 9930  27. Сохранение и обучение
+     9986-10081  27. Сохранение и обучение
                    saveGame/loadGame и обучение
-     9931-10201  28. Мир, цикл и запуск
+    10082-10359  28. Мир, цикл и запуск
                    resetWorld, updateWorld, step, frame, Loader и async boot — точка входа внизу файла
 
   Нумерация разделов в файле историческая и местами сбита (номер 23 занят
@@ -249,6 +249,44 @@ canvas{display:block}
 .card span{font:400 12px/1.35 var(--ui);flex:1}
 .card .price{font:900 15px/1 var(--mono);color:var(--cyan)}
 .card.owned{border-color:var(--good);opacity:.85}
+/* ---------- личный телефон: корпус, экран, список контактов ---------- */
+.phone{width:min(360px,92vw);margin:0 auto;padding:9px 9px 13px;border-radius:36px;
+  background:linear-gradient(160deg,#33333c,#16161c 42%,#0a0a0e);
+  border:1px solid rgba(255,255,255,.13);
+  box-shadow:0 0 0 2px #05050a,0 18px 44px rgba(0,0,0,.72)}
+.phScreen{border-radius:28px;overflow:hidden;border:1px solid rgba(255,255,255,.06);
+  background:linear-gradient(180deg,#101725,#0a0d14 60%,#080a10)}
+.phNotch{height:20px;display:flex;align-items:center;justify-content:center}
+.phNotch i{width:56px;height:5px;border-radius:3px;background:#05050a;display:block}
+.phBar{display:flex;align-items:center;gap:7px;padding:0 14px 7px;font:700 11px/1 var(--mono);color:#cfd6e4}
+.phBar .sp{flex:1}
+.phSig{display:inline-flex;align-items:flex-end;gap:2px;height:10px}
+.phSig s{display:block;width:3px;border-radius:1px;text-decoration:none;background:rgba(207,214,228,.26)}
+.phSig s.on{background:#cfd6e4}
+.phBat{display:inline-block;width:22px;height:10px;border:1px solid rgba(207,214,228,.55);
+  border-radius:3px;padding:1px;position:relative}
+.phBat::after{content:'';position:absolute;right:-3px;top:3px;width:2px;height:4px;
+  background:rgba(207,214,228,.55);border-radius:0 1px 1px 0}
+.phBat i{display:block;height:100%;border-radius:1px;background:#4be36b}
+.phBat.low i{background:#ff8a1f}
+.phBat.dead i{background:#ff4d5e}
+.phTitle{padding:2px 14px 8px;font:900 18px/1.1 var(--head);color:#fff}
+.phList{max-height:min(54vh,430px);overflow:auto;padding:0 8px 6px}
+.phRow{display:flex;align-items:center;gap:10px;padding:7px 8px;margin-bottom:6px;border-radius:13px;
+  background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.05)}
+.phRow.off{opacity:.42}
+.phAv{flex:0 0 38px;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font:900 15px/1 var(--head);color:#0b0b0f}
+.phWho{flex:1;min-width:0}
+.phWho b{display:block;font:700 13px/1.25 var(--ui);color:#eef2f8;text-transform:none}
+.phWho span{display:block;font:400 11px/1.3 var(--ui);color:#8b93a4;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.phDial{flex:0 0 34px;width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;
+  background:#2ecc71;color:#06301a;font:900 18px/1 var(--head);box-shadow:0 2px 8px rgba(46,204,113,.4)}
+.phDial:hover{filter:brightness(1.12)}
+.phDial:active{transform:translateY(2px)}
+.phRow.off .phDial{background:#5a6070;color:#20242c;box-shadow:none;cursor:not-allowed}
+.phFoot{padding:7px 14px 2px;font:600 10px/1.35 var(--ui);color:#6b7385;text-align:center;letter-spacing:.05em}
 .stats{display:grid;grid-template-columns:1fr auto;gap:2px 14px;font:600 13px/1.5 var(--ui);max-width:420px}
 .stats i{font-style:normal;color:var(--dim)}
 .stats b{font-family:var(--mono);color:var(--yellow)}
@@ -6071,6 +6109,21 @@ const PHONE = {
   people: ['vanya', 'kostya', 'sanya', 'oleg', 'egorov'],
   services: ['tamara', 'ambul', 'pnd'],
   book(who) { return this.people.filter(p => p !== who).concat(this.services); },
+  /* У каждого свой аппарат — в книжке он подписан, как в жизни. */
+  model: {
+    vanya:  'iPhone 15 Pro Max',
+    kostya: 'iPhone 13 Pro',
+    sanya:  'iPhone 17 Pro Max',
+    oleg:   'Xiaomi · Android',
+    egorov: 'Samsung Galaxy A55',
+    tamara: 'рабочий, с проводом',
+    ambul:  'единый номер',
+    pnd:    'городской'
+  },
+  short: {
+    vanya: 'Ваня', kostya: 'Костя', sanya: 'Саня', oleg: 'Олег',
+    egorov: 'Егоров Сергей', tamara: 'Тамара', ambul: 'Скорая помощь', pnd: 'ПНД'
+  },
   note: {
     vanya:  'бригадир · объясняет один раз',
     kostya: 'монтажник · уже уехал',
@@ -6083,6 +6136,54 @@ const PHONE = {
   }
 };
 
+/* Заряд садится за смену: в пять вечера полный, к глубокой ночи треть. */
+function phoneBattery() {
+  const spent = ((hour() - START_HOUR + 24) % 24) / 12;
+  return Math.round(clamp(100 - spent * 68, 12, 100));
+}
+/* Связь: в промзоне железо и бетон, по краям района — просто никому не надо. */
+function phoneSignal() {
+  const p = S.player;
+  if (p.x > 100 && p.z < 70) return 1;
+  if (p.x < 12 || p.x > W.x - 12 || p.z < 10 || p.z > W.z - 10) return 2;
+  return 4;
+}
+
+/* Что бригада роняет в эфир между делом. Эти же реплики всплывают пузырями
+   над Ваней, Костей и Саней, когда они стоят рядом, и над самим Олегом. */
+const CREW_LINES = {
+  vanya: [
+    'Ой, да там хуйня делов.',
+    'Да, мы это сделаем.',
+    'А мы зарабатываем не на работе, а на монтажниках.',
+    'Меня опять наебали.',
+    'Какие деньги? У меня их никогда нет.',
+    'Ты чё, не видел мои долги?',
+    'Ребят, может уже работать будем?'
+  ],
+  kostya: [
+    'Ой да ладно, чё ты? Я просто тебя проверял.',
+    'А чё я? Я лысый, что ли?',
+    'Ну что за негатив.',
+    'Что, блядь, опять на Ишим?'
+  ],
+  sanya: [
+    'Щас бы лучше на Мириады поехать работать.',
+    'Куда угодно, только не на Ишим.',
+    'Нет-нет, я же сказал: на Ишим я не поеду.',
+    'Пойдёмте сходим за пивом.',
+    'Что-то пива не хватило. Надо больше пива.'
+  ],
+  oleg: [
+    'Водка? Да нет, я не пью.',
+    'Давай меня закодируем.',
+    'Да нет, я тебе говорю: вообще больше не пью.',
+    'Я всё. Теперь только работать. Пить не буду.'
+  ]
+};
+/* Отдельно и редко — та самая, ради которой всё и затевалось. */
+const OLEG_VANYA_LINE = 'Ты гандон, Ваня. Понял? Ты гандон.';
+
 /* Егоров Сергей монтировал этот район до бригады и убеждён, что делал это
    безупречно. Отвечает по кругу, а на четвёртый звонок подряд перестаёт. */
 const EGOROV_LINES = [
@@ -6094,9 +6195,22 @@ const EGOROV_LINES = [
   'Всё там держалось двенадцать лет. Пришли вы — перестало.'
 ];
 
+/* Олег думает вслух. Пузырь над головой — тот же, что у жителей. */
+function olegMutter(text) {
+  const p = S.player;
+  p.say = 3.6; p.line = text;
+}
+
 function callContact(who) {
   if (Dlg.open) return;
   closeSheet();
+  /* Плохая связь — звонок просто не проходит. Неудачную попытку не считаем:
+     Егоров и так не бесконечно терпеливый. */
+  if (phoneSignal() <= 1 && Math.random() < 0.34) {
+    Audio2.nope();
+    toast('Связь пропала. Промзона', 'bad', 2200);
+    return;
+  }
   const n = (S.phone.calls[who] = (S.phone.calls[who] || 0) + 1);
   const say = (w, t) => ({ who: w, text: t });
   const M = S.mission;
@@ -6105,7 +6219,9 @@ function callContact(who) {
 
   switch (who) {
     case 'vanya':
-      seq.push(say('vanya', 'Олег. Слушаю.'));
+      seq.push(say('vanya', pick(CREW_LINES.vanya)));
+      seq.push(say('vanya', 'А, Олег. Слушаю.'));
+      after = () => { if (Math.random() < 0.5) olegMutter(OLEG_VANYA_LINE); };
       if (M) {
         seq.push(say('oleg', 'По «' + M.def.title + '» вопрос…'));
         seq.push(say('vanya', 'Я объяснял. ' + MOTTO));
@@ -6116,12 +6232,14 @@ function callContact(who) {
       break;
 
     case 'kostya':
+      seq.push(say('kostya', pick(CREW_LINES.kostya)));
       seq.push(say('kostya', 'О, Олег! Я там уже всё посмотрел, всё нормально.'));
       seq.push(say('oleg', 'Костя, ты вообще на каком объекте?'));
       seq.push(say('kostya', 'На нужном. Ты главное не переделывай, а то опять скажут, что я криво.'));
       break;
 
     case 'sanya':
+      seq.push(say('sanya', pick(CREW_LINES.sanya)));
       if (callPartner()) {
         seq.push(say('sanya', 'Еду. Пять минут.'));
         seq.push(say('oleg', 'Саня, твои пять минут — это сколько?'));
@@ -7363,7 +7481,8 @@ function newPlayer() {
     health: 100, stamina: 100, drunk: 0, money: 350, rep: 0,
     phase: 0, dodge: 0, dodgeCd: 0, hurt: 0, invuln: 0,
     tools: ['screw'], tool: 0, lampOn: false, swing: 0, swingCd: 0,
-    gait: 'oleg', seed: 0.5, time: 0, sp: 0, acc: 0, act: '', actK: 0, idle: 0, idleP: 1, lkY: 0, lkP: 0
+    gait: 'oleg', seed: 0.5, time: 0, sp: 0, acc: 0, act: '', actK: 0, idle: 0, idleP: 1, lkY: 0, lkP: 0,
+    say: 0, line: ''
   };
 }
 function newBike() { return { x: 15, z: 52, yaw: 0, speed: 0, cond: 100, wheel: 0, parked: true, chain: 0, lean: 0, steer: 0 }; }
@@ -7732,8 +7851,17 @@ function bubble3(x, y, z, text, color) {
   const c = HUD2.c;
   const scale = clamp(12 / p[2] + 0.55, 0.6, 1.15);
   c.save();
-  c.font = '700 ' + Math.round(13 * scale) + 'px "Trebuchet MS",sans-serif';
-  const w = Math.min(250, c.measureText(text).width + 16);
+  /* Длинную реплику ужимаем по размеру шрифта, а не обрезаем рамкой: раньше
+     всё, что не влезало в 250 пикселей, просто выезжало за пузырь. */
+  let f = Math.round(13 * scale);
+  c.font = '700 ' + f + 'px "Trebuchet MS",sans-serif';
+  let tw = c.measureText(text).width;
+  if (tw + 16 > 250) {
+    f = Math.max(9, Math.floor(f * 250 / (tw + 16)));
+    c.font = '700 ' + f + 'px "Trebuchet MS",sans-serif';
+    tw = c.measureText(text).width;
+  }
+  const w = Math.min(250, tw + 16);
   const h = 22 * scale;
   c.globalAlpha = clamp((42 - p[2]) / 12, 0, 1);
   c.fillStyle = 'rgba(12,7,24,.86)';
@@ -8230,6 +8358,11 @@ function updatePartner(dt) {
   if (P.active > 0) { P.active -= dt; if (P.active <= 0) { S.partnerBonus = false; S.npcs = S.npcs.filter(n => n.kind !== 'sanya'); } }
   for (const n of S.npcs) {
     n.say = Math.max(0, n.say - dt);
+    /* Бригада не молчит: пока стоят рядом, каждый роняет своё. */
+    if (n.say <= 0 && n.leave <= 0 && !Dlg.open && CREW_LINES[n.kind] &&
+        dist2(n.x, n.z, S.player.x, S.player.z) < 26 * 26 && Math.random() < 0.09 * dt) {
+      n.say = 3.4; n.line = pick(CREW_LINES[n.kind]);
+    }
     if (n.leave > 0) {                                /* расходятся; Костя, как обычно, первым */
       n.leave -= dt;
       n.vx = Math.sin(n.yaw) * 2.9; n.vz = Math.cos(n.yaw) * 2.9;
@@ -9249,6 +9382,9 @@ function drawOverlay2D() {
   c.clearRect(0, 0, HUD2.w, HUD2.h);
   if (S.screen !== 'play' && S.screen !== 'pause') return;
   const p = S.player;
+  /* Олег всегда в середине кадра и близко к камере, поэтому его реплику вешаем
+     ниже прочих: на 2.3 м она уезжала под бегущую строку радио. */
+  if (p.say > 0 && p.line) bubble3(p.x, 1.95, p.z, p.line, 'rgba(255,138,31,.82)');
   for (const q of S.peds) if (q.say > 0 && dist2(q.x, q.z, p.x, p.z) < 30 * 30) bubble3(q.x, 2.1, q.z, q.line);
   for (const h of S.hools) if (h.say > 0 && dist2(h.x, h.z, p.x, p.z) < 30 * 30) bubble3(h.x, 2.1, h.z, h.line, 'rgba(138,43,226,.8)');
   for (const g of S.grans) if (g.say > 0) bubble3(g.x, 2.1, g.z, g.line, 'rgba(75,227,107,.8)');
@@ -9618,18 +9754,33 @@ function screenJournal(back) {
 }
 function screenPhone(back) {
   const book = PHONE.book('oleg');
-  const cards = book.map((w, i) => {
+  const bat = phoneBattery(), sig = phoneSignal();
+  const bars = [3, 5, 7, 9].map((h, i) =>
+    '<s class="' + (i < sig ? 'on' : '') + '" style="height:' + h + 'px"></s>').join('');
+  const rows = book.map((w, i) => {
     const c = CHARS[w] || { name: w, c: '#25e8dc' };
-    const busy = w === 'egorov' && (S.phone.calls[w] || 0) > 3;
-    return '<div class="card' + (busy ? ' owned' : '') + '">' +
-      '<b style="color:' + c.c + '">' + (i + 1) + '. ' + c.name + '</b>' +
-      '<span>' + (PHONE.note[w] || '') + (busy ? ' · сбрасывает' : '') + '</span>' +
-      '<button class="btn sm c" id="call_' + w + '">Позвонить</button></div>';
+    const nm = PHONE.short[w] || c.name;
+    const off = w === 'egorov' && (S.phone.calls[w] || 0) > 3;
+    return '<div class="phRow' + (off ? ' off' : '') + '">' +
+      '<span class="phAv" style="background:' + c.c + '">' + nm.charAt(0) + '</span>' +
+      '<span class="phWho"><b>' + nm + '</b><span>' + (i + 1) + ' · ' + (PHONE.model[w] || '') +
+      (off ? ' · сбрасывает' : '') + '</span></span>' +
+      '<button class="phDial" id="call_' + w + '" title="Позвонить">✆</button></div>';
   }).join('');
-  showSheet('<h2>Личный телефон</h2><div class="sub">записная книжка · ' + book.length + ' контактов</div>' +
-    '<div class="shopGrid">' + cards + '</div>' +
-    '<div class="note">Телефон в районе есть у каждого, и в книжке у каждого записаны все остальные — свой номер себе не пишут. ' +
-    'Тамара, скорая и ПНД стоят у всех без исключения. Звонить можно мышью или цифрами 1–' + Math.min(9, book.length) + '.</div>' +
+  showSheet('<h2>Личный телефон</h2><div class="sub">Олег · записная книжка</div>' +
+    '<div class="phone"><div class="phScreen">' +
+      '<div class="phNotch"><i></i></div>' +
+      '<div class="phBar"><span>' + clockStr() + '</span><span class="sp"></span>' +
+        '<span class="phSig">' + bars + '</span><span>' + (sig > 1 ? 'LTE' : 'E') + '</span>' +
+        '<span class="phBat' + (bat < 20 ? ' dead' : bat < 40 ? ' low' : '') +
+          '"><i style="width:' + bat + '%"></i></span><span>' + bat + '</span></div>' +
+      '<div class="phTitle">Контакты</div>' +
+      '<div class="phList">' + rows + '</div>' +
+      '<div class="phFoot">' + PHONE.model.oleg + ' · мышью или цифрами 1–' + Math.min(9, book.length) + '</div>' +
+    '</div></div>' +
+    '<div class="note">Телефон есть у каждого в районе, и в книжке у каждого записаны все остальные — ' +
+    'свой номер себе не пишут. Тамара, скорая и ПНД стоят у всех без исключения. ' +
+    'В промзоне связь пропадает, и звонок иногда не проходит.</div>' +
     '<div class="btns"><button class="btn c" id="bBack">Закрыть (T / Esc)</button></div>', 'phone');
   for (const w of book) wire('call_' + w, () => callContact(w));
   wire('bBack', back || closeSheet);
@@ -10028,6 +10179,13 @@ function updateWorld(dt) {
   p.drunk = clamp(p.drunk - BAL.soberRate * dt, 0, 100);
   if (wasDrunk > 0 && p.drunk <= 0) toast('Голова прояснилась. Работать можно', 'good', 2400);
   if (p.drunk > 60 && Math.random() < 0.35 * dt) floater(p.x, 2.2, p.z, pick(['…', 'Оп', 'Куда руль?']), '#8a2be2');
+  /* Бубнит себе под нос, стоя на месте. Чем пьянее, тем чаще и тем убеждённее
+     он не пьёт. */
+  p.say = Math.max(0, p.say - dt);
+  if (p.say <= 0 && !Dlg.open && !p.onBike &&
+      Math.random() < (0.09 + p.drunk * 0.002) * dt) {
+    p.say = 3.4; p.line = pick(CREW_LINES.oleg);
+  }
   if (p.drunk > 45) addHeat(0.5 * dt);            /* внимание района растёт само, молча */
   if (p.onBike) moveBike(dt); else movePlayerOnFoot(dt);
   updateCars(dt); updateDogs(dt); updateHools(dt); updatePeds(dt); updatePartner(dt); updateHeat(dt);
