@@ -43,7 +43,8 @@ await page.addInitScript(({ save, opts, keys }) => {
   try { localStorage.setItem(keys.save, JSON.stringify(save)); localStorage.setItem(keys.opt, JSON.stringify(opts)); } catch (e) { }
 }, { save: saveFor(sc), opts: optsFor(argv.quality || 'high', true), keys: { save: SAVE_KEY, opt: OPT_KEY } });
 
-await page.goto(pathToFileURL(GAME).href + '?mc3d-test', { waitUntil: 'load' });
+const CFG = argv.cfg ? '&mc3d-cfg=' + encodeURIComponent(argv.cfg) : '';
+await page.goto(pathToFileURL(GAME).href + '?mc3d-test' + CFG, { waitUntil: 'load' });
 await page.waitForFunction(() => !!window.__MC3D, null, { timeout: 120000 });
 await page.click('#bCont');
 
