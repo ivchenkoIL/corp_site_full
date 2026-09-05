@@ -57,7 +57,8 @@ await page.addInitScript(({ save, opts, keys }) => {
 }, { save: saveFor(sc), opts: optsFor(argv.quality || 'medium', argv.dynamic === '1' || argv.dynamic === 'true'), keys: { save: SAVE_KEY, opt: OPT_KEY } });
 
 const t0 = Date.now();
-await page.goto(pathToFileURL(GAME).href, { waitUntil: 'load' });
+const QS = argv.cfg ? '?mc3d-cfg=' + encodeURIComponent(argv.cfg) : '';
+await page.goto(pathToFileURL(GAME).href + QS, { waitUntil: 'load' });
 try { await page.waitForSelector('#bCont', { timeout: +(argv.timeout || 60) * 1000 }); }
 catch (e) {
   const seen = await page.evaluate(() => ({ step: document.getElementById('loadStep')?.textContent, loading: document.getElementById('loading')?.textContent?.slice(0, 400), err: document.getElementById('errtext')?.textContent }));
