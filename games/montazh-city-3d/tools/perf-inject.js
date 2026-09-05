@@ -428,9 +428,13 @@
         if (i >= 0) P.mem.textures.splice(i, 1);
         P.mem.texCount--;
       }
-      /* то же для случая без мультисэмплинга: сцена пишет прямо в текстуру */
+      /* то же для случая без мультисэмплинга: сцена пишет прямо в текстуру.
+         Требование «не меньше трёх байт на тексель» отсекает одноканальные
+         цели вроде буфера затенения (R8, половина стороны сцены): он
+         создаётся позже HDR-текстуры и до этой оговорки перебивал её, отчего
+         в отчёте буфер сцены выходил ровно вдвое меньше настоящего. */
       if (target === gl.TEXTURE_2D && layers === 1 && levels === 1 &&
-          fi.name.indexOf('DEPTH') < 0 && w >= 320 && h >= 240) { P.sceneW = w; P.sceneH = h; }
+          fi.name.indexOf('DEPTH') < 0 && fi.bpp >= 3 && w >= 320 && h >= 240) { P.sceneW = w; P.sceneH = h; }
       var rec = { w: w, h: h, layers: layers, fmt: fi.name, bytes: l0, bytesMips: withMips,
                   mips: levels > 1, target: target === gl.TEXTURE_CUBE_MAP ? 'cube' : target === gl.TEXTURE_2D_ARRAY ? '2d_array' : target === gl.TEXTURE_3D ? '3d' : '2d' };
       if (target === gl.TEXTURE_CUBE_MAP) { rec.bytes *= 6; rec.bytesMips *= 6; }
@@ -453,7 +457,7 @@
       /* Размер буфера сцены. С этапа 03 масштаб рендера живёт не на холсте, а
          на HDR-буфере: холст всегда в полной плотности, и gl.canvas.width
          авто-масштаба больше не показывает. Берём размер цветного вложения. */
-      if (fi.name.indexOf('DEPTH') < 0 && fi.name.indexOf('STENCIL') < 0) { P.sceneW = w; P.sceneH = h; }
+      if (fi.name.indexOf('DEPTH') < 0 && fi.name.indexOf('STENCIL') < 0 && fi.bpp >= 3) { P.sceneW = w; P.sceneH = h; }
       var old = boundRB ? rbInfo.get(boundRB) : null;
       if (old) {
         P.mem.rbBytes -= old.bytes;
@@ -755,6 +759,14 @@
     'env#0': 'окружение: небо в кубмапу',
     'env#1': 'окружение: префильтр и SH',
     'env#2': 'окружение: BRDF',
+    /* Этап 04. Проход теней исполняется по разу на каскад, поэтому у него
+       несколько порядковых номеров: shadow#0 — ближний каскад. */
+    'shadow#0': 'тени: каскад 1',
+    'shadow#1': 'тени: каскад 2',
+    'shadow#2': 'тени: каскад 3',
+    'depth#0': 'проход глубины',
+    'ssao#0': 'затенение в складках',
+    'ssaoblur#0': 'размытие затенения',
     'main#0': 'статика района',
     'glow#0': 'тени под объектами',
     'main#1': 'персонажи и техника',
