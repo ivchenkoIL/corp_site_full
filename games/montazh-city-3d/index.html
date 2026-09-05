@@ -10003,7 +10003,7 @@ async function boot() {
        с её JS-двойником, а для этого ему нужны обе. Ставится исключительно
        при запуске с ?mc3d-test — при обычном открытии из file:// в window
        по-прежнему не торчит ничего. */
-    if (location.search.indexOf('mc3d-test') >= 0) window.__MC3D = { QCFG, SkyJS, Env, EnvMap, GL, R3, GLSL_SKY };
+    if (location.search.indexOf('mc3d-test') >= 0) window.__MC3D = { QCFG, SkyJS, Env, EnvMap, GL, R3, GLSL_SKY, Perf, S };
     Loader.hide();
     screenMenu();
     requestAnimationFrame(frame);
