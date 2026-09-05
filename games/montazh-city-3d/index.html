@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- ОГЛАВЛЕНИЕ:НАЧАЛО (пересобирается: node tools/toc.mjs) -->
 <!--
-  МОНТАЖ-СИТИ 3D — карта файла. Один файл, 9156 строк, без сборки и без
+  МОНТАЖ-СИТИ 3D — карта файла. Один файл, 10025 строк, без сборки и без
   зависимостей. Целиком его читать не надо: ниже строки, по которым видно,
   где что лежит. Диапазоны пересобираются командой `node tools/toc.mjs`,
   проверить актуальность — `node tools/toc.mjs --check`.
@@ -9,98 +9,98 @@
   Крупно:
       119-  285  CSS: HUD, диалоги, экраны, мини-игры
       287-  360  разметка: canvas #gl, слой HUD, диалог, экраны, загрузка
-      361- 9153  вся игра: один IIFE, ничего не торчит в window
+      361-10022  вся игра: один IIFE, ничего не торчит в window
 
   По ролям:
-    рендер ·············· 550-820, 3792-4205, 8109-8352
-    текстуры ············ 1295-2308
-    геометрия ··········· 821-1294, 2562-2568, 2569-2940, 2941-3791, 4666-4970
-    геометрия+анимация ·· 4206-4665
-    жители+анимация ····· 6801-7340
-    физика ·············· 2478-2561, 6489-6686
-    камера ·············· 6687-6743
-    данные мира ········· 2309-2477
-    состояние ··········· 6364-6415, 6416-6488
-    игровая логика ······ 7341-7591, 7592-8049
-    интерфейс ··········· 5161-5317, 5318-5423, 5424-6175, 6176-6296, 6744-6800, 8050-8108, 8353-8448, 8449-8805
-    ввод ················ 6297-6363
-    звук ················ 4971-5115
-    сохранение ·········· 5116-5160, 8806-8901
-    основа ·············· 371-465, 466-549
-    цикл ················ 8902-9152
+    рендер ·············· 677-1342, 4316-5017, 8921-9210
+    текстуры ············ 1817-2830
+    геометрия ··········· 1343-1816, 3084-3090, 3091-3462, 3463-4315, 5478-5782
+    геометрия+анимация ·· 5018-5477
+    жители+анимация ····· 7613-8152
+    физика ·············· 3000-3083, 7301-7498
+    камера ·············· 7499-7555
+    данные мира ········· 2831-2999
+    состояние ··········· 7176-7227, 7228-7300
+    игровая логика ······ 8153-8403, 8404-8861
+    интерфейс ··········· 5973-6129, 6130-6235, 6236-6987, 6988-7108, 7556-7612, 8862-8920, 9211-9306, 9307-9663
+    ввод ················ 7109-7175
+    звук ················ 5783-5927
+    сохранение ·········· 5928-5972, 9664-9759
+    основа ·············· 371-592, 593-676
+    цикл ················ 9760-10021
 
   Разделы подряд:
-      371-  465  Конфигурация качества и производительности
+      371-  592  Конфигурация качества и производительности
                    QCFG — все числа качества: профили, авто-масштаб, частота монитора, текстуры, цвет; Q — активный профиль
-      466-  549  0. Утилиты и математика
+      593-  676  0. Утилиты и математика
                    мелочи и матрицы 4×4 в column-major, как их ждёт GL; lin1/lin3 — sRGB в линейный свет
-      550-  820  1. WebGL: контекст, шейдеры, буферы
+      677- 1342  1. WebGL: контекст, шейдеры, буферы
                    GLSL целиком: VS/FS_MAIN (нормали из surf, triplanar, detail), VS/FS_SKY, VS/FS_GLOW, компиляция и разбор юниформ
-      821- 1294  2. Меши: сборка геометрии
+     1343- 1816  2. Меши: сборка геометрии
                    класс Mesh: box, bevelBox, cyl, ellipsoid, extrudeZ, tube, wheel, сглаживание нормалей, upload в VAO
-     1295- 2308  3. Процедурные текстуры (рисуются кодом, ничего не загружается)
+     1817- 2830  3. Процедурные текстуры (рисуются кодом, ничего не загружается)
                    комплекты карт из canvas 2D: albedo (sRGB) + нормаль по Собелю из высот + roughness/metalness + AO; TEXTURE_2D_ARRAY по группам; генерация заданиями между кадрами
-     2309- 2477  4. Район: данные (всё в метрах)
+     2831- 2999  4. Район: данные (всё в метрах)
                    дома, киоски, опоры, точки интереса, реквизит, ямы; surfY и isRoad
-     2478- 2561  5. Столкновения: список AABB + равномерная сетка
+     3000- 3083  5. Столкновения: список AABB + равномерная сетка
                    равномерная сетка 8 м поверх списка AABB
-     2562- 2568  6. Генерация геометрии района
+     3084- 3090  6. Генерация геометрии района
                    Static.batches, Static.signs, Static.lamps — то, что рисуется каждый кадр
-     2569- 2940  Дорога: бордюрный камень, чугун, разметка и обстановка
+     3091- 3462  Дорога: бордюрный камень, чугун, разметка и обстановка
                    бордюр, люки, лужи, разметка, фасадный рельеф, кондиционеры, вывески
-     2941- 3791  Растительность: атлас, карты, ветер
+     3463- 4315  Растительность: атлас, карты, ветер
                    атлас листвы с альфа-тестом, кроны, ветер через атрибут aPart; в конце buildWorld собирает все батчи
-                   └ 3567-3791  сборка батчей района в Static.batches
-     3792- 4205  7. Рендерер
+                   └ 4089-4315  сборка батчей района в Static.batches
+     4316- 5017  7. Рендерер
                    R3, Env (солнце и время суток), initRenderer, resizeGL/applyRenderSize (масштаб рендера), Perf (монитор, GPU, авто-масштаб), applyProfile, drawSky, beginMain, bindMaterial/drawMesh, drawStatic
-     4206- 4665  8. Персонажи: модели со скелетом
+     5018- 5477  8. Персонажи: модели со скелетом
                    скелет на 20 костях, походки и позы; makeCharMesh строит, poseCharacter анимирует
-                   └ 4476-4665  позы и анимация скелета
-     4666- 4970  9. Велосипед и транспорт
+                   └ 5288-5477  позы и анимация скелета
+     5478- 5782  9. Велосипед и транспорт
                    кузова машин, велосипед, собака — те же кости, только меньше
-     4971- 5115  10. Звук: Web Audio, всё синтезируется на лету
+     5783- 5927  10. Звук: Web Audio, всё синтезируется на лету
                    осцилляторы, шумы и три радиостанции; ни одного загруженного файла
-     5116- 5160  11. Сохранение
+     5928- 5972  11. Сохранение
                    формат сохранения в localStorage; настройки лежат отдельным ключом
-     5161- 5317  12. Диалоги и портреты
+     5973- 6129  12. Диалоги и портреты
                    очередь реплик, портреты рисуются на canvas
-     5318- 5423  13. Мини-игры монтажа (двумерные схемы поверх сцены)
+     6130- 6235  13. Мини-игры монтажа (двумерные схемы поверх сцены)
                    общий каркас мини-игр поверх сцены
-     5424- 6175  23. Мини-игра «Монтаж двери» (условная схема)
+     6236- 6987  23. Мини-игра «Монтаж двери» (условная схема)
                    что происходит по E и по F рядом с объектом
-     6176- 6296  14. Радио и бегущая строка
+     6988- 7108  14. Радио и бегущая строка
                    станции, диджей, объявления и бегущая строка
-     6297- 6363  15. Ввод: клавиатура, мышь, обзор от третьего лица
+     7109- 7175  15. Ввод: клавиатура, мышь, обзор от третьего лица
                    клавиатура, мышь, захват курсора; Input.hit — нажатия за кадр
-     6364- 6415  16. Состояние игры
+     7176- 7227  16. Состояние игры
                    S — всё изменяемое состояние смены; BAL — баланс; TOOLS — инструменты
-     6416- 6488  17. Эффекты, тосты, показатели
+     7228- 7300  17. Эффекты, тосты, показатели
                    искры, всплывающий текст, тосты, деньги, репутация, розыск
-     6489- 6686  18. Движение Олега и велосипеда
+     7301- 7498  18. Движение Олега и велосипеда
                    скольжение по AABB, велосипед с креном и заносом
-     6687- 6743  19. Камера от третьего лица
+     7499- 7555  19. Камера от третьего лица
                    камера за спиной с ручным осмотром и возвратом
-     6744- 6800  20. Двумерный слой поверх сцены: реплики, метки, указатели
+     7556- 7612  20. Двумерный слой поверх сцены: реплики, метки, указатели
                    реплики, метки и стрелка к цели рисуются на canvas 2D поверх WebGL
-     6801- 7340  21. Жители района
+     7613- 8152  21. Жители района
                    машины, собаки, хулиганы, бабушки, прохожие; charPose — общий сборщик позы
-                   └ 6975-7340  сборка позы жителя для рендера
-     7341- 7591  22. Заявки
+                   └ 7787-8152  сборка позы жителя для рендера
+     8153- 8403  22. Заявки
                    сценарные заявки и генератор свободных
-     7592- 8049  Бригада: Ваня объясняет один раз, Костя делает на глаз и уезжает
+     8404- 8861  Бригада: Ваня объясняет один раз, Костя делает на глаз и уезжает
                    ход заявки от брифинга до сдачи, мини-игры монтажа, финальная оборона кабеля
-     8050- 8108  23. Взаимодействие
+     8862- 8920  23. Взаимодействие
                    что происходит по E и по F рядом с объектом
-     8109- 8352  24. Тени, маркеры и отрисовка кадра
+     8921- 9210  24. Тени, маркеры и отрисовка кадра
                    drawDynamic, drawGlows, drawOverlay2D и renderFrame — порядок проходов кадра
-                   └ 8334-8352  порядок проходов кадра
-     8353- 8448  25. Интерфейс
+                   └ 9173-9210  порядок проходов кадра
+     9211- 9306  25. Интерфейс
                    HUD, миникарта
-     8449- 8805  26. Экраны
+     9307- 9663  26. Экраны
                    меню, пауза, карта, журнал, магазин, финал
-     8806- 8901  27. Сохранение и обучение
+     9664- 9759  27. Сохранение и обучение
                    saveGame/loadGame и обучение
-     8902- 9152  28. Мир, цикл и запуск
+     9760-10021  28. Мир, цикл и запуск
                    resetWorld, updateWorld, step, frame, Loader и async boot — точка входа внизу файла
 
   Нумерация разделов в файле историческая и местами сбита (номер 23 занят
@@ -441,7 +441,15 @@ const QCFG = {
   /* Компилируемые пределы шейдера. */
   shader: { maxLamps: 8 },
   /* Свечения: дальности в метрах, умножаются на profile.vis. */
-  glow: { lampNear: 26, signR: 55, carR: 45 },
+  glow: {
+    lampNear: 26, signR: 55, carR: 45,      /* дальности, м */
+    /* Размеры и прозрачности спрайтов свечения: пара [размер в метрах,
+       прозрачность], жёсткость — показатель спада к краю квада. */
+    lampBig: [3.2, 0.75, 2.0], lampSmall: [1.6, 0.5, 2.0], lampHalo: [8, 0.14, 3.2],
+    sign: [4.2, 0.38, 2.4], head: [1.5, 0.5, 2.2], tail: [1.1, 0.4, 2.2],
+    torch: [1.2, 0.7, 2.2], marker: [1.5, 0.30, 2.2], markerBase: [3.4, 0.22, 3],
+    spark: [6, 0.7, 2], dust: [6, 0.35, 2]
+  },
   /* Текстуры: размеры логические (холст = size × texSS), карты — из высот. */
   tex: {
     surfSize: 256,       /* материалы поверхностей: 15 слоёв, полный комплект карт */
@@ -453,7 +461,10 @@ const QCFG = {
     detailFar: 22,       /* дальше не подмешивается */
     detailStrength: 0.55,
     aoRadius: 5,         /* радиус размытия высот для ambient occlusion, px логических */
-    aoStrength: 2.0
+    aoStrength: 2.0,
+    /* Пороги альфа-теста. У зелени ниже общего: на дальних мипах альфа
+       усредняется с пустотой и при 0.5 крона редеет. Вывескам нужен чёткий край. */
+    cutVeg: 0.40, cutSign: 0.5
   },
   /* Цвет. Albedo лежит в SRGB8_ALPHA8 и семплится линейно; вершинные цвета
      и авторские тинты переводятся в линейное пространство той же гаммой.
@@ -494,6 +505,11 @@ const QCFG = {
     emis: { win: 1.55, tint: [1, .86, .6], tintK: 0.35 },   /* окна и неон */
     glowK: 1.0,         /* общая сила свечений-спрайтов */
     horizonOccl: 1.0,   /* гашение отражений, ушедших под геометрическую нормаль */
+    sunAO: 0.5,         /* насколько карта AO гасит прямой солнечный свет */
+    glossNight: 1.45,   /* к ночи поверхности «влажнее» и сильнее бликуют */
+    /* Тени-блобы под объектами: не модель освещения, а дешёвая подложка. */
+    shadow: { lift: 0.022, hard: 1.6, ped: [1.3, 0.38], dog: [1.1, 0.34], car: [3.4, 0.4],
+              guard: [2.0, 0.4], bike: [1.6, 0.35], oleg: [1.4, 0.45], olegBike: [2.2, 0.45] },
     /* Вершинное затенение низа стен и кузовов. Это не дубль карты AO: та про
        мелкий рельеф материала, а это контакт с землёй, которого карте взять
        неоткуда. Сила задана так, как читается после линеаризации. */
@@ -948,7 +964,8 @@ uniform mat4 uProj, uView, uModel;
 uniform mat4 uBones[20];
 uniform float uSkin;
 uniform vec3 uWind;                       /* xy — вектор порыва в метрах, z — время */
-out vec3 vNor; out vec2 vUV; out vec3 vCol; out float vEmis; out vec3 vWorld; out float vGloss;
+out highp vec3 vWorld; out highp vec2 vUV;
+out vec3 vNor; out vec3 vCol; out float vEmis; out float vGloss;
 void main(){
   mat4 M = uSkin > 0.5 ? uBones[int(aPart)] : uModel;
   vec4 wp = M * vec4(aPos, 1.0);
@@ -969,12 +986,22 @@ void main(){
   gl_Position = uProj * uView * wp;
 }`;
 
-const FS_MAIN = `#version 300 es
+/* Главная программа собирается в двух вариантах: дневном (LAMPS = 0, цикла
+   по источникам нет вовсе) и ночном. Обе компилируются при загрузке, а кадр
+   выбирает нужную — днём восемь мёртвых итераций с полной BRDF не исполняются.
+
+   Точность: mediump везде, кроме связанного с мировыми координатами. На Apple
+   GPU mediump — половинная точность; координаты района доходят до двухсот
+   метров, а развёртка с повторами detail — до сотен, и в fp16 то и другое
+   рассыпается. */
+const FS_MAIN = LAMPS => `#version 300 es
 /* PASS:main — метка для оснастки замера (tools/perf-inject.js): по ней
    программа опознаётся в разборе кадра по проходам, а не по именам юниформ. */
-precision highp float;
+precision mediump float;
 precision mediump sampler2DArray;
-in vec3 vNor; in vec2 vUV; in vec3 vCol; in float vEmis; in vec3 vWorld; in float vGloss;
+precision mediump samplerCube;
+in highp vec3 vWorld; in highp vec2 vUV;
+in vec3 vNor; in vec3 vCol; in float vEmis; in float vGloss;
 uniform sampler2DArray uTex;      /* albedo в SRGB8_ALPHA8: семплер отдаёт линейный цвет; альфа — маска */
 uniform sampler2DArray uSurf;     /* nx ny roughness metalness, линейно */
 uniform sampler2DArray uAO;       /* ambient occlusion, линейно */
@@ -989,11 +1016,11 @@ uniform vec3 uDetailP;            /* повторов на тайл, ближн�
 uniform vec3 uSunDir, uSunIrr;
 uniform float uFogDens, uFogMip, uNight, uAlphaMode, uCut, uGlossMul, uEmisK;
 uniform vec4 uTint;
-uniform vec3 uEye;
-uniform vec3 uLampPos[${QCFG.shader.maxLamps}];
-uniform vec3 uLampCol[${QCFG.shader.maxLamps}];
+uniform highp vec3 uEye;
+${LAMPS > 0 ? `uniform highp vec3 uLampPos[${LAMPS}];
+uniform vec3 uLampCol[${LAMPS}];
 uniform float uLampR2, uLampR0, uLampP;
-uniform int uLampN;
+uniform int uLampN;` : ''}
 out vec4 fragColor;
 ${GLSL_PBR}
 /* Освещённость из сферических гармоник L2 по формуле Рамамурти–Ханрахана:
@@ -1006,9 +1033,9 @@ vec3 shIrradiance(vec3 n){
            + 2.0 * c2 * (uSH[3] * n.x + uSH[1] * n.y + uSH[2] * n.z), vec3(0.0));
 }
 /* Касательный базис из производных экрана: тангенсов в вершинах нет и не нужно */
-vec3 perturb(vec3 N, vec3 nt, vec3 p, vec2 uv){
-  vec3 dp1 = dFdx(p), dp2 = dFdy(p);
-  vec2 duv1 = dFdx(uv), duv2 = dFdy(uv);
+vec3 perturb(vec3 N, vec3 nt, highp vec3 p, highp vec2 uv){
+  vec3 dp1 = vec3(dFdx(p)), dp2 = vec3(dFdy(p));
+  vec2 duv1 = vec2(dFdx(uv)), duv2 = vec2(dFdy(uv));
   vec3 dp2perp = cross(dp2, N), dp1perp = cross(N, dp1);
   vec3 T = dp2perp * duv1.x + dp1perp * duv2.x;
   vec3 B = dp2perp * duv1.y + dp1perp * duv2.y;
@@ -1022,12 +1049,12 @@ void main(){
   vec4 t;
   vec4 sf = vec4(0.5, 0.5, uMatRM);
   float ao = 1.0;
-  float dEye = length(vWorld - uEye);
+  float dEye = float(length(vWorld - uEye));
   if (uTriplanar > 0.0) {
     /* трёхплоскостная проекция: развёртка от мировых координат, швов и растяжений нет */
     vec3 w = pow(abs(Ng), vec3(4.0)); w /= (w.x + w.y + w.z);
     vec3 q = vWorld / uTriplanar;
-    vec3 cx = vec3(q.zy, uLayer), cy = vec3(q.xz, uLayer), cz = vec3(q.xy, uLayer);
+    highp vec3 cx = vec3(q.zy, uLayer), cy = vec3(q.xz, uLayer), cz = vec3(q.xy, uLayer);
     t = texture(uTex, cx) * w.x + texture(uTex, cy) * w.y + texture(uTex, cz) * w.z;
     if (uHasSurf > 0.5) {
       vec4 sx = texture(uSurf, cx), sy = texture(uSurf, cy), sz = texture(uSurf, cz);
@@ -1038,17 +1065,22 @@ void main(){
       N = normalize(Ng + vec3(0.0, nx.y, nx.x * sg.x) * w.x + vec3(ny.x, 0.0, ny.y * sg.y) * w.y + vec3(nz.x * sg.z, nz.y, 0.0) * w.z);
     }
   } else {
-    vec3 tc = vec3(vUV, uLayer);
+    highp vec3 tc = vec3(vUV, uLayer);
     t = texture(uTex, tc);
     if (uAlphaMode > 0.5 && t.a < uCut) discard;      /* листва и знаки: альфа-тест */
     if (uHasSurf > 0.5) {
       sf = texture(uSurf, tc);
       ao = texture(uAO, tc).r;
       vec2 nxy = sf.xy * 2.0 - 1.0;
-      if (uDetailK > 0.0) {
+      /* Производные развёртки считаем ДО ветки: внутри неоднородного
+         ветвления они не определены, а textureGrad как раз и нужен, чтобы
+         уровень мипа не зависел от того, зашли мы в ветку или нет. */
+      highp vec2 duv = vUV * uDetailP.x;
+      vec2 ddx = vec2(dFdx(duv)), ddy = vec2(dFdy(duv));
+      if (uDetailK > 0.0 && dEye < uDetailP.z) {
         /* detail-нормаль вблизи — то, что убирает мыло в упор */
         float k = uDetailK * (1.0 - smoothstep(uDetailP.y, uDetailP.z, dEye));
-        nxy += (texture(uDetail, vec3(vUV * uDetailP.x, 0.0)).xy * 2.0 - 1.0) * k;
+        nxy += (textureGrad(uDetail, vec3(duv, 0.0), ddx, ddy).xy * 2.0 - 1.0) * k;
       }
       N = perturb(Ng, normalize(vec3(nxy, sqrt(max(0.06, 1.0 - dot(nxy, nxy))))), vWorld, vUV);
     }
@@ -1065,7 +1097,7 @@ void main(){
   float NoV = max(dot(N, V), 1e-4);
 
   /* солнце */
-  vec3 lit = directLight(N, V, uSunDir, uSunIrr * mix(1.0, ao, 0.5), diff, f0, a);
+  vec3 lit = directLight(N, V, uSunDir, uSunIrr * mix(1.0, ao, ${gf(QCFG.light.sunAO)}), diff, f0, a);
 
   /* Окружение как свет. Рассеянное — из сферических гармоник неба;
      зеркальное — из префильтрованной по шероховатости кубмапы по отражённому
@@ -1081,10 +1113,11 @@ void main(){
   lit += diff * shIrradiance(N) * INV_PI * ao;
   lit += skyRad * envBRDF(f0, rough, NoV) * specOcclusion(NoV, ao, rough) * horiz;
 
+${LAMPS > 0 ? `
   /* точечные источники: фонари, витрины и фары */
-  for (int i = 0; i < ${QCFG.shader.maxLamps}; i++) {
+  for (int i = 0; i < ${LAMPS}; i++) {
     if (i >= uLampN) break;
-    vec3 d = uLampPos[i] - vWorld;
+    vec3 d = vec3(uLampPos[i] - vWorld);
     float d2 = dot(d, d);
     if (d2 > uLampR2) continue;
     /* спад обратный квадрату с оконной функцией на радиусе: свет кончается
@@ -1092,7 +1125,7 @@ void main(){
     float win = clamp(1.0 - d2 * d2 / (uLampR2 * uLampR2), 0.0, 1.0);
     float att = uLampP * win * win / max(d2, uLampR0);
     lit += directLight(N, V, d * inversesqrt(max(d2, 1e-8)), uLampCol[i] * att * ao, diff, f0, a);
-  }
+  }` : ''}
   /* окна и неон: альфа текстуры — маска свечения */
   float winMask = (uAlphaMode > 0.5) ? 0.0 : t.a;
   float em = vEmis + winMask;
@@ -1270,7 +1303,7 @@ void main(){
 
 const FS_GLOW = `#version 300 es
 /* PASS:glow */
-precision highp float;
+precision mediump float;
 in vec2 vUV;
 uniform vec4 uColor;
 uniform float uHard, uMode;
@@ -4284,7 +4317,8 @@ function buildWorld(gl) {
 /* 7. Рендерер                                                          */
 /* ------------------------------------------------------------------ */
 const R3 = {
-  main: null, sky: null, glow: null, tone: null, cube: null, pref: null, skyVAO: null, glowVAO: null,
+  main: null, mainDay: null, mainNight: null, sky: null, glow: null, tone: null, cube: null, pref: null,
+  skyVAO: null, glowVAO: null,
   proj: m4(), view: m4(), model: m4(), invVP: m4(), tmp: m4(), tmp2: m4(),
   eye: [0, 0, 0], right: [1, 0, 0], up: [0, 1, 0], fwd: [0, 0, -1], time: 0,
   curGrp: null                         /* группа текстур, связанная сейчас */
@@ -4449,7 +4483,7 @@ const Env = {
     const wd = 0.7 + Math.sin(hour * 0.31) * 0.9;
     this.windX = Math.cos(wd); this.windZ = Math.sin(wd);
     this.windAmp = 0.09 + this.cloud * 0.13;
-    this.glossMul = lerp(1, 1.45, n);
+    this.glossMul = lerp(1, QCFG.light.glossNight, n);
   }
 };
 
@@ -4616,7 +4650,11 @@ function initRenderer(canvas) {
     GL.renderer = dbg ? String(gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL)) : String(gl.getParameter(gl.RENDERER));
   } catch (e) { GL.renderer = ''; }
   Perf.init(gl);
-  R3.main = program(gl, VS_MAIN, FS_MAIN, 'main');
+  /* Два варианта главной программы. Обе компилируются здесь: переключение в
+     кадре должно быть выбором указателя, а не компиляцией на ходу. */
+  R3.mainDay = program(gl, VS_MAIN, FS_MAIN(0), 'main-day');
+  R3.mainNight = program(gl, VS_MAIN, FS_MAIN(QCFG.shader.maxLamps), 'main-night');
+  R3.main = R3.mainDay;
   R3.sky = program(gl, VS_SKY, FS_SKY, 'sky');
   R3.glow = program(gl, VS_GLOW, FS_GLOW, 'glow');
   R3.tone = program(gl, VS_TONE, FS_TONE, 'tone');
@@ -4850,7 +4888,11 @@ function drawSky() {
 }
 
 function beginMain(lamps) {
-  const gl = GL.gl, P = R3.main;
+  const gl = GL.gl;
+  const n = Math.min(QCFG.shader.maxLamps, Q.lamps, lamps ? lamps.length : 0);
+  /* Днём источников нет — берём вариант без цикла по ним. */
+  R3.main = n > 0 ? R3.mainNight : R3.mainDay;
+  const P = R3.main;
   gl.useProgram(P.p);
   gl.uniformMatrix4fv(P.u.uProj, false, R3.proj);
   gl.uniformMatrix4fv(P.u.uView, false, R3.view);
@@ -4880,14 +4922,13 @@ function beginMain(lamps) {
   R3.curGrp = null;
   gl.uniform4f(P.u.uTint, 1, 1, 1, 1);
   gl.uniform1f(P.u.uAlphaMode, 0);
-  gl.uniform1f(P.u.uCut, 0.5);
+  gl.uniform1f(P.u.uCut, QCFG.tex.cutSign);
   gl.uniform3f(P.u.uWind, Env.windX * Env.windAmp, Env.windZ * Env.windAmp, R3.time);
   gl.uniform1f(P.u.uSkin, 0);
   const LP = QCFG.light.lamp;
   gl.uniform1f(P.u.uLampR2, LP.radius * LP.radius);
   gl.uniform1f(P.u.uLampR0, LP.srcR * LP.srcR);
   gl.uniform1f(P.u.uLampP, LP.power * Math.PI);
-  const n = Math.min(QCFG.shader.maxLamps, Q.lamps, lamps ? lamps.length : 0);
   gl.uniform1i(P.u.uLampN, n);
   for (let i = 0; i < n; i++) {
     gl.uniform3f(P.u['uLampPos[' + i + ']'] || P.u.uLampPos, lamps[i].x, lamps[i].y, lamps[i].z);
@@ -4965,10 +5006,10 @@ function drawStatic() {
   gl.disable(gl.CULL_FACE);
   /* порог для зелени ниже общего: на дальних мипах альфа усредняется с пустотой
      и при 0.5 крона редеет. Вывескам порог возвращаем — им нужен чёткий край. */
-  gl.uniform1f(R3.main.u.uCut, 0.40);
+  gl.uniform1f(R3.main.u.uCut, QCFG.tex.cutVeg);
   for (const b of Static.batches) if (b.alpha)
     drawMesh(b.gpu, TX[b.name], idm, { alpha: true, tint: b.name === 'leaves' ? Season.tint : null });
-  gl.uniform1f(R3.main.u.uCut, 0.5);
+  gl.uniform1f(R3.main.u.uCut, QCFG.tex.cutSign);
   for (const s of Static.signs) if (s.mat) drawMesh(s.gpu, s.mat, idm, { alpha: true });
   gl.enable(gl.CULL_FACE);
 }
@@ -8887,10 +8928,10 @@ function drawShadow(x, z, size, alpha) {
   gl.uniformMatrix4fv(P.u.uView, false, R3.view);
   gl.uniform3f(P.u.uRight, 1, 0, 0);
   gl.uniform3f(P.u.uUp, 0, 0, 1);
-  gl.uniform3f(P.u.uPos, x, surfY(x, z) + 0.022, z);
+  gl.uniform3f(P.u.uPos, x, surfY(x, z) + QCFG.light.shadow.lift, z);
   gl.uniform2f(P.u.uSize, size, size);
   gl.uniform4f(P.u.uColor, 0, 0, 0, alpha);
-  gl.uniform1f(P.u.uHard, 1.6);
+  gl.uniform1f(P.u.uHard, QCFG.light.shadow.hard);
   gl.uniform1f(P.u.uMode, 1);
   gl.bindVertexArray(R3.glowVAO);
   gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -8905,19 +8946,20 @@ function drawDynamic() {
   const vis = (x, z, r) => { const rr = (r || 95) * vk; return dist2(x, z, camx, camz) < rr * rr; };
 
   /* тени — отдельным проходом, с альфа-смешиванием */
+  const SH = QCFG.light.shadow, sh = (x, z, k) => drawShadow(x, z, k[0], k[1]);
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
-  if (vis(p.x, p.z)) drawShadow(p.x, p.z, p.onBike ? 2.2 : 1.4, 0.45);
-  for (const q of S.peds) if (vis(q.x, q.z, 55)) drawShadow(q.x, q.z, 1.3, 0.38);
-  for (const h of S.hools) if (vis(h.x, h.z, 55)) drawShadow(h.x, h.z, 1.3, 0.38);
-  for (const g of S.grans) if (vis(g.x, g.z, 55)) drawShadow(g.x, g.z, 1.3, 0.38);
-  for (const n of S.npcs) if (vis(n.x, n.z, 55)) drawShadow(n.x, n.z, 1.3, 0.38);
-  for (const d of S.dogs) if (vis(d.x, d.z, 45)) drawShadow(d.x, d.z, 1.1, 0.34);
-  for (const g of S.guards) if (vis(g.x, g.z, 70)) drawShadow(g.x, g.z, 2.0, 0.4);
-  for (const c of S.cars) if (vis(c.x, c.z)) drawShadow(c.x, c.z, 3.4, 0.4);
-  if (!p.onBike && vis(S.bike.x, S.bike.z, 55)) drawShadow(S.bike.x, S.bike.z, 1.6, 0.35);
+  if (vis(p.x, p.z)) sh(p.x, p.z, p.onBike ? SH.olegBike : SH.oleg);
+  for (const q of S.peds) if (vis(q.x, q.z, 55)) sh(q.x, q.z, SH.ped);
+  for (const h of S.hools) if (vis(h.x, h.z, 55)) sh(h.x, h.z, SH.ped);
+  for (const g of S.grans) if (vis(g.x, g.z, 55)) sh(g.x, g.z, SH.ped);
+  for (const n of S.npcs) if (vis(n.x, n.z, 55)) sh(n.x, n.z, SH.ped);
+  for (const d of S.dogs) if (vis(d.x, d.z, 45)) sh(d.x, d.z, SH.dog);
+  for (const g of S.guards) if (vis(g.x, g.z, 70)) sh(g.x, g.z, SH.guard);
+  for (const c of S.cars) if (vis(c.x, c.z)) sh(c.x, c.z, SH.car);
+  if (!p.onBike && vis(S.bike.x, S.bike.z, 55)) sh(S.bike.x, S.bike.z, SH.bike);
   const M = S.mission;
   if (M && M.data && M.data.raiders && M.data.step === 5)
-    for (const r of M.data.raiders) if (!r.done && vis(r.x, r.z, 60)) drawShadow(r.x, r.z, 1.3, 0.38);
+    for (const r of M.data.raiders) if (!r.done && vis(r.x, r.z, 60)) sh(r.x, r.z, SH.ped);
   gl.depthMask(true); gl.disable(gl.BLEND);
 
   beginMainLights();
@@ -9014,37 +9056,39 @@ function drawGlows() {
   gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE); gl.depthMask(false);
   if (Env.night > 0.04) {
     const vk = Q.vis, lampR = Q.glowR * vk, nearR = QCFG.glow.lampNear * vk, signR = QCFG.glow.signR * vk, carR = QCFG.glow.carR * vk;
+    const G = QCFG.glow, LC = QCFG.light.lamp;
     for (const l of Static.lamps) {
       const dd = dist2(l.x, l.z, S.cam.x, S.cam.z);
       if (dd > lampR * lampR) continue;
-      drawGlow([l.x, l.y, l.z], l.small ? 1.6 : 3.2, [1, .84, .55], (l.small ? 0.5 : 0.75) * Env.night, 2.0);
-      if (!l.small && dd < nearR * nearR) drawGlow([l.x, l.y - 0.4, l.z], 8, [1, .8, .5], 0.14 * Env.night, 3.2);
+      const k = l.small ? G.lampSmall : G.lampBig;
+      drawGlow([l.x, l.y, l.z], k[0], LC.warm, k[1] * Env.night, k[2]);
+      if (!l.small && dd < nearR * nearR)
+        drawGlow([l.x, l.y - 0.4, l.z], G.lampHalo[0], LC.warm, G.lampHalo[1] * Env.night, G.lampHalo[2]);
     }
     for (const s of Static.signs) {
       if (dist2(s.pos[0], s.pos[2], S.cam.x, S.cam.z) > signR * signR) continue;
-      drawGlow(s.pos, 4.2, hex2rgb(s.color), 0.38 * Env.night, 2.4);
+      drawGlow(s.pos, G.sign[0], hex2rgb(s.color), G.sign[1] * Env.night, G.sign[2]);
     }
     for (const c of S.cars) {
       if (dist2(c.x, c.z, S.cam.x, S.cam.z) > carR * carR) continue;
-      const fx1 = c.x + Math.sin(c.yaw) * 2.1, fz1 = c.z + Math.cos(c.yaw) * 2.1;
-      drawGlow([fx1, 0.55, fz1], 1.5, [1, .95, .8], 0.5 * Env.night, 2.2);
-      drawGlow([c.x - Math.sin(c.yaw) * 2.1, 0.55, c.z - Math.cos(c.yaw) * 2.1], 1.1, [1, .25, .2], 0.4 * Env.night, 2.2);
+      drawGlow([c.x + Math.sin(c.yaw) * 2.1, 0.55, c.z + Math.cos(c.yaw) * 2.1], G.head[0], LC.torch, G.head[1] * Env.night, G.head[2]);
+      drawGlow([c.x - Math.sin(c.yaw) * 2.1, 0.55, c.z - Math.cos(c.yaw) * 2.1], G.tail[0], [1, .25, .2], G.tail[1] * Env.night, G.tail[2]);
     }
-    if (p.lampOn) drawGlow([p.x + Math.sin(p.yaw) * 0.5, 1.35, p.z + Math.cos(p.yaw) * 0.5], 1.2, [1, .95, .8], 0.7, 2.2);
+    if (p.lampOn) drawGlow([p.x + Math.sin(p.yaw) * 0.5, 1.35, p.z + Math.cos(p.yaw) * 0.5], G.torch[0], LC.torch, G.torch[1], G.torch[2]);
   }
   /* маркер цели */
   const t = S.mission && S.mission.target;
   if (t) {
-    const pulse = 0.55 + 0.45 * Math.sin(S.t * 3);
+    const G = QCFG.glow, pulse = 0.55 + 0.45 * Math.sin(S.t * 3);
     for (let i = 0; i < 5; i++)
-      drawGlow([t.x, 0.6 + i * 1.1, t.z], 1.5 - i * 0.16, [1, .82, .25], 0.30 * pulse, 2.2);
-    drawGlow([t.x, 0.15, t.z], 3.4, [1, .82, .25], 0.22 * pulse, 3);
+      drawGlow([t.x, 0.6 + i * 1.1, t.z], G.marker[0] - i * 0.16, [1, .82, .25], G.marker[1] * pulse, G.marker[2]);
+    drawGlow([t.x, 0.15, t.z], G.markerBase[0], [1, .82, .25], G.markerBase[1] * pulse, G.markerBase[2]);
   }
   /* искры и пыль */
   if (Q.sparks > 0) for (const f of S.fx) {
     if (f.kind === 'text') continue;
-    const a = clamp(f.life / f.max, 0, 1);
-    drawGlow([f.x, f.y, f.z], f.s * 6, f.color, a * (f.kind === 'spark' ? 0.7 : 0.35), 2);
+    const a = clamp(f.life / f.max, 0, 1), k = f.kind === 'spark' ? QCFG.glow.spark : QCFG.glow.dust;
+    drawGlow([f.x, f.y, f.z], f.s * k[0], f.color, a * k[1], k[2]);
   }
   gl.depthMask(true); gl.disable(gl.BLEND);
 }
