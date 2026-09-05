@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- ОГЛАВЛЕНИЕ:НАЧАЛО (пересобирается: node tools/toc.mjs) -->
 <!--
-  МОНТАЖ-СИТИ 3D — карта файла. Один файл, 10025 строк, без сборки и без
+  МОНТАЖ-СИТИ 3D — карта файла. Один файл, 10303 строк, без сборки и без
   зависимостей. Целиком его читать не надо: ниже строки, по которым видно,
   где что лежит. Диапазоны пересобираются командой `node tools/toc.mjs`,
   проверить актуальность — `node tools/toc.mjs --check`.
@@ -9,98 +9,98 @@
   Крупно:
       119-  285  CSS: HUD, диалоги, экраны, мини-игры
       287-  360  разметка: canvas #gl, слой HUD, диалог, экраны, загрузка
-      361-10022  вся игра: один IIFE, ничего не торчит в window
+      361-10300  вся игра: один IIFE, ничего не торчит в window
 
   По ролям:
-    рендер ·············· 677-1342, 4316-5017, 8921-9210
-    текстуры ············ 1817-2830
-    геометрия ··········· 1343-1816, 3084-3090, 3091-3462, 3463-4315, 5478-5782
-    геометрия+анимация ·· 5018-5477
-    жители+анимация ····· 7613-8152
-    физика ·············· 3000-3083, 7301-7498
-    камера ·············· 7499-7555
-    данные мира ········· 2831-2999
-    состояние ··········· 7176-7227, 7228-7300
-    игровая логика ······ 8153-8403, 8404-8861
-    интерфейс ··········· 5973-6129, 6130-6235, 6236-6987, 6988-7108, 7556-7612, 8862-8920, 9211-9306, 9307-9663
-    ввод ················ 7109-7175
-    звук ················ 5783-5927
-    сохранение ·········· 5928-5972, 9664-9759
-    основа ·············· 371-592, 593-676
-    цикл ················ 9760-10021
+    рендер ·············· 732-1397, 4428-5293, 9197-9487
+    текстуры ············ 1926-2939
+    геометрия ··········· 1398-1925, 3193-3199, 3200-3571, 3572-4427, 5754-6058
+    геометрия+анимация ·· 5294-5753
+    жители+анимация ····· 7889-8428
+    физика ·············· 3109-3192, 7577-7774
+    камера ·············· 7775-7831
+    данные мира ········· 2940-3108
+    состояние ··········· 7452-7503, 7504-7576
+    игровая логика ······ 8429-8679, 8680-9137
+    интерфейс ··········· 6249-6405, 6406-6511, 6512-7263, 7264-7384, 7832-7888, 9138-9196, 9488-9583, 9584-9940
+    ввод ················ 7385-7451
+    звук ················ 6059-6203
+    сохранение ·········· 6204-6248, 9941-10036
+    основа ·············· 371-647, 648-731
+    цикл ················ 10037-10299
 
   Разделы подряд:
-      371-  592  Конфигурация качества и производительности
+      371-  647  Конфигурация качества и производительности
                    QCFG — все числа качества: профили, авто-масштаб, частота монитора, текстуры, цвет; Q — активный профиль
-      593-  676  0. Утилиты и математика
+      648-  731  0. Утилиты и математика
                    мелочи и матрицы 4×4 в column-major, как их ждёт GL; lin1/lin3 — sRGB в линейный свет
-      677- 1342  1. WebGL: контекст, шейдеры, буферы
+      732- 1397  1. WebGL: контекст, шейдеры, буферы
                    GLSL целиком: VS/FS_MAIN (нормали из surf, triplanar, detail), VS/FS_SKY, VS/FS_GLOW, компиляция и разбор юниформ
-     1343- 1816  2. Меши: сборка геометрии
+     1398- 1925  2. Меши: сборка геометрии
                    класс Mesh: box, bevelBox, cyl, ellipsoid, extrudeZ, tube, wheel, сглаживание нормалей, upload в VAO
-     1817- 2830  3. Процедурные текстуры (рисуются кодом, ничего не загружается)
+     1926- 2939  3. Процедурные текстуры (рисуются кодом, ничего не загружается)
                    комплекты карт из canvas 2D: albedo (sRGB) + нормаль по Собелю из высот + roughness/metalness + AO; TEXTURE_2D_ARRAY по группам; генерация заданиями между кадрами
-     2831- 2999  4. Район: данные (всё в метрах)
+     2940- 3108  4. Район: данные (всё в метрах)
                    дома, киоски, опоры, точки интереса, реквизит, ямы; surfY и isRoad
-     3000- 3083  5. Столкновения: список AABB + равномерная сетка
+     3109- 3192  5. Столкновения: список AABB + равномерная сетка
                    равномерная сетка 8 м поверх списка AABB
-     3084- 3090  6. Генерация геометрии района
+     3193- 3199  6. Генерация геометрии района
                    Static.batches, Static.signs, Static.lamps — то, что рисуется каждый кадр
-     3091- 3462  Дорога: бордюрный камень, чугун, разметка и обстановка
+     3200- 3571  Дорога: бордюрный камень, чугун, разметка и обстановка
                    бордюр, люки, лужи, разметка, фасадный рельеф, кондиционеры, вывески
-     3463- 4315  Растительность: атлас, карты, ветер
+     3572- 4427  Растительность: атлас, карты, ветер
                    атлас листвы с альфа-тестом, кроны, ветер через атрибут aPart; в конце buildWorld собирает все батчи
-                   └ 4089-4315  сборка батчей района в Static.batches
-     4316- 5017  7. Рендерер
+                   └ 4198-4427  сборка батчей района в Static.batches
+     4428- 5293  7. Рендерер
                    R3, Env (солнце и время суток), initRenderer, resizeGL/applyRenderSize (масштаб рендера), Perf (монитор, GPU, авто-масштаб), applyProfile, drawSky, beginMain, bindMaterial/drawMesh, drawStatic
-     5018- 5477  8. Персонажи: модели со скелетом
+     5294- 5753  8. Персонажи: модели со скелетом
                    скелет на 20 костях, походки и позы; makeCharMesh строит, poseCharacter анимирует
-                   └ 5288-5477  позы и анимация скелета
-     5478- 5782  9. Велосипед и транспорт
+                   └ 5564-5753  позы и анимация скелета
+     5754- 6058  9. Велосипед и транспорт
                    кузова машин, велосипед, собака — те же кости, только меньше
-     5783- 5927  10. Звук: Web Audio, всё синтезируется на лету
+     6059- 6203  10. Звук: Web Audio, всё синтезируется на лету
                    осцилляторы, шумы и три радиостанции; ни одного загруженного файла
-     5928- 5972  11. Сохранение
+     6204- 6248  11. Сохранение
                    формат сохранения в localStorage; настройки лежат отдельным ключом
-     5973- 6129  12. Диалоги и портреты
+     6249- 6405  12. Диалоги и портреты
                    очередь реплик, портреты рисуются на canvas
-     6130- 6235  13. Мини-игры монтажа (двумерные схемы поверх сцены)
+     6406- 6511  13. Мини-игры монтажа (двумерные схемы поверх сцены)
                    общий каркас мини-игр поверх сцены
-     6236- 6987  23. Мини-игра «Монтаж двери» (условная схема)
+     6512- 7263  23. Мини-игра «Монтаж двери» (условная схема)
                    что происходит по E и по F рядом с объектом
-     6988- 7108  14. Радио и бегущая строка
+     7264- 7384  14. Радио и бегущая строка
                    станции, диджей, объявления и бегущая строка
-     7109- 7175  15. Ввод: клавиатура, мышь, обзор от третьего лица
+     7385- 7451  15. Ввод: клавиатура, мышь, обзор от третьего лица
                    клавиатура, мышь, захват курсора; Input.hit — нажатия за кадр
-     7176- 7227  16. Состояние игры
+     7452- 7503  16. Состояние игры
                    S — всё изменяемое состояние смены; BAL — баланс; TOOLS — инструменты
-     7228- 7300  17. Эффекты, тосты, показатели
+     7504- 7576  17. Эффекты, тосты, показатели
                    искры, всплывающий текст, тосты, деньги, репутация, розыск
-     7301- 7498  18. Движение Олега и велосипеда
+     7577- 7774  18. Движение Олега и велосипеда
                    скольжение по AABB, велосипед с креном и заносом
-     7499- 7555  19. Камера от третьего лица
+     7775- 7831  19. Камера от третьего лица
                    камера за спиной с ручным осмотром и возвратом
-     7556- 7612  20. Двумерный слой поверх сцены: реплики, метки, указатели
+     7832- 7888  20. Двумерный слой поверх сцены: реплики, метки, указатели
                    реплики, метки и стрелка к цели рисуются на canvas 2D поверх WebGL
-     7613- 8152  21. Жители района
+     7889- 8428  21. Жители района
                    машины, собаки, хулиганы, бабушки, прохожие; charPose — общий сборщик позы
-                   └ 7787-8152  сборка позы жителя для рендера
-     8153- 8403  22. Заявки
+                   └ 8063-8428  сборка позы жителя для рендера
+     8429- 8679  22. Заявки
                    сценарные заявки и генератор свободных
-     8404- 8861  Бригада: Ваня объясняет один раз, Костя делает на глаз и уезжает
+     8680- 9137  Бригада: Ваня объясняет один раз, Костя делает на глаз и уезжает
                    ход заявки от брифинга до сдачи, мини-игры монтажа, финальная оборона кабеля
-     8862- 8920  23. Взаимодействие
+     9138- 9196  23. Взаимодействие
                    что происходит по E и по F рядом с объектом
-     8921- 9210  24. Тени, маркеры и отрисовка кадра
+     9197- 9487  24. Тени, маркеры и отрисовка кадра
                    drawDynamic, drawGlows, drawOverlay2D и renderFrame — порядок проходов кадра
-                   └ 9173-9210  порядок проходов кадра
-     9211- 9306  25. Интерфейс
+                   └ 9449-9487  порядок проходов кадра
+     9488- 9583  25. Интерфейс
                    HUD, миникарта
-     9307- 9663  26. Экраны
+     9584- 9940  26. Экраны
                    меню, пауза, карта, журнал, магазин, финал
-     9664- 9759  27. Сохранение и обучение
+     9941-10036  27. Сохранение и обучение
                    saveGame/loadGame и обучение
-     9760-10021  28. Мир, цикл и запуск
+    10037-10299  28. Мир, цикл и запуск
                    resetWorld, updateWorld, step, frame, Loader и async boot — точка входа внизу файла
 
   Нумерация разделов в файле историческая и местами сбита (номер 23 занят
@@ -396,18 +396,23 @@ const QCFG = {
       vis: 0.8,           /* множитель дальности отрисовки жителей и техники */
       sparks: 0.5,        /* доля частиц искр и пыли */
       scan: false,        /* полоски развёртки поверх кадра */
+      csm: 1,             /* каскадов теней; 0 — прохода теней нет вовсе */
+      csmSize: 512,       /* сторона слоя каскада, текселей */
+      ssao: false,        /* затенение в складках по глубине */
       veg: { grass: 0.5, cards: 0.6 }   /* плотность травы и карт листвы */
     },
     medium: {
       title: 'среднее',
       dprMax: 1.25, scale: 1, scaleMin: 0.6, texSS: 2, aniso: 8, msaa: 2, detail: true,
       lamps: 8, lampPick: 5, glowR: 52, vis: 1, sparks: 1, scan: true,
+      csm: 2, csmSize: 1024, ssao: false,
       veg: { grass: 1, cards: 1 }
     },
     high: {
       title: 'высокое',
       dprMax: 2, scale: 1, scaleMin: 0.6, texSS: 2, aniso: 16, msaa: 2, detail: true,
       lamps: 8, lampPick: 5, glowR: 52, vis: 1, sparks: 1, scan: true,
+      csm: 3, csmSize: 1024, ssao: true,
       veg: { grass: 1, cards: 1 }
     }
   },
@@ -515,6 +520,56 @@ const QCFG = {
        неоткуда. Сила задана так, как читается после линеаризации. */
     groundAO: { y0: 0, y1: 3.5, k: 0.17 },
     bodyAO: { y0: 0.15, y1: 1.0, k: 0.12 }
+  },
+  /* Отсев статики по клеткам. Район — один меш на материал, поэтому клетки
+     живут не в списке объектов, а в порядке индексов: треугольники батча
+     разложены по клеткам сетки, у каждой клетки свой диапазон в буфере
+     индексов и своя коробка. Кадр выбирает видимые клетки и рисует их
+     диапазоны — одним multiDrawElements, если расширение есть.
+     Клетка 16 м: район 200×150 даёт 13×10 = 130 клеток на батч. Мельче —
+     дороже обход на CPU и длиннее список диапазонов, крупнее — грубее отсев. */
+  cull: {
+    cell: 16,            /* сторона клетки, м */
+    pad: 0.35,           /* запас коробки на ветер и на швы, м */
+    shadowPad: 2.0       /* запас коробки каскада: чуть шире, чем видно */
+  },
+  /* Каскадные теневые карты от солнца. Границы — под масштаб сцены: камера
+     в 6 м за спиной, интересное в первых 60 м, дальняя плоскость 460 м.
+     Дальше maxDist тени не считаются вовсе — там их всё равно не разглядеть,
+     а каскад пришлось бы растянуть на весь район. */
+  shadow: {
+    size: 1024,          /* сторона слоя каскада, текселей (перекрывается профилем) */
+    cascades: 3,         /* сколько каскадов (перекрывается профилем) */
+    splits: [14, 42, 120],  /* дальние границы каскадов, м; последняя — maxDist */
+    fade: 0.12,          /* доля последнего каскада, на которой тень гаснет к 1 */
+    blend: 1.5,          /* ширина перехода между каскадами, м */
+    /* Смещение. Три числа вместо одного, потому что ошибок тоже три:
+       постоянная (квантование глубины), наклонная (тексель накрывает тем
+       больший перепад высоты, чем косее свет) и нормальная (сдвиг точки
+       выборки вдоль нормали — снимает рябь, не отрывая тень от подошвы). */
+    depthBias: 0.0016,   /* постоянное смещение в единицах глубины каскада */
+    slopeBias: 0.0032,   /* множитель при tan(угла между нормалью и светом) */
+    slopeMax: 4.0,       /* потолок наклонного смещения: у ребра tan уходит в бесконечность */
+    normalBias: 0.55,    /* сдвиг вдоль нормали, в текселях каскада */
+    pcf: 1,              /* радиус PCF в текселях: 1 → 3×3, 2 → 5×5 */
+    minAlt: 3.0,         /* ниже этой высоты солнца проход теней не исполняется, ° */
+    strength: 1.0        /* 1 — полная тень; меньше — солнце пробивает */
+  },
+  /* Затенение в складках геометрии по буферу глубины. Считается на половинном
+     разрешении и размывается с сохранением краёв: без этого затенение течёт
+     через силуэты и обводит объекты ореолом. Умножает ТОЛЬКО рассеянное из
+     гармоник и зеркальную окклюзию — солнечный член трогают тени, а не AO. */
+  ssao: {
+    on: true,            /* перекрывается профилем */
+    half: true,          /* считать в половину стороны буфера сцены */
+    radius: 0.55,        /* радиус выборки в мире, м */
+    samples: 12,         /* отсчётов на пиксель */
+    bias: 0.022,         /* порог «своей» поверхности, м: без него самозатенение */
+    strength: 0.9,       /* сила: 1 — полное затемнение в глухом углу */
+    power: 1.35,         /* контраст: >1 поджимает лёгкое затенение к единице */
+    maxDist: 45,         /* дальше AO не считается — там радиус меньше пикселя */
+    blur: 2,             /* радиус размытия в пикселях половинного буфера */
+    depthSigma: 0.35     /* насколько размытию мешает перепад глубины, м */
   },
   /* Небо: однократное рассеяние Рэлея и Ми по лучу зрения. Коэффициенты
      стандартные для земной атмосферы, длины в метрах. Модель живёт в одном
@@ -1793,6 +1848,59 @@ class Mesh {
     }
     for (const idx of other.i) this.i.push(idx + base);
   }
+  /* Разложить треугольники по клеткам сетки XZ и переставить индексы так,
+     чтобы каждая клетка занимала непрерывный кусок буфера. Отсев тогда
+     сводится к «нарисовать такие-то диапазоны», а буфер остаётся один.
+
+     Клетка треугольника — по центру тяжести, а коробка клетки — по всем трём
+     вершинам с запасом: длинный треугольник дороги торчит из своей клетки, и
+     коробка обязана это учесть, иначе он пропадёт на краю кадра.
+
+     Возвращает { n, start, count, box } — box по шесть чисел на клетку.
+     Пустые клетки остаются с count = 0 и в кадре не рассматриваются. */
+  cellify(cellSize, pad) {
+    const C = Math.max(1, cellSize || 16), P = pad || 0;
+    const nx = Math.ceil(W.x / C), nz = Math.ceil(W.z / C), n = nx * nz;
+    const tri = this.i.length / 3;
+    const of = new Int32Array(tri);                 /* клетка каждого треугольника */
+    const count = new Int32Array(n), start = new Int32Array(n);
+    const box = new Float32Array(n * 6);
+    for (let c = 0; c < n; c++) {
+      box[c*6] = box[c*6+1] = box[c*6+2] = 1e30;
+      box[c*6+3] = box[c*6+4] = box[c*6+5] = -1e30;
+    }
+    for (let t = 0; t < tri; t++) {
+      const a = this.i[t*3] * STRIDE, b = this.i[t*3+1] * STRIDE, c2 = this.i[t*3+2] * STRIDE;
+      const cx = (this.v[a] + this.v[b] + this.v[c2]) / 3;
+      const cz = (this.v[a+2] + this.v[b+2] + this.v[c2+2]) / 3;
+      const gx = clamp(Math.floor(cx / C), 0, nx - 1), gz = clamp(Math.floor(cz / C), 0, nz - 1);
+      const ci = gz * nx + gx;
+      of[t] = ci; count[ci]++;
+      const bb = ci * 6;
+      for (const o of [a, b, c2]) {
+        if (this.v[o]   < box[bb])   box[bb]   = this.v[o];
+        if (this.v[o+1] < box[bb+1]) box[bb+1] = this.v[o+1];
+        if (this.v[o+2] < box[bb+2]) box[bb+2] = this.v[o+2];
+        if (this.v[o]   > box[bb+3]) box[bb+3] = this.v[o];
+        if (this.v[o+1] > box[bb+4]) box[bb+4] = this.v[o+1];
+        if (this.v[o+2] > box[bb+5]) box[bb+5] = this.v[o+2];
+      }
+    }
+    let acc = 0;
+    for (let c = 0; c < n; c++) {
+      start[c] = acc; acc += count[c];
+      if (count[c]) { const bb = c * 6; box[bb] -= P; box[bb+1] -= P; box[bb+2] -= P; box[bb+3] += P; box[bb+4] += P; box[bb+5] += P; }
+    }
+    const cur = start.slice(), out = new Array(this.i.length);
+    for (let t = 0; t < tri; t++) {
+      const d = cur[of[t]]++ * 3;
+      out[d] = this.i[t*3]; out[d+1] = this.i[t*3+1]; out[d+2] = this.i[t*3+2];
+    }
+    this.i = out;
+    /* start/count в треугольниках — в индексах умножим при отрисовке */
+    this.cells = { n, nx, nz, cell: C, start, count, box };
+    return this;
+  }
   upload(gl) {
     const vao = gl.createVertexArray();
     gl.bindVertexArray(vao);
@@ -1810,7 +1918,8 @@ class Mesh {
       gl.vertexAttribPointer(loc, size, gl.FLOAT, false, S, off);
     }
     gl.bindVertexArray(null);
-    return { vao, count: this.i.length, type: big ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, verts: this.n, tris: this.i.length / 3 };
+    return { vao, count: this.i.length, type: big ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT, verts: this.n, tris: this.i.length / 3,
+             cells: this.cells || null, ibytes: big ? 4 : 2 };
   }
 }
 
@@ -4299,6 +4408,9 @@ function buildWorld(gl) {
   Static.batches.length = 0;
   for (const k of keys) {
     if (!M[k].i.length) continue;
+    /* индексы раскладываются по клеткам ДО выгрузки: в кадре рисуются только
+       диапазоны видимых клеток, буфер при этом остаётся один */
+    M[k].cellify(QCFG.cull.cell, QCFG.cull.pad);
     Static.batches.push({ name: k, gpu: M[k].upload(gl), alpha: ALPHA_KEYS.has(k) });
   }
   /* вывески: здесь только геометрия и текст; слои текстуры — buildSignsAsync */
@@ -4319,7 +4431,7 @@ function buildWorld(gl) {
 const R3 = {
   main: null, mainDay: null, mainNight: null, sky: null, glow: null, tone: null, cube: null, pref: null,
   skyVAO: null, glowVAO: null,
-  proj: m4(), view: m4(), model: m4(), invVP: m4(), tmp: m4(), tmp2: m4(),
+  proj: m4(), view: m4(), model: m4(), invVP: m4(), viewProj: m4(), tmp: m4(), tmp2: m4(),
   eye: [0, 0, 0], right: [1, 0, 0], up: [0, 1, 0], fwd: [0, 0, -1], time: 0,
   curGrp: null                         /* группа текстур, связанная сейчас */
 };
@@ -4859,6 +4971,152 @@ function setCamera(eye, target) {
   inv.fill(0);
   inv[0] = 1 / p[0]; inv[5] = 1 / p[5]; inv[11] = 1 / p[14]; inv[14] = -1; inv[15] = p[10] / p[14];
   m4mul(R3.invVP, R3.tmp, inv);
+  /* пирамида видимости для отсева статики по клеткам */
+  m4mul(R3.viewProj, R3.proj, R3.view);
+  if (Cull.n) { Cull.setPlanes(R3.viewProj); Cull.markCamera(0); }
+}
+
+/* --- Отсев статики по клеткам ----------------------------------------
+   Район — один меш на материал, и до этого этапа он рисовался целиком каждый
+   кадр: 36 вызовов, около 99 тысяч треугольников, 43–54 % кадра. Проход теней
+   умножил бы это на число каскадов.
+
+   Индексы каждого батча разложены по клеткам сетки 16 м (Mesh.cellify), так
+   что клетка — это непрерывный диапазон в буфере индексов. В кадре остаётся
+   отметить видимые клетки и слить соседние диапазоны в один вызов; при
+   наличии WEBGL_multi_draw все диапазоны батча уходят одним вызовом.
+
+   Коробки клеток объединены по всем батчам: проверка пирамидой считается один
+   раз на клетку, а не на каждый батч. Отсев от этого чуть мягче — зато 130
+   проверок в кадре вместо четырёх с половиной тысяч. */
+const Cull = {
+  n: 0, nx: 0, nz: 0, cell: 16,
+  box: null,                         /* объединённая коробка клетки, 6 чисел */
+  vis: null, visSh: null,            /* видимость камерой и светом каскада */
+  planes: new Float32Array(24),
+  ext: null, cnt: null, off: null,
+  on: true,
+  stats: { calls: 0, tris: 0, cells: 0, vis: 0, sCalls: 0, sTris: 0, full: 0 },
+  st: 0,                             /* 1 — считаем в статический счётчик */
+
+  init(gl) {
+    this.ext = gl.getExtension('WEBGL_multi_draw');
+    const c0 = Static.batches.find(b => b.gpu.cells);
+    if (!c0) { this.n = 0; return; }
+    const C = c0.gpu.cells;
+    this.n = C.n; this.nx = C.nx; this.nz = C.nz; this.cell = C.cell;
+    this.vis = new Uint8Array(C.n); this.visSh = new Uint8Array(C.n);
+    this.box = new Float32Array(C.n * 6);
+    for (let i = 0; i < C.n; i++) {
+      this.box[i*6] = this.box[i*6+1] = this.box[i*6+2] = 1e30;
+      this.box[i*6+3] = this.box[i*6+4] = this.box[i*6+5] = -1e30;
+    }
+    for (const b of Static.batches) {
+      const cc = b.gpu.cells; if (!cc) continue;
+      for (let i = 0; i < C.n; i++) {
+        if (!cc.count[i]) continue;
+        for (let k = 0; k < 3; k++) {
+          if (cc.box[i*6+k]   < this.box[i*6+k])   this.box[i*6+k]   = cc.box[i*6+k];
+          if (cc.box[i*6+3+k] > this.box[i*6+3+k]) this.box[i*6+3+k] = cc.box[i*6+3+k];
+        }
+      }
+    }
+    let m = 0;
+    for (const b of Static.batches) if (b.gpu.cells) m = Math.max(m, b.gpu.cells.n);
+    this.cnt = new Int32Array(m + 1); this.off = new Int32Array(m + 1);
+  },
+
+  /* Шесть плоскостей пирамиды из матрицы вида-проекции (Гриббс–Хартманн).
+     Матрица column-major, поэтому строка i — это m[i], m[4+i], m[8+i], m[12+i]. */
+  setPlanes(m) {
+    const p = this.planes;
+    for (let i = 0; i < 6; i++) {
+      const r = i >> 1, s = (i & 1) ? -1 : 1;
+      const a = m[3] + s * m[r], b = m[7] + s * m[4 + r], c = m[11] + s * m[8 + r], d = m[15] + s * m[12 + r];
+      const l = Math.hypot(a, b, c) || 1;
+      p[i*4] = a / l; p[i*4+1] = b / l; p[i*4+2] = c / l; p[i*4+3] = d / l;
+    }
+  },
+
+  /* Отметить клетки, попавшие в пирамиду. Проверка по «положительной вершине»:
+     коробка снаружи, если её самый дальний по плоскости угол всё равно за ней. */
+  markCamera(maxDist) {
+    const p = this.planes, box = this.box, out = this.vis;
+    const ex = R3.eye[0], ez = R3.eye[2], md2 = maxDist ? maxDist * maxDist : 0;
+    let vis = 0;
+    for (let i = 0; i < this.n; i++) {
+      const b = i * 6;
+      if (box[b] > 1e29) { out[i] = 0; continue; }
+      let inside = 1;
+      for (let k = 0; k < 6 && inside; k++) {
+        const a = p[k*4], bb = p[k*4+1], c = p[k*4+2], d = p[k*4+3];
+        const px = a >= 0 ? box[b+3] : box[b], py = bb >= 0 ? box[b+4] : box[b+1], pz = c >= 0 ? box[b+5] : box[b+2];
+        if (a * px + bb * py + c * pz + d < 0) inside = 0;
+      }
+      if (inside && md2) {
+        /* расстояние до ближайшей точки коробки по XZ — для дальности теней */
+        const dx = ex < box[b] ? box[b] - ex : (ex > box[b+3] ? ex - box[b+3] : 0);
+        const dz = ez < box[b+2] ? box[b+2] - ez : (ez > box[b+5] ? ez - box[b+5] : 0);
+        if (dx * dx + dz * dz > md2) inside = 0;
+      }
+      out[i] = inside; vis += inside;
+    }
+    this.stats.cells = this.n; this.stats.vis = vis;
+  },
+
+  /* Клетки, которые могут бросить тень в этот каскад. Коробка переводится в
+     пространство света; по X и Y сверяется с границами каскада, а по глубине
+     проверяется только дальняя сторона: то, что стоит между солнцем и
+     каскадом, тень бросает, как бы далеко от каскада оно ни было. */
+  markShadow(L, cx, cy, half, pad) {
+    const box = this.box, out = this.visSh, R = half + pad;
+    for (let i = 0; i < this.n; i++) {
+      const b = i * 6;
+      if (box[b] > 1e29) { out[i] = 0; continue; }
+      let lo0 = 1e30, hi0 = -1e30, lo1 = 1e30, hi1 = -1e30;
+      for (let k = 0; k < 8; k++) {
+        const x = box[b + (k & 1 ? 3 : 0)], y = box[b + 1 + (k & 2 ? 3 : 0)], z = box[b + 2 + (k & 4 ? 3 : 0)];
+        const u = L[0] * x + L[1] * y + L[2] * z, v = L[4] * x + L[5] * y + L[6] * z;
+        if (u < lo0) lo0 = u; if (u > hi0) hi0 = u;
+        if (v < lo1) lo1 = v; if (v > hi1) hi1 = v;
+      }
+      out[i] = (hi0 >= cx - R && lo0 <= cx + R && hi1 >= cy - R && lo1 <= cy + R) ? 1 : 0;
+    }
+  }
+};
+
+/* Нарисовать батч по маске видимых клеток, слив соседние диапазоны.
+   Пустые клетки диапазон не рвут: они занимают ноль индексов. */
+function drawCells(gpu, vis) {
+  const gl = GL.gl, c = gpu.cells;
+  if (!c || !vis || !Cull.on) {
+    gl.drawElements(gl.TRIANGLES, gpu.count, gpu.type, 0);
+    Cull.stats.calls++; Cull.stats.tris += gpu.tris;
+    return;
+  }
+  const cnt = Cull.cnt, off = Cull.off, ib = gpu.ibytes;
+  let k = 0, rs = -1, re = -1, tris = 0;
+  for (let i = 0; i < c.n; i++) {
+    const q = c.count[i];
+    if (!q) continue;
+    if (!vis[i]) { if (rs >= 0) { cnt[k] = (re - rs) * 3; off[k] = rs * 3 * ib; k++; rs = -1; } continue; }
+    const s = c.start[i];
+    tris += q;
+    if (rs < 0) { rs = s; re = s + q; }
+    else if (s === re) re = s + q;
+    else { cnt[k] = (re - rs) * 3; off[k] = rs * 3 * ib; k++; rs = s; re = s + q; }
+  }
+  if (rs >= 0) { cnt[k] = (re - rs) * 3; off[k] = rs * 3 * ib; k++; }
+  if (!k) return;
+  if (Cull.ext && k > 1) {
+    Cull.ext.multiDrawElementsWEBGL(gl.TRIANGLES, cnt, 0, gpu.type, off, 0, k);
+    Cull.stats.calls++; if (Cull.st) Cull.stats.sCalls++;
+  } else {
+    for (let j = 0; j < k; j++) gl.drawElements(gl.TRIANGLES, cnt[j], gpu.type, off[j]);
+    Cull.stats.calls += k; if (Cull.st) Cull.stats.sCalls += k;
+  }
+  Cull.stats.tris += tris;
+  if (Cull.st) { Cull.stats.sTris += tris; Cull.stats.full += gpu.tris; }
 }
 
 /* Небо рисуется ПОСЛЕДНИМ из непрозрачного: треугольник на дальней плоскости
@@ -4965,7 +5223,12 @@ function drawMesh(gpu, mat, model, opt) {
   else gl.uniform4f(P.u.uTint, 1, 1, 1, 1);
   bindMaterial(mat);
   gl.bindVertexArray(gpu.vao);
-  gl.drawElements(gl.TRIANGLES, gpu.count, gpu.type, 0);
+  if (opt.cells) drawCells(gpu, opt.cells);
+  else {
+    gl.drawElements(gl.TRIANGLES, gpu.count, gpu.type, 0);
+    Cull.stats.calls++; Cull.stats.tris += gpu.tris;
+    if (Cull.st) { Cull.stats.sCalls++; Cull.stats.sTris += gpu.tris; Cull.stats.full += gpu.tris; }
+  }
 }
 
 function drawGlow(pos, size, color, alpha, hard) {
@@ -4995,12 +5258,24 @@ function hex2rgb(h) {
 /* Осенний нюанс: батч листвы красится одним uTint, геометрию не трогаем. */
 const Season = { tint: null, set(t) { this.tint = t <= 0 ? null : [1 + t * 0.35, 1 - t * 0.06, 0.9 - t * 0.42, 1]; } };
 
+/* Видна ли точка с запасом r: вывески — маленькие отдельные меши, коробок по
+   клеткам у них нет, и дешевле проверить их шаром. */
+function sphereVisible(p, r) {
+  if (!Cull.on) return true;
+  const pl = Cull.planes;
+  for (let k = 0; k < 6; k++)
+    if (pl[k*4] * p[0] + pl[k*4+1] * p[1] + pl[k*4+2] * p[2] + pl[k*4+3] < -r) return false;
+  return true;
+}
+
 /* статический мир + вывески */
 function drawStatic() {
   const idm = m4id(R3.model);
+  const vis = Cull.on ? Cull.vis : null;
+  Cull.st = 1;
   for (const b of Static.batches) {
     if (b.alpha) continue;
-    drawMesh(b.gpu, TX[b.name], idm);
+    drawMesh(b.gpu, TX[b.name], idm, { cells: vis });
   }
   const gl = GL.gl;
   gl.disable(gl.CULL_FACE);
@@ -5008,10 +5283,11 @@ function drawStatic() {
      и при 0.5 крона редеет. Вывескам порог возвращаем — им нужен чёткий край. */
   gl.uniform1f(R3.main.u.uCut, QCFG.tex.cutVeg);
   for (const b of Static.batches) if (b.alpha)
-    drawMesh(b.gpu, TX[b.name], idm, { alpha: true, tint: b.name === 'leaves' ? Season.tint : null });
+    drawMesh(b.gpu, TX[b.name], idm, { alpha: true, cells: vis, tint: b.name === 'leaves' ? Season.tint : null });
   gl.uniform1f(R3.main.u.uCut, QCFG.tex.cutSign);
-  for (const s of Static.signs) if (s.mat) drawMesh(s.gpu, s.mat, idm, { alpha: true });
+  for (const s of Static.signs) if (s.mat && sphereVisible(s.pos, 6)) drawMesh(s.gpu, s.mat, idm, { alpha: true });
   gl.enable(gl.CULL_FACE);
+  Cull.st = 0;
 }
 
 
@@ -9173,6 +9449,7 @@ function drawTone() {
 function renderFrame() {
   const gl = GL.gl;
   Perf.beginFrame(gl);
+  Cull.stats.calls = 0; Cull.stats.tris = 0; Cull.stats.sCalls = 0; Cull.stats.sTris = 0; Cull.stats.full = 0;
   Env.update(hour());
   R3.time = S.t;                       /* облака медленно плывут */
   setCamera([S.cam.x, S.cam.y, S.cam.z], [S.cam.tx, S.cam.ty, S.cam.tz]);
@@ -9972,6 +10249,7 @@ async function boot() {
     Loader.set('строим район', 0.57); await Loader.yield();
     buildSolids();
     buildWorld(gl);
+    Cull.init(gl);                     /* коробки клеток — после сборки батчей */
     Loader.set('рисуем вывески', 0.72); await Loader.yield();
     await buildSignsAsync(gl, (f, job) => Loader.set(job ? 'рисуем вывески · ' + job : null, 0.72 + f * 0.10));
     Loader.set('собираем жителей и технику', 0.84); await Loader.yield();
@@ -10003,7 +10281,7 @@ async function boot() {
        с её JS-двойником, а для этого ему нужны обе. Ставится исключительно
        при запуске с ?mc3d-test — при обычном открытии из file:// в window
        по-прежнему не торчит ничего. */
-    if (location.search.indexOf('mc3d-test') >= 0) window.__MC3D = { QCFG, SkyJS, Env, EnvMap, GL, R3, GLSL_SKY, Perf, S };
+    if (location.search.indexOf('mc3d-test') >= 0) window.__MC3D = { QCFG, SkyJS, Env, EnvMap, GL, R3, GLSL_SKY, Perf, S, Cull, Q, HDR, renderFrame };
     Loader.hide();
     screenMenu();
     requestAnimationFrame(frame);

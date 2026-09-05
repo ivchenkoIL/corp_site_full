@@ -71,7 +71,12 @@ while (Date.now() - t0 < SEC * 1000) {
       gpuAvg: +P.gpuAvg.toFixed(2),
       hz: P.hz, budget: +P.budgetMs().toFixed(1),
       steps: P.steps, drops: P.drops, dropRate: +P.dropRate.toFixed(3),
-      dt: +P.dtRaw.toFixed(1), dynamic: !!M.S.dynamic
+      dt: +P.dtRaw.toFixed(1), dynamic: !!M.S.dynamic,
+      /* отсев статики: вызовы и треугольники за кадр, видимых клеток из всех */
+      calls: M.Cull ? M.Cull.stats.calls : null,
+      tris: M.Cull ? M.Cull.stats.tris : null,
+      cvis: M.Cull ? M.Cull.stats.vis : null,
+      call_: M.Cull ? M.Cull.stats.cells : null
     };
   }));
 }
@@ -88,6 +93,12 @@ console.log('время GPU по собственному таймеру игр�
 console.log('масштаб: старт ' + first.scale + ', конец ' + last.scale + ', минимум ' + Math.min(...scales) + ', максимум ' + Math.max(...scales));
 console.log('шагов контроллера за прогон: ' + (last.steps - first.steps) + ', пропущенных кадров ' + (last.drops - first.drops) + ', доля пропусков ' + last.dropRate);
 console.log('интервал rAF в конце: ' + last.dt + ' мс');
+if (last.calls !== null && last.calls !== undefined) {
+  const mtris = med(rows.map(r => r.tris).filter(v => v != null));
+  const mcalls = med(rows.map(r => r.calls).filter(v => v != null));
+  console.log('отсев статики: вызовов ' + mcalls + ', треугольников ' + mtris +
+              ', видимых клеток ' + last.cvis + ' из ' + last.call_);
+}
 console.log('\nвремя  масштаб  буфер        GPU    бюджет  шагов  пропусков');
 for (const r of rows.filter((_, i) => i % 4 === 0))
   console.log(String(r.t).padStart(6), String(r.scale).padStart(7), r.buf.padStart(12),
