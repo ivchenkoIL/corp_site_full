@@ -74,8 +74,10 @@ while (Date.now() - t0 < SEC * 1000) {
       steps: P.steps, drops: P.drops, dropRate: +P.dropRate.toFixed(3),
       dt: +P.dtRaw.toFixed(1), dynamic: !!M.S.dynamic,
       /* отсев статики: вызовы и треугольники за кадр, видимых клеток из всех */
-      calls: M.Cull ? M.Cull.stats.calls : null,
-      tris: M.Cull ? M.Cull.stats.tris : null,
+      calls: M.Cull ? M.Cull.stats.sCalls : null,
+      tris: M.Cull ? M.Cull.stats.sTris : null,
+      allCalls: M.Cull ? M.Cull.stats.calls : null,
+      allTris: M.Cull ? M.Cull.stats.tris : null,
       cvis: M.Cull ? M.Cull.stats.vis : null,
       call_: M.Cull ? M.Cull.stats.cells : null
     };
@@ -97,8 +99,11 @@ console.log('интервал rAF в конце: ' + last.dt + ' мс');
 if (last.calls !== null && last.calls !== undefined) {
   const mtris = med(rows.map(r => r.tris).filter(v => v != null));
   const mcalls = med(rows.map(r => r.calls).filter(v => v != null));
-  console.log('отсев статики: вызовов ' + mcalls + ', треугольников ' + mtris +
+  const atris = med(rows.map(r => r.allTris).filter(v => v != null));
+  const acalls = med(rows.map(r => r.allCalls).filter(v => v != null));
+  console.log('главный проход: вызовов ' + mcalls + ', треугольников ' + mtris +
               ', видимых клеток ' + last.cvis + ' из ' + last.call_);
+  console.log('весь кадр (с тенями и глубиной): вызовов ' + acalls + ', треугольников ' + atris);
 }
 console.log('\nвремя  масштаб  буфер        GPU    бюджет  шагов  пропусков');
 for (const r of rows.filter((_, i) => i % 4 === 0))
