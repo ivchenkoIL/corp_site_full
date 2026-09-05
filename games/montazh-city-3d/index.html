@@ -512,10 +512,13 @@ const QCFG = {
     rEarth: 6371e3, rAtmo: 6471e3,
     gMie: 0.76,                          /* вытянутость доли Ми вперёд */
     msK: 0.008,                          /* доля многократного рассеяния (см. inscatter) */
-    sunI: 26,                            /* яркость солнца над атмосферой */
+    /* Яркость солнца в модели рассеяния — она же задаёт, насколько ярко
+       рассеянное. Подобрана по контрольным сценам: 26 давало двор «Три
+       Колена» на +27 % к базе, 18 роняло открытую улицу на −13 %. */
+    sunI: 22,
     viewSteps: 8, lightSteps: 4,         /* отсчётов по лучу и к солнцу */
     groundAlbedo: [.11, .10, .09],       /* земля под горизонтом — для окружения */
-    groundSun: 2.5, groundSky: 0.6,      /* чем земля освещена: солнцем и небом */
+    groundSun: 2.5, groundSky: 0.35,     /* чем земля освещена: солнцем и небом */
     /* Ночное небо: свечение атмосферы, засветка города и рассеянный лунный
        свет одной подложкой. Значения не «на глаз ярче»: подобраны так, чтобы
        рассеянный свет из сферических гармоник встал на уровень прежней
@@ -564,7 +567,7 @@ const QCFG = {
     /* Ключевые точки экспозиции. Автоэкспозиции нет намеренно: она «дышала»
        бы на каждом повороте камеры. Ночь почти не отличается от дня —
        темноту делает сама сцена, а не экспозиция. */
-    exposure: { day: 1.0, sunset: 1.25, night: 1.05 },
+    exposure: { day: 1.0, sunset: 1.0, night: 1.05 },
     sat: 1.06,
     dither: 1.0         /* сила дизеринга в младшем бите: без него ночное небо полосит */
   }
@@ -976,7 +979,9 @@ uniform sampler2DArray uTex;      /* albedo в SRGB8_ALPHA8: семплер от
 uniform sampler2DArray uSurf;     /* nx ny roughness metalness, линейно */
 uniform sampler2DArray uAO;       /* ambient occlusion, линейно */
 uniform sampler2DArray uDetail;   /* detail-нормаль высокой частоты, RG */
-uniform samplerCube uSky;         /* небо: туман, дальний план и отражения */
+uniform samplerCube uSky;         /* небо: туман и дальний план */
+uniform samplerCube uPref;        /* префильтрованные по шероховатости отражения */
+uniform float uPrefMax;           /* последний уровень префильтра */
 uniform vec3 uSH[9];              /* сферические гармоники рассеянного света */
 uniform float uLayer, uHasSurf, uTriplanar, uDetailK;
 uniform vec2 uMatRM;              /* roughness, metalness для материалов без карт */
@@ -1062,13 +1067,17 @@ void main(){
   /* солнце */
   vec3 lit = directLight(N, V, uSunDir, uSunIrr * mix(1.0, ao, 0.5), diff, f0, a);
 
-  /* Рассеянное — из сферических гармоник неба; зеркальное — из кубмапы неба
-     по отражённому вектору. Пока это резкое отражение без учёта
-     шероховатости; префильтр по уровням встанет сюда на следующем шаге. */
+  /* Окружение как свет. Рассеянное — из сферических гармоник неба;
+     зеркальное — из префильтрованной по шероховатости кубмапы по отражённому
+     вектору, со split-sum: свёртку даёт префильтр, интеграл BRDF —
+     приближение Кариса. Именно это превращает объекты из наклеенных в
+     стоящие в сцене: металл отражает небо, тени подсвечены голубым. */
   vec3 R = reflect(-V, N);
+  /* Горизонтная окклюзия: отражение, ушедшее под геометрическую поверхность,
+     физически невозможно — иначе карта нормалей ловит небо сквозь стену. */
   float horiz = clamp(1.0 + ${gf(QCFG.light.horizonOccl)} * dot(R, vNorG), 0.0, 1.0);
   horiz *= horiz;
-  vec3 skyRad = textureLod(uSky, R, rough * 5.0).rgb;
+  vec3 skyRad = textureLod(uPref, R, rough * uPrefMax).rgb;
   lit += diff * shIrradiance(N) * INV_PI * ao;
   lit += skyRad * envBRDF(f0, rough, NoV) * specOcclusion(NoV, ao, rough) * horiz;
 
@@ -1117,6 +1126,64 @@ out vec4 fragColor;
 ${GLSL_SKY}
 void main(){
   fragColor = vec4(skyColor(normalize(uFaceO + uFaceU * vP.x + uFaceV * vP.y), uSunDir, uNight), 1.0);
+}`;
+
+/* --- Префильтр отражений ----------------------------------------------
+   Свёртка кубмапы неба ядром GGX по уровням шероховатости: нулевой уровень —
+   зеркало, последний — почти рассеянное. Это вторая половина split-sum;
+   первая (интеграл BRDF) взята аналитическим приближением Кариса, поэтому
+   таблицы BRDF и прохода её генерации нет вовсе. */
+const FS_PREF = `#version 300 es
+/* PASS:env */
+precision highp float;
+in vec2 vP;
+uniform vec3 uFaceO, uFaceU, uFaceV;
+uniform samplerCube uSrc;
+uniform float uRough, uSrcSize;
+uniform int uSamples;
+out vec4 fragColor;
+const float PI = 3.14159265;
+/* Хаммерсли: детерминированная последовательность без текстуры шума */
+vec2 hammersley(int i, int n){
+  uint b = uint(i);
+  b = (b << 16u) | (b >> 16u);
+  b = ((b & 0x55555555u) << 1u) | ((b & 0xAAAAAAAAu) >> 1u);
+  b = ((b & 0x33333333u) << 2u) | ((b & 0xCCCCCCCCu) >> 2u);
+  b = ((b & 0x0F0F0F0Fu) << 4u) | ((b & 0xF0F0F0F0u) >> 4u);
+  b = ((b & 0x00FF00FFu) << 8u) | ((b & 0xFF00FF00u) >> 8u);
+  return vec2(float(i) / float(n), float(b) * 2.3283064365386963e-10);
+}
+vec3 importanceGGX(vec2 xi, vec3 N, float a){
+  float phi = 2.0 * PI * xi.x;
+  float ct = sqrt((1.0 - xi.y) / (1.0 + (a * a - 1.0) * xi.y));
+  float st = sqrt(max(1.0 - ct * ct, 0.0));
+  vec3 h = vec3(st * cos(phi), st * sin(phi), ct);
+  vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+  vec3 tx = normalize(cross(up, N)), ty = cross(N, tx);
+  return tx * h.x + ty * h.y + N * h.z;
+}
+void main(){
+  vec3 N = normalize(uFaceO + uFaceU * vP.x + uFaceV * vP.y);
+  if (uRough <= 0.0) { fragColor = vec4(texture(uSrc, N).rgb, 1.0); return; }
+  float a = uRough * uRough;
+  vec3 sum = vec3(0.0); float wsum = 0.0;
+  for (int i = 0; i < 64; i++) {
+    if (i >= uSamples) break;
+    vec3 H = importanceGGX(hammersley(i, uSamples), N, a);
+    vec3 L = 2.0 * dot(N, H) * H - N;
+    float NoL = dot(N, L);
+    if (NoL <= 0.0) continue;
+    /* Мип источника по телесному углу отсчёта: без него на грубых уровнях
+       небо распадается на светлые точки — отсчётов меньше, чем текселей. */
+    float NoH = max(dot(N, H), 1e-4);
+    float d = NoH * NoH * (a * a - 1.0) + 1.0;
+    float pdf = (a * a) / (PI * d * d) * 0.25 + 1e-4;
+    float sa = 1.0 / (float(uSamples) * pdf);
+    float sTex = 4.0 * PI / (6.0 * uSrcSize * uSrcSize);
+    sum += textureLod(uSrc, L, max(0.5 * log2(sa / sTex), 0.0)).rgb * NoL;
+    wsum += NoL;
+  }
+  fragColor = vec4(sum / max(wsum, 1e-4), 1.0);
 }`;
 
 const VS_SKY = `#version 300 es
@@ -4217,7 +4284,7 @@ function buildWorld(gl) {
 /* 7. Рендерер                                                          */
 /* ------------------------------------------------------------------ */
 const R3 = {
-  main: null, sky: null, glow: null, tone: null, cube: null, skyVAO: null, glowVAO: null,
+  main: null, sky: null, glow: null, tone: null, cube: null, pref: null, skyVAO: null, glowVAO: null,
   proj: m4(), view: m4(), model: m4(), invVP: m4(), tmp: m4(), tmp2: m4(),
   eye: [0, 0, 0], right: [1, 0, 0], up: [0, 1, 0], fwd: [0, 0, -1], time: 0,
   curGrp: null                         /* группа текстур, связанная сейчас */
@@ -4405,64 +4472,98 @@ const CUBE_FACES = [
 ];
 
 const EnvMap = {
-  cube: null, fb: null, size: 0, face: 0, dirty: true, ready: false,
-  lastSun: [0, 0, 0], bytes: 0,
+  cube: null, pref: null, fb: null, size: 0, prefSize: 0, levels: 0,
+  job: 0, jobs: 0, dirty: true, ready: false,
+  lastSun: [0, 0, 0], bytes: 0, shMs: 0,
   sh: new Float32Array(27),          /* девять коэффициентов по три канала */
   _dir: [0, 0, 0], _col: [0, 0, 0],
 
-  init(gl) {
-    this.size = QCFG.env.cube;
-    this.cube = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.cube);
-    const levels = Math.floor(Math.log2(this.size)) + 1;
-    gl.texStorage2D(gl.TEXTURE_CUBE_MAP, levels, gl.RGBA16F, this.size, this.size);
+  _makeCube(gl, size, levels) {
+    const t = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, t);
+    gl.texStorage2D(gl.TEXTURE_CUBE_MAP, levels, gl.RGBA16F, size, size);
     gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return t;
+  },
+
+  init(gl) {
+    const E = QCFG.env;
+    this.size = E.cube; this.prefSize = E.pref; this.levels = E.prefLevels;
+    const cubeLevels = Math.floor(Math.log2(this.size)) + 1;
+    this.cube = this._makeCube(gl, this.size, cubeLevels);
+    this.pref = this._makeCube(gl, this.prefSize, this.levels);
     this.fb = gl.createFramebuffer();
+    /* заданий на пересборку: шесть граней неба плюс грань×уровень префильтра */
+    this.jobs = 6 + 6 * this.levels;
     let b = 0;
-    for (let l = 0; l < levels; l++) { const sz = Math.max(1, this.size >> l); b += sz * sz * 6 * 8; }
+    for (let l = 0; l < cubeLevels; l++) { const sz = Math.max(1, this.size >> l); b += sz * sz * 6 * 8; }
+    for (let l = 0; l < this.levels; l++) { const sz = Math.max(1, this.prefSize >> l); b += sz * sz * 6 * 8; }
     this.bytes = b;
-    this.dirty = true; this.face = 0;
+    this.dirty = true; this.job = 0;
   },
 
   /* солнце сдвинулось настолько, что окружение пора пересобрать? */
   check() {
     const s = Env.sun, l = this.lastSun;
     const cos = s[0] * l[0] + s[1] * l[1] + s[2] * l[2];
-    if (cos < Math.cos(QCFG.env.sunStepDeg * D2R)) { this.dirty = true; }
-    if (this.dirty && this.face === 0) { l[0] = s[0]; l[1] = s[1]; l[2] = s[2]; }
+    if (cos < Math.cos(QCFG.env.sunStepDeg * D2R)) this.dirty = true;
+    if (this.dirty && this.job === 0) { l[0] = s[0]; l[1] = s[1]; l[2] = s[2]; }
   },
 
-  /* Одна грань за кадр. Когда собраны все шесть — мипы и сферические
-     гармоники; при загрузке всё это прогоняется разом. */
+  /* Одно задание за кадр: сначала шесть граней неба, потом мипы и
+     сферические гармоники, потом грани префильтра по уровням. При загрузке
+     всё прогоняется разом — иначе первый кадр смены будет без окружения. */
   update(gl, all) {
     if (!this.dirty) return;
-    const P = R3.cube, n = all ? 6 : 1;
-    gl.useProgram(P.p);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb);
     gl.disable(gl.DEPTH_TEST);
-    gl.viewport(0, 0, this.size, this.size);
-    gl.uniform3fv(P.u.uSunDir, Env.sun);
-    gl.uniform1f(P.u.uNight, Env.night);
     gl.bindVertexArray(R3.skyVAO);
+    const n = all ? this.jobs : 1;
     for (let k = 0; k < n; k++) {
-      const f = CUBE_FACES[this.face];
-      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_CUBE_MAP_POSITIVE_X + this.face, this.cube, 0);
-      gl.uniform3fv(P.u.uFaceO, f.o); gl.uniform3fv(P.u.uFaceU, f.u); gl.uniform3fv(P.u.uFaceV, f.v);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
-      this.face++;
-      if (this.face >= 6) {
-        this.face = 0; this.dirty = false; this.ready = true;
+      if (this.job < 6) this._skyFace(gl, this.job);
+      else this._prefFace(gl, this.job - 6);
+      this.job++;
+      if (this.job === 6) {
         gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.cube);
         gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+        const t0 = performance.now();
         this.computeSH();
-        break;
+        this.shMs = performance.now() - t0;
+        this.ready = true;                 /* небо готово, отражения догоняются */
       }
+      if (this.job >= this.jobs) { this.job = 0; this.dirty = false; break; }
     }
     gl.enable(gl.DEPTH_TEST);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  },
+
+  _skyFace(gl, i) {
+    const P = R3.cube, f = CUBE_FACES[i];
+    gl.useProgram(P.p);
+    gl.viewport(0, 0, this.size, this.size);
+    gl.uniform3fv(P.u.uSunDir, Env.sun);
+    gl.uniform1f(P.u.uNight, Env.night);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, this.cube, 0);
+    gl.uniform3fv(P.u.uFaceO, f.o); gl.uniform3fv(P.u.uFaceU, f.u); gl.uniform3fv(P.u.uFaceV, f.v);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  },
+
+  _prefFace(gl, i) {
+    const P = R3.pref, lvl = (i / 6) | 0, face = i % 6, f = CUBE_FACES[face];
+    const sz = Math.max(1, this.prefSize >> lvl);
+    gl.useProgram(P.p);
+    gl.viewport(0, 0, sz, sz);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.cube);
+    gl.uniform1i(P.u.uSrc, 0);
+    gl.uniform1f(P.u.uSrcSize, this.size);
+    gl.uniform1f(P.u.uRough, this.levels > 1 ? lvl / (this.levels - 1) : 0);
+    gl.uniform1i(P.u.uSamples, QCFG.env.prefSamples[Math.min(lvl, QCFG.env.prefSamples.length - 1)]);
+    gl.uniform3fv(P.u.uFaceO, f.o); gl.uniform3fv(P.u.uFaceU, f.u); gl.uniform3fv(P.u.uFaceV, f.v);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_CUBE_MAP_POSITIVE_X + face, this.pref, lvl);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
   },
 
   /* Сферические гармоники L2 по той же аналитической функции неба. Считаются
@@ -4520,6 +4621,7 @@ function initRenderer(canvas) {
   R3.glow = program(gl, VS_GLOW, FS_GLOW, 'glow');
   R3.tone = program(gl, VS_TONE, FS_TONE, 'tone');
   R3.cube = program(gl, VS_FACE, FS_CUBE, 'cube');
+  R3.pref = program(gl, VS_FACE, FS_PREF, 'pref');
   initHDR(gl);
   EnvMap.init(gl);
   /* полноэкранный треугольник для неба */
@@ -4767,8 +4869,11 @@ function beginMain(lamps) {
   gl.uniform3fv(P.u.uEye, R3.eye);
   gl.uniform1i(P.u.uTex, 0); gl.uniform1i(P.u.uSurf, 1); gl.uniform1i(P.u.uAO, 2); gl.uniform1i(P.u.uDetail, 3);
   gl.uniform1i(P.u.uSky, 4);
+  gl.uniform1i(P.u.uPref, 5);
+  gl.uniform1f(P.u.uPrefMax, QCFG.env.prefLevels - 1);
   if (Tex.detail) { gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D_ARRAY, Tex.detail.tex); }
   gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_CUBE_MAP, EnvMap.cube);
+  gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_CUBE_MAP, EnvMap.pref);
   gl.activeTexture(gl.TEXTURE0);
   gl.uniform1f(P.u.uDetailK, Q.detail ? QCFG.tex.detailStrength : 0);
   gl.uniform3f(P.u.uDetailP, QCFG.tex.detailScale, QCFG.tex.detailNear, QCFG.tex.detailFar);
@@ -9832,7 +9937,7 @@ async function boot() {
        набралось бы только к шестому кадру, и первый кадр смены был бы без
        неба и без рассеянного света. */
     Env.update(12);
-    EnvMap.dirty = true; EnvMap.face = 0;
+    EnvMap.dirty = true; EnvMap.job = 0;
     EnvMap.update(gl, true);
     Loader.set(null, 1);
     Input.init();
