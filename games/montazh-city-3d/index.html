@@ -456,40 +456,93 @@ const QCFG = {
     aoStrength: 2.0
   },
   /* Цвет. Albedo лежит в SRGB8_ALPHA8 и семплится линейно; вершинные цвета
-     и авторские палитры переводятся в линейное пространство той же гаммой.
-     Кодирование в sRGB — один раз, в проходе постобработки. */
-  color: { gamma: 2.2, exposure: 1.02, sunK: 1.0, ambK: 1.7, skyK: 0.76, fogK: 1.0 },
+     и авторские тинты переводятся в линейное пространство той же гаммой.
+     Кодирование в sRGB — один раз, в проходе постобработки.
+     Коэффициенты sunK/ambK/skyK/fogK этапа 02 были костылями под старую
+     модель — балансом теперь занимаются QCFG.light и QCFG.sky. */
+  color: { gamma: 2.2 },
   /* Свет. Модель отражения физическая: GGX (Троубридж–Райц) для распределения
      микрограней, высотно-коррелированный Smith для затенения геометрией,
      Френель по Шлику, Ламберт в диффузе с сохранением энергии. Одна и та же
      BRDF для солнца, для точечных источников и для окружения. Ни одного
      числа освещения в шейдере — всё здесь. */
   light: {
-    sunK: 1.0,          /* множитель солнечной освещённости */
+    sunK: 8.0,          /* освещённость от солнца = прозрачность атмосферы × sunK */
     vGlossK: 0.85,      /* лужи, стекло, краска: rough_eff = rough·(1 − vGloss·k) */
     roughMin: 0.045,    /* ниже блик вырождается в точку и мерцает на движении */
     f0: 0.04,           /* отражение диэлектрика в упор, 4 % */
-    ambK: 1.0,          /* множитель рассеянного (до этапа окружения — палитры Env) */
     /* Точечные источники: спад обратный квадрату с оконной функцией на
        радиусе, та же BRDF, что у солнца. Раньше был линейный спад (1 − d/16)²
        и обёртка 0.75/0.25, из-за которой затенённая сторона всё равно
        светилась. */
     lamp: {
       radius: 16,       /* дальше источник не считается, м */
+      /* Радиус самого светильника. Точечный источник на полутора метрах даёт
+         обратным квадратом вдесятеро больше прежнего линейного спада и
+         выжигает землю под ногами; у настоящей лампы есть размер, и ближе
+         своего радиуса она не разгорается. */
+      srcR: 1.2,
       /* Сила источника: освещённость = power·k·окно²/расстояние². Значение не
          на глаз: приравнено к прежнему вкладу (0.75·NoL + 0.25)·(1 − d/16)² на
          восьми и на четырнадцати метрах — оба уравнения дают 21. */
       power: 21,
       warm: [1, .82, .55], oleg: [.65, .7, .95], torch: [1, .95, .8], bike: [1, .92, .7],
-      kSmall: 0.7, kBig: 1.15, kOleg: 0.55, kTorch: 2.1, kBike: 1.4
+      /* kOleg — не светильник, а игровая поблажка «чтобы ночью не идти
+         вслепую»: при честном спаде её пришлось убавить втрое. */
+      kSmall: 0.7, kBig: 1.15, kOleg: 0.18, kTorch: 1.2, kBike: 1.0
     },
     emis: { win: 1.55, tint: [1, .86, .6], tintK: 0.35 },   /* окна и неон */
+    glowK: 1.0,         /* общая сила свечений-спрайтов */
     horizonOccl: 1.0,   /* гашение отражений, ушедших под геометрическую нормаль */
     /* Вершинное затенение низа стен и кузовов. Это не дубль карты AO: та про
        мелкий рельеф материала, а это контакт с землёй, которого карте взять
        неоткуда. Сила задана так, как читается после линеаризации. */
     groundAO: { y0: 0, y1: 3.5, k: 0.17 },
     bodyAO: { y0: 0.15, y1: 1.0, k: 0.12 }
+  },
+  /* Небо: однократное рассеяние Рэлея и Ми по лучу зрения. Коэффициенты
+     стандартные для земной атмосферы, длины в метрах. Модель живёт в одном
+     месте (GLSL_SKY): из неё собирается шейдер кубмапы, и по ней же на CPU
+     считаются сферические гармоники рассеянного света. Совпадение двух
+     реализаций проверяет tools/sky-test.mjs. */
+  sky: {
+    betaR: [5.8e-6, 13.5e-6, 33.1e-6],   /* рассеяние Рэлея по каналам, 1/м */
+    betaM: 21e-6,                        /* рассеяние Ми */
+    hR: 8000, hM: 1200,                  /* высоты однородной атмосферы, м */
+    rEarth: 6371e3, rAtmo: 6471e3,
+    gMie: 0.76,                          /* вытянутость доли Ми вперёд */
+    msK: 0.008,                          /* доля многократного рассеяния (см. inscatter) */
+    sunI: 26,                            /* яркость солнца над атмосферой */
+    viewSteps: 8, lightSteps: 4,         /* отсчётов по лучу и к солнцу */
+    groundAlbedo: [.11, .10, .09],       /* земля под горизонтом — для окружения */
+    groundSun: 2.5, groundSky: 0.6,      /* чем земля освещена: солнцем и небом */
+    /* Ночное небо: свечение атмосферы, засветка города и рассеянный лунный
+       свет одной подложкой. Значения не «на глаз ярче»: подобраны так, чтобы
+       рассеянный свет из сферических гармоник встал на уровень прежней
+       ночной палитры Env, и тогда экспозиция ночи остаётся дневной. */
+    night: { zenith: [.0088, .0120, .0300], horizon: [.0240, .0272, .0500] },
+    /* Положение солнца. Раньше высота зажималась снизу (Math.max(0.03, …)) и
+       солнце никогда не заходило, а «ночь» набиралась отдельными рампами по
+       часам. Теперь высота честно уходит в минус, а ночь считается из неё. */
+    sunrise: 6, sunset: 18, maxAlt: 72, azStart: 75, azEnd: 285,
+    nightAlt: [4, -6],                   /* от какой высоты солнца до какой набирается ночь, ° */
+    moonLag: 11.5,                       /* луна отстаёт от солнца на столько часов */
+    /* Экранный проход: то, что кубмапа 128² не удержит. */
+    disk: { pow: 3000, k: 26 },          /* диск солнца */
+    moon: { cos: 0.9993, k: 2.2, glowPow: 700, col: [.62, .66, .82] },
+    stars: { k: 0.6, dens: 260 },
+    cloud: { speed: [0.006, 0.0035], plane: 0.55, lo: 1.5, hi: 3.7, cover: [0.42, 0.24], sunlit: 0.5 },
+    fogDens: [0.0026, 0.0085], fogSunset: 0.0016, fogMip: 3
+  },
+  /* Окружение из неба: кубмапа, префильтрованные по шероховатости отражения и
+     сферические гармоники для рассеянного. Считается при загрузке и при
+     движении солнца, по одной грани за кадр. */
+  env: {
+    cube: 128,          /* кубмапа неба, с мипами */
+    pref: 64, prefLevels: 6,
+    prefSamples: [1, 16, 24, 32, 32, 24],
+    sunStepDeg: 1.5,    /* солнце сдвинулось на столько — пересобрать окружение */
+    shGrid: 12          /* сетка направлений на грань для SH на CPU */
   },
   /* Постобработка. Сцена рисуется в HDR-буфер в линейном свете, и ровно один
      раз в конце кадра он превращается в картинку: экспозиция, ACES,
@@ -507,8 +560,11 @@ const QCFG = {
        146 у RGBA16F на том же градиенте) — сказывается дизеринг на выводе. */
     hdr: 'R11F_G11F_B10F',   /* RGBA16F | R11F_G11F_B10F | RGBA8 */
     msaaMax: 4,         /* потолок сэмплов поверх профиля; реальное — по getInternalformatParameter */
-    exposure: 0.55,     /* общий множитель поверх ключевых точек Env: кривая ACES
-                           «горячее» прежней Рейнхарда и на тех же числах пересвечивает */
+    /* Ключевые точки экспозиции. Автоэкспозиции нет намеренно. */
+    /* Ключевые точки экспозиции. Автоэкспозиции нет намеренно: она «дышала»
+       бы на каждом повороте камеры. Ночь почти не отличается от дня —
+       темноту делает сама сцена, а не экспозиция. */
+    exposure: { day: 1.0, sunset: 1.25, night: 1.05 },
     sat: 1.06,
     dither: 1.0         /* сила дизеринга в младшем бите: без него ночное небо полосит */
   }
@@ -607,6 +663,195 @@ const GL = { gl: null, canvas: null, w: 1, h: 1, dpr: 1, scale: 1, uiDpr: 1, ani
 /* Числа конфигурации в текст шейдера. */
 const gf = v => (v !== 0 && Math.abs(v) < 1e-4 ? v.toExponential(8) : v.toFixed(8));
 const gv3 = a => 'vec3(' + a.map(gf).join(', ') + ')';
+
+/* --- Модель неба: однократное рассеяние Рэлея и Ми ---------------------
+   Луч зрения делится на отсчёты; в каждом считается, сколько света дошло от
+   солнца (внутренний цикл — оптическая глубина к солнцу) и сколько из него
+   рассеялось в сторону наблюдателя. Отсюда сами собой берутся синий зенит
+   (Рэлей сильнее в коротких волнах), красный закат (длинный путь через
+   атмосферу выедает синеву) и белёсый ореол вокруг солнца (Ми).
+
+   Это единственное место, где живёт формула неба. Из неё собирается GLSL для
+   кубмапы, и по ней же считаются сферические гармоники — но на CPU, чтобы
+   не читать обратно то, что нарисовали. Значит, формула существует в двух
+   исполнениях, и их совпадение проверяется тестом tools/sky-test.mjs. */
+const GLSL_SKY = (() => {
+  const K = QCFG.sky;
+  return `
+const vec3  BETA_R = ${gv3(K.betaR)};
+const float BETA_M = ${gf(K.betaM)};
+const float H_R = ${gf(K.hR)}, H_M = ${gf(K.hM)};
+const float R_EARTH = ${gf(K.rEarth)}, R_ATMO = ${gf(K.rAtmo)};
+const float G_MIE = ${gf(K.gMie)}, SUN_I = ${gf(K.sunI)}, MS_K = ${gf(K.msK)};
+const vec3  GROUND_A = ${gv3(K.groundAlbedo)};
+const vec3  NIGHT_Z = ${gv3(K.night.zenith)}, NIGHT_H = ${gv3(K.night.horizon)};
+
+/* расстояние до верхней границы атмосферы вдоль луча */
+float atmoFar(vec3 o, vec3 d){
+  float b = dot(o, d), c = dot(o, o) - R_ATMO * R_ATMO;
+  float disc = b * b - c;
+  return disc <= 0.0 ? 0.0 : -b + sqrt(disc);
+}
+/* луч уходит в землю? тогда точка в её тени и не светит */
+bool hitsGround(vec3 o, vec3 d){
+  float b = dot(o, d), c = dot(o, o) - R_EARTH * R_EARTH;
+  float disc = b * b - c;
+  return disc > 0.0 && (-b - sqrt(disc)) > 0.0;
+}
+vec3 inscatter(vec3 dir, vec3 sun){
+  vec3 o = vec3(0.0, R_EARTH + 200.0, 0.0);
+  float far = atmoFar(o, dir);
+  if (far <= 0.0) return vec3(0.0);
+  float seg = far / ${K.viewSteps}.0;
+  vec3 sumR = vec3(0.0), sumM = vec3(0.0);
+  float odR = 0.0, odM = 0.0;
+  for (int i = 0; i < ${K.viewSteps}; i++){
+    vec3 p = o + dir * (seg * (float(i) + 0.5));
+    float h = length(p) - R_EARTH;
+    float dr = exp(-h / H_R) * seg, dm = exp(-h / H_M) * seg;
+    odR += dr; odM += dm;
+    if (hitsGround(p, sun)) continue;
+    float ls = atmoFar(p, sun) / ${K.lightSteps}.0;
+    float lR = 0.0, lM = 0.0;
+    for (int j = 0; j < ${K.lightSteps}; j++){
+      float hq = length(p + sun * (ls * (float(j) + 0.5))) - R_EARTH;
+      lR += exp(-hq / H_R) * ls; lM += exp(-hq / H_M) * ls;
+    }
+    vec3 att = exp(-(BETA_R * (odR + lR) + BETA_M * 1.1 * (odM + lM)));
+    sumR += att * dr; sumM += att * dm;
+  }
+  float mu = dot(dir, sun), mu2 = mu * mu;
+  float pR = 0.05968310 * (1.0 + mu2);                       /* 3/(16pi) */
+  float g2 = G_MIE * G_MIE;
+  float pM = 0.11936620 * ((1.0 - g2) * (1.0 + mu2)) /
+             ((2.0 + g2) * pow(max(1.0 + g2 - 2.0 * G_MIE * mu, 1e-4), 1.5));  /* 3/(8pi) */
+  /* Приближение многократного рассеяния. Однократное даёт слишком красный
+     горизонт: там, где путь через атмосферу длинный, синева выедается
+     начисто, а в действительности она возвращается переотражениями.
+     Насыщение (1 − exp(−betaR·od)) даёт нужную форму — у зенита почти ноль,
+     у горизонта ровный белый, — и стоит одного exp, потому что оптическая
+     глубина уже посчитана. */
+  vec3 ms = (vec3(1.0) - exp(-BETA_R * odR)) * (MS_K * SUN_I * max(sun.y * 1.4 + 0.06, 0.0));
+  return (sumR * BETA_R * pR + sumM * BETA_M * pM) * SUN_I + ms;
+}
+/* Небо целиком: рассеяние, ночная подложка и земля под горизонтом.
+
+   Для направлений вниз луч зрения ушёл бы под поверхность, плотность
+   атмосферы там растёт экспоненциально и интеграл вырождается: в GLSL
+   получался ноль, в JS — NaN (0 · Infinity). Поэтому нижнюю полусферу
+   считаем по зеркальному направлению — это и есть дымка над далёкой землёй,
+   которая вблизи горизонта неотличима от неба, — и подмешиваем к ней саму
+   землю, освещённую солнцем и небом.
+
+   Земля нужна не для картинки, её закрывает застройка, а для окружения: из
+   нижней полусферы берутся отражения и рассеянный свет снизу. */
+vec3 skyColor(vec3 dir, vec3 sun, float nightK){
+  vec3 up = dir.y < 0.0 ? vec3(dir.x, -dir.y, dir.z) : dir;
+  vec3 col = inscatter(up, sun);
+  col += mix(NIGHT_H, NIGHT_Z, clamp(dir.y * 0.5 + 0.5, 0.0, 1.0)) * nightK;
+  if (dir.y < 0.0){
+    vec3 g = GROUND_A * (max(sun.y, 0.0) * ${gf(QCFG.sky.groundSun)} + ${gf(QCFG.sky.groundSky)});
+    col = mix(col, g, clamp(-dir.y * 2.5, 0.0, 1.0) * 0.85);
+  }
+  return max(col, vec3(0.0));
+}`;
+})();
+
+/* JS-двойник модели неба. Нужен ровно для одного: посчитать сферические
+   гармоники рассеянного света, не читая обратно нарисованную кубмапу —
+   любое такое чтение ломает тайловый конвейер. Тест tools/sky-test.mjs
+   сравнивает его с GLSL-версией на сетке направлений. */
+const SkyJS = {
+  _o: [0, 0, 0], _p: [0, 0, 0],
+  atmoFar(ox, oy, oz, dx, dy, dz) {
+    const K = QCFG.sky;
+    const b = ox * dx + oy * dy + oz * dz;
+    const c = ox * ox + oy * oy + oz * oz - K.rAtmo * K.rAtmo;
+    const disc = b * b - c;
+    return disc <= 0 ? 0 : -b + Math.sqrt(disc);
+  },
+  hitsGround(ox, oy, oz, dx, dy, dz) {
+    const K = QCFG.sky;
+    const b = ox * dx + oy * dy + oz * dz;
+    const c = ox * ox + oy * oy + oz * oz - K.rEarth * K.rEarth;
+    const disc = b * b - c;
+    return disc > 0 && (-b - Math.sqrt(disc)) > 0;
+  },
+  /* out = [r, g, b]; dir и sun — единичные */
+  color(out, dir, sun, nightK) {
+    const K = QCFG.sky, bR = K.betaR, bM = K.betaM;
+    const oy = K.rEarth + 200;
+    /* нижняя полусфера считается по зеркальному направлению — см. skyColor */
+    const dx = dir[0], dy0 = dir[1], dz = dir[2];
+    const uy = dy0 < 0 ? -dy0 : dy0;
+    const far = this.atmoFar(0, oy, 0, dx, uy, dz);
+    let r = 0, g = 0, b = 0;
+    if (far > 0) {
+      const seg = far / K.viewSteps;
+      let sR0 = 0, sR1 = 0, sR2 = 0, sM0 = 0, sM1 = 0, sM2 = 0, odR = 0, odM = 0;
+      for (let i = 0; i < K.viewSteps; i++) {
+        const t = seg * (i + 0.5);
+        const px = dx * t, py = oy + uy * t, pz = dz * t;
+        const h = Math.sqrt(px * px + py * py + pz * pz) - K.rEarth;
+        const dr = Math.exp(-h / K.hR) * seg, dm = Math.exp(-h / K.hM) * seg;
+        odR += dr; odM += dm;
+        if (this.hitsGround(px, py, pz, sun[0], sun[1], sun[2])) continue;
+        const ls = this.atmoFar(px, py, pz, sun[0], sun[1], sun[2]) / K.lightSteps;
+        let lR = 0, lM = 0;
+        for (let j = 0; j < K.lightSteps; j++) {
+          const u = ls * (j + 0.5);
+          const qx = px + sun[0] * u, qy = py + sun[1] * u, qz = pz + sun[2] * u;
+          const hq = Math.sqrt(qx * qx + qy * qy + qz * qz) - K.rEarth;
+          lR += Math.exp(-hq / K.hR) * ls; lM += Math.exp(-hq / K.hM) * ls;
+        }
+        const tR = odR + lR, tM = (odM + lM) * bM * 1.1;
+        const a0 = Math.exp(-(bR[0] * tR + tM)), a1 = Math.exp(-(bR[1] * tR + tM)), a2 = Math.exp(-(bR[2] * tR + tM));
+        sR0 += a0 * dr; sR1 += a1 * dr; sR2 += a2 * dr;
+        sM0 += a0 * dm; sM1 += a1 * dm; sM2 += a2 * dm;
+      }
+      const mu = dx * sun[0] + uy * sun[1] + dz * sun[2], mu2 = mu * mu;
+      const pR = 0.05968310 * (1 + mu2);
+      const g2 = K.gMie * K.gMie;
+      const pM = 0.11936620 * ((1 - g2) * (1 + mu2)) /
+                 ((2 + g2) * Math.pow(Math.max(1 + g2 - 2 * K.gMie * mu, 1e-4), 1.5));
+      const msk = K.msK * K.sunI * Math.max(sun[1] * 1.4 + 0.06, 0);
+      r = (sR0 * bR[0] * pR + sM0 * bM * pM) * K.sunI + (1 - Math.exp(-bR[0] * odR)) * msk;
+      g = (sR1 * bR[1] * pR + sM1 * bM * pM) * K.sunI + (1 - Math.exp(-bR[1] * odR)) * msk;
+      b = (sR2 * bR[2] * pR + sM2 * bM * pM) * K.sunI + (1 - Math.exp(-bR[2] * odR)) * msk;
+    }
+    const up = clamp(dir[1] * 0.5 + 0.5, 0, 1), N = QCFG.sky.night;
+    r += lerp(N.horizon[0], N.zenith[0], up) * nightK;
+    g += lerp(N.horizon[1], N.zenith[1], up) * nightK;
+    b += lerp(N.horizon[2], N.zenith[2], up) * nightK;
+    if (dir[1] < 0) {
+      const A = QCFG.sky.groundAlbedo;
+      const k = Math.max(sun[1], 0) * QCFG.sky.groundSun + QCFG.sky.groundSky;
+      const t = clamp(-dir[1] * 2.5, 0, 1) * 0.85;
+      r = lerp(r, A[0] * k, t); g = lerp(g, A[1] * k, t); b = lerp(b, A[2] * k, t);
+    }
+    out[0] = Math.max(r, 0); out[1] = Math.max(g, 0); out[2] = Math.max(b, 0);
+    return out;
+  },
+  /* Прозрачность атмосферы вдоль луча на солнце: отсюда цвет и сила прямого
+     солнечного света, а не из авторской палитры. */
+  transmittance(out, sun) {
+    const K = QCFG.sky, bR = K.betaR;
+    const oy = K.rEarth + 200;
+    if (this.hitsGround(0, oy, 0, sun[0], sun[1], sun[2])) { out[0] = out[1] = out[2] = 0; return out; }
+    const far = this.atmoFar(0, oy, 0, sun[0], sun[1], sun[2]);
+    const seg = far / (K.lightSteps * 2);
+    let odR = 0, odM = 0;
+    for (let j = 0; j < K.lightSteps * 2; j++) {
+      const t = seg * (j + 0.5);
+      const px = sun[0] * t, py = oy + sun[1] * t, pz = sun[2] * t;
+      const h = Math.sqrt(px * px + py * py + pz * pz) - K.rEarth;
+      odR += Math.exp(-h / K.hR) * seg; odM += Math.exp(-h / K.hM) * seg;
+    }
+    const m = K.betaM * 1.1 * odM;
+    out[0] = Math.exp(-(bR[0] * odR + m)); out[1] = Math.exp(-(bR[1] * odR + m)); out[2] = Math.exp(-(bR[2] * odR + m));
+    return out;
+  }
+};
 
 /* --- Постобработка ----------------------------------------------------
    Единственное место, где линейный свет становится картинкой. Сцена, небо и
@@ -731,19 +976,30 @@ uniform sampler2DArray uTex;      /* albedo в SRGB8_ALPHA8: семплер от
 uniform sampler2DArray uSurf;     /* nx ny roughness metalness, линейно */
 uniform sampler2DArray uAO;       /* ambient occlusion, линейно */
 uniform sampler2DArray uDetail;   /* detail-нормаль высокой частоты, RG */
+uniform samplerCube uSky;         /* небо: туман, дальний план и отражения */
+uniform vec3 uSH[9];              /* сферические гармоники рассеянного света */
 uniform float uLayer, uHasSurf, uTriplanar, uDetailK;
 uniform vec2 uMatRM;              /* roughness, metalness для материалов без карт */
 uniform vec3 uDetailP;            /* повторов на тайл, ближняя и дальняя дистанции, м */
-uniform vec3 uSunDir, uSunIrr, uAmbSky, uAmbGround, uFogCol;
-uniform float uFogDens, uNight, uAlphaMode, uCut, uGlossMul;
+uniform vec3 uSunDir, uSunIrr;
+uniform float uFogDens, uFogMip, uNight, uAlphaMode, uCut, uGlossMul, uEmisK;
 uniform vec4 uTint;
 uniform vec3 uEye;
 uniform vec3 uLampPos[${QCFG.shader.maxLamps}];
 uniform vec3 uLampCol[${QCFG.shader.maxLamps}];
-uniform float uLampR2, uLampP;
+uniform float uLampR2, uLampR0, uLampP;
 uniform int uLampN;
 out vec4 fragColor;
 ${GLSL_PBR}
+/* Освещённость из сферических гармоник L2 по формуле Рамамурти–Ханрахана:
+   девять коэффициентов и два десятка операций вместо выборки из карты
+   освещённости. Коэффициенты считает CPU по той же модели неба. */
+vec3 shIrradiance(vec3 n){
+  const float c1 = 0.429043, c2 = 0.511664, c3 = 0.743125, c4 = 0.886227, c5 = 0.247708;
+  return max(c1 * uSH[8] * (n.x * n.x - n.y * n.y) + c3 * uSH[6] * n.z * n.z + c4 * uSH[0] - c5 * uSH[6]
+           + 2.0 * c1 * (uSH[4] * n.x * n.y + uSH[7] * n.x * n.z + uSH[5] * n.y * n.z)
+           + 2.0 * c2 * (uSH[3] * n.x + uSH[1] * n.y + uSH[2] * n.z), vec3(0.0));
+}
 /* Касательный базис из производных экрана: тангенсов в вершинах нет и не нужно */
 vec3 perturb(vec3 N, vec3 nt, vec3 p, vec2 uv){
   vec3 dp1 = dFdx(p), dp2 = dFdy(p);
@@ -806,15 +1062,14 @@ void main(){
   /* солнце */
   vec3 lit = directLight(N, V, uSunDir, uSunIrr * mix(1.0, ao, 0.5), diff, f0, a);
 
-  /* Рассеянное и зеркальное от окружения. Пока источник — полусферические
-     палитры Env; на шаге окружения сюда встанут сферические гармоники и
-     префильтрованная кубмапа неба, а палитры уйдут. */
+  /* Рассеянное — из сферических гармоник неба; зеркальное — из кубмапы неба
+     по отражённому вектору. Пока это резкое отражение без учёта
+     шероховатости; префильтр по уровням встанет сюда на следующем шаге. */
   vec3 R = reflect(-V, N);
   float horiz = clamp(1.0 + ${gf(QCFG.light.horizonOccl)} * dot(R, vNorG), 0.0, 1.0);
   horiz *= horiz;
-  vec3 skyRad = mix(uAmbGround, uAmbSky, clamp(R.y * 0.5 + 0.5, 0.0, 1.0));
-  vec3 irr = mix(uAmbGround, uAmbSky, N.y * 0.5 + 0.5) * PI;
-  lit += diff * irr * INV_PI * ao;
+  vec3 skyRad = textureLod(uSky, R, rough * 5.0).rgb;
+  lit += diff * shIrradiance(N) * INV_PI * ao;
   lit += skyRad * envBRDF(f0, rough, NoV) * specOcclusion(NoV, ao, rough) * horiz;
 
   /* точечные источники: фонари, витрины и фары */
@@ -826,17 +1081,42 @@ void main(){
     /* спад обратный квадрату с оконной функцией на радиусе: свет кончается
        ровно там, где кончается, и не обрывается ступенькой */
     float win = clamp(1.0 - d2 * d2 / (uLampR2 * uLampR2), 0.0, 1.0);
-    float att = uLampP * win * win / max(d2, 0.05);
+    float att = uLampP * win * win / max(d2, uLampR0);
     lit += directLight(N, V, d * inversesqrt(max(d2, 1e-8)), uLampCol[i] * att * ao, diff, f0, a);
   }
   /* окна и неон: альфа текстуры — маска свечения */
   float winMask = (uAlphaMode > 0.5) ? 0.0 : t.a;
   float em = vEmis + winMask;
-  lit += albedo * em * uNight * ${gf(QCFG.light.emis.win)} + ${gv3(QCFG.light.emis.tint)} * winMask * uNight * ${gf(QCFG.light.emis.tintK)};
+  lit += (albedo * em * ${gf(QCFG.light.emis.win)} + ${gv3(QCFG.light.emis.tint)} * winMask * ${gf(QCFG.light.emis.tintK)}) * uNight * uEmisK;
+  /* Туман: цвет берётся из той же модели неба по направлению взгляда — вдаль
+     объекты уходят ровно в тот оттенок, каким там небо, и на закате туман
+     краснеет со стороны солнца сам, без отдельной палитры. */
   float f = 1.0 - exp(-uFogDens * dEye);
-  vec3 col = mix(lit, uFogCol, clamp(f, 0.0, 1.0));
+  vec3 col = mix(lit, textureLod(uSky, -V, uFogMip).rgb, clamp(f, 0.0, 1.0));
   /* линейный свет в HDR-буфер: экспозиция и тонмаппинг — один раз, в проходе постобработки */
   fragColor = vec4(col, uTint.a);
+}`;
+
+/* --- Небо в кубмапу ---------------------------------------------------
+   Дорогая часть неба считается сюда: одна грань 128² за кадр и только когда
+   солнце сдвинулось. В кадре из неё берутся фон, туман, отражения и
+   рассеянный свет — четыре потребителя на один расчёт. */
+const VS_FACE = `#version 300 es
+layout(location=0) in vec2 aPos;
+out vec2 vP;
+void main(){ vP = aPos; gl_Position = vec4(aPos, 0.0, 1.0); }`;
+
+const FS_CUBE = `#version 300 es
+/* PASS:env */
+precision highp float;
+in vec2 vP;
+uniform vec3 uFaceO, uFaceU, uFaceV;   /* базис грани куба */
+uniform vec3 uSunDir;
+uniform float uNight;
+out vec4 fragColor;
+${GLSL_SKY}
+void main(){
+  fragColor = vec4(skyColor(normalize(uFaceO + uFaceU * vP.x + uFaceV * vP.y), uSunDir, uNight), 1.0);
 }`;
 
 const VS_SKY = `#version 300 es
@@ -846,15 +1126,20 @@ out vec3 vDir;
 void main(){
   vec4 p = uInvVP * vec4(aPos, 1.0, 1.0);
   vDir = p.xyz / p.w;
+  /* w = z: небо садится ровно на дальнюю плоскость и рисуется последним из
+     непрозрачного с проверкой глубины — под домами шейдер не исполняется */
   gl_Position = vec4(aPos, 1.0, 1.0);
 }`;
 
 const FS_SKY = `#version 300 es
 /* PASS:sky */
-precision highp float;
-in vec3 vDir;
-uniform vec3 uEye, uSunDir, uZenith, uHorizon, uSunCol, uGround;
-uniform float uCloud, uTime;
+precision mediump float;
+precision mediump samplerCube;
+in highp vec3 vDir;
+uniform highp vec3 uEye;
+uniform vec3 uSunDir, uSunTint, uMoonDir;
+uniform samplerCube uSky;
+uniform float uCloud, uTime, uNight;
 out vec4 fragColor;
 float h21(vec2 p){ p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float vnoise(vec2 p){
@@ -862,36 +1147,45 @@ float vnoise(vec2 p){
   f = f * f * (3.0 - 2.0 * f);
   return mix(mix(h21(i), h21(i + vec2(1,0)), f.x), mix(h21(i + vec2(0,1)), h21(i + vec2(1,1)), f.x), f.y);
 }
+/* Четыре октавы вместо пяти: пятая давала рябь мельче пикселя, а стоила
+   восьми хешей. Считается только там, где небо видно. */
 float fbm(vec2 p){
   float s = 0.0, a = 0.5;
-  for (int k = 0; k < 5; k++) { s += a * vnoise(p); p *= 2.03; a *= 0.5; }
+  for (int k = 0; k < 4; k++) { s += a * vnoise(p); p *= 2.03; a *= 0.5; }
   return s;
 }
 void main(){
   vec3 d = normalize(vDir - uEye);
-  float h = clamp(d.y * 1.15 + 0.06, -1.0, 1.0);
-  vec3 col;
-  if (h > 0.0) {
-    col = mix(uHorizon, uZenith, pow(h, 0.55));
+  vec3 col = texture(uSky, d).rgb;
+  float sd = max(dot(d, uSunDir), 0.0);
+  /* Диск солнца и луна: в кубмапе 128² они размазались бы в пятно, поэтому
+     считаются здесь, аналитически, поверх выборки. */
+  col += uSunTint * pow(sd, ${gf(QCFG.sky.disk.pow)}) * ${gf(QCFG.sky.disk.k)};
+  if (uNight > 0.01) {
+    float md = max(dot(d, uMoonDir), 0.0);
+    col += ${gv3(QCFG.sky.moon.col)} * uNight *
+           (smoothstep(${gf(QCFG.sky.moon.cos)}, 1.0, md) * ${gf(QCFG.sky.moon.k)} +
+            pow(md, ${gf(QCFG.sky.moon.glowPow)}) * 0.2);
+    vec3 sp = floor(d * ${gf(QCFG.sky.stars.dens)});
+    float st = h21(sp.xy + sp.z * 37.0);
+    st = pow(max(st - 0.984, 0.0) * 62.0, 2.0);
+    col += vec3(st) * uNight * ${gf(QCFG.sky.stars.k)} * smoothstep(0.0, 0.25, d.y);
+  }
+  if (d.y > 0.0) {
     /* облачный слой: плоскость над головой, проекция направления взгляда */
     float dy = max(d.y, 0.035);
-    vec2 cp = d.xz / dy * 0.55 + vec2(uTime * 0.006, uTime * 0.0035);
-    float n = fbm(cp * 1.5);
+    vec2 cp = d.xz / dy * ${gf(QCFG.sky.cloud.plane)} + vec2(uTime * ${gf(QCFG.sky.cloud.speed[0])}, uTime * ${gf(QCFG.sky.cloud.speed[1])});
+    float n = fbm(cp * ${gf(QCFG.sky.cloud.lo)});
     n = smoothstep(0.52 - uCloud * 0.22, 0.86, n + uCloud * 0.16);
-    float edge = fbm(cp * 3.7) * 0.5 + 0.5;
+    float edge = fbm(cp * ${gf(QCFG.sky.cloud.hi)}) * 0.5 + 0.5;
     float cov = n * smoothstep(0.0, 0.16, d.y);
-    vec3 cbright = mix(uHorizon, vec3(1.0), 0.55) * (0.75 + 0.55 * edge);
-    vec3 cdark = mix(uZenith, uHorizon, 0.4) * 0.72;
-    float sunlit = pow(max(dot(d, uSunDir), 0.0), 5.0);
-    vec3 cloud = mix(cdark, cbright, edge) + uSunCol * sunlit * 0.5;
+    /* Облака красит то же небо: тень снизу, освещённая сторона сверху,
+       подсветка со стороны солнца. Своих палитр у облаков больше нет. */
+    vec3 lo = texture(uSky, vec3(d.x, -0.3, d.z)).rgb;
+    vec3 hi = texture(uSky, vec3(0.0, 1.0, 0.0)).rgb;
+    vec3 cloud = mix(lo * 0.8, mix(hi, uSunTint, 0.30) * (0.7 + 0.6 * edge), edge)
+               + uSunTint * pow(sd, 5.0) * ${gf(QCFG.sky.cloud.sunlit)};
     col = mix(col, cloud, cov * 0.85);
-    float sd = max(dot(d, uSunDir), 0.0);
-    col += uSunCol * pow(sd, 220.0) * 3.4 * (1.0 - cov * 0.8);   /* диск */
-    col += uSunCol * pow(sd, 6.0) * 0.42;                        /* засветка вокруг */
-    float band = exp(-abs(d.y) * 9.0);
-    col = mix(col, uHorizon * 1.15, band * 0.55);
-  } else {
-    col = mix(uHorizon * 0.75, uGround, clamp(-h * 2.4, 0.0, 1.0));
   }
   fragColor = vec4(col, 1.0);
 }`;
@@ -3923,7 +4217,7 @@ function buildWorld(gl) {
 /* 7. Рендерер                                                          */
 /* ------------------------------------------------------------------ */
 const R3 = {
-  main: null, sky: null, glow: null, tone: null, skyVAO: null, glowVAO: null,
+  main: null, sky: null, glow: null, tone: null, cube: null, skyVAO: null, glowVAO: null,
   proj: m4(), view: m4(), model: m4(), invVP: m4(), tmp: m4(), tmp2: m4(),
   eye: [0, 0, 0], right: [1, 0, 0], up: [0, 1, 0], fwd: [0, 0, -1], time: 0,
   curGrp: null                         /* группа текстур, связанная сейчас */
@@ -4031,69 +4325,179 @@ function resizeHDR(gl, w, h) {
 }
 
 const Env = {
-  sun: [0.4, 0.6, 0.5], sunCol: [1, .86, .66], ambSky: [.32, .34, .46], ambGround: [.2, .17, .2],
-  fog: [.55, .42, .5], fogDens: 0.0075, night: 0, zenith: [.24, .3, .55], horizon: [1, .55, .35], ground: [.16, .12, .2],
+  sun: [0.4, 0.6, 0.5], moon: [0, 1, 0], alt: 0,
+  sunIrr: [0, 0, 0], sunTint: [0, 0, 0],   /* освещённость и цвет диска — из прозрачности атмосферы */
+  fog: [.55, .42, .5], fogDens: 0.0075, night: 0,
   exposure: 2.0, cloud: 0.34, glossMul: 1,
   windX: 1, windZ: 0.3, windAmp: 0.12,
-  /* те же палитры в линейном свете — их и получают шейдеры */
-  L: { sunCol: [0, 0, 0], ambSky: [0, 0, 0], ambGround: [0, 0, 0], fog: [0, 0, 0], zenith: [0, 0, 0], horizon: [0, 0, 0], ground: [0, 0, 0] },
+  _t: [0, 0, 0],
   update(hour) {
-    const dayT = clamp((hour - 5.5) / 13, 0, 1);
-    const alt = Math.sin(dayT * Math.PI) * 72 * D2R;
-    const az = (hour < 5.5 || hour > 18.5) ? 250 * D2R : lerp(75, 285, (hour - 5.5) / 13) * D2R;
-    const belowHorizon = hour < 5.6 || hour > 20.6;
-    this.sun[0] = Math.cos(az) * Math.cos(alt);
-    this.sun[1] = Math.max(0.03, Math.sin(alt));
-    this.sun[2] = Math.sin(az) * Math.cos(alt);
-    const l = Math.hypot(this.sun[0], this.sun[1], this.sun[2]);
-    this.sun[0] /= l; this.sun[1] /= l; this.sun[2] /= l;
+    const K = QCFG.sky;
+    /* Высота солнца честно уходит в минус: раньше она зажималась снизу
+       (Math.max(0.03, …)), солнце никогда не заходило, а «ночь» набиралась
+       отдельными рампами по часам (18.4 + 2.2 и 6.6 − 1.6). Теперь и высота,
+       и ночь — из одного положения светила. */
+    const noon = (K.sunrise + K.sunset) / 2, halfDay = (K.sunset - K.sunrise) / 2;
+    const alt = Math.asin(Math.cos((hour - noon) / halfDay * (Math.PI / 2)) * Math.sin(K.maxAlt * D2R));
+    this.alt = alt;
+    const az = (K.azStart + (K.azEnd - K.azStart) * (hour - K.sunrise) / (K.sunset - K.sunrise)) * D2R;
+    const ca = Math.cos(alt);
+    this.sun[0] = Math.cos(az) * ca; this.sun[1] = Math.sin(alt); this.sun[2] = Math.sin(az) * ca;
+    /* Луна: то же небо, но отстаёт на полсуток — чтобы ночью было что
+       отражать в стёклах и куда смотреть. */
+    const mh = hour + K.moonLag;
+    const malt = Math.asin(Math.cos((mh - noon) / halfDay * (Math.PI / 2)) * Math.sin(K.maxAlt * D2R));
+    const maz = (K.azStart + (K.azEnd - K.azStart) * (mh - K.sunrise) / (K.sunset - K.sunrise)) * D2R;
+    const mca = Math.cos(malt);
+    this.moon[0] = Math.cos(maz) * mca; this.moon[1] = Math.sin(malt); this.moon[2] = Math.sin(maz) * mca;
 
-    const low = clamp(1 - Math.sin(Math.max(alt, 0)) * 2.1, 0, 1);   /* «закатность» */
-    this.night = belowHorizon ? 1 : clamp((hour - 18.4) / 2.2, 0, 1) + clamp((6.6 - hour) / 1.6, 0, 1);
-    this.night = clamp(this.night, 0, 1);
+    const aDeg = alt / D2R;
+    this.night = 1 - clamp((aDeg - K.nightAlt[1]) / (K.nightAlt[0] - K.nightAlt[1]), 0, 1);
     const n = this.night;
+    /* «Закатность» — для тумана и облачности; сам цвет заката берётся из
+       модели рассеяния, а не из палитры. */
+    const low = clamp(1 - Math.sin(Math.max(alt, 0)) * 2.1, 0, 1);
 
-    const dayCol = [1, .93, .82], sunsetCol = [1, .58, .34], nightCol = [.30, .34, .55];
-    for (let i = 0; i < 3; i++) {
-      const warm = lerp(dayCol[i], sunsetCol[i], low);
-      this.sunCol[i] = lerp(warm * 1.34, nightCol[i] * 0.30, n);
-    }
-    /* Рассеянного света намеренно немного: иначе освещённая и теневая стороны
-       сливаются и дом выглядит плоской картинкой. */
-    const skyDay = [.29, .35, .50], skySunset = [.44, .28, .42], skyNight = [.115, .125, .245];
-    const grDay = [.20, .18, .18], grSunset = [.25, .15, .18], grNight = [.09, .08, .14];
-    for (let i = 0; i < 3; i++) {
-      this.ambSky[i] = lerp(lerp(skyDay[i], skySunset[i], low), skyNight[i], n);
-      this.ambGround[i] = lerp(lerp(grDay[i], grSunset[i], low), grNight[i], n);
-    }
-    const zDay = [.32, .48, .82], zSunset = [.30, .22, .55], zNight = [.045, .05, .12];
-    const hDay = [.72, .78, .92], hSunset = [1, .48, .30], hNight = [.14, .10, .22];
-    for (let i = 0; i < 3; i++) {
-      this.zenith[i] = lerp(lerp(zDay[i], zSunset[i], low), zNight[i], n);
-      this.horizon[i] = lerp(lerp(hDay[i], hSunset[i], low), hNight[i], n);
-      this.ground[i] = lerp(.10, .04, n) * (i === 2 ? 1.5 : 1);
-      this.fog[i] = this.horizon[i] * 0.72 + (i === 2 ? 0.07 : 0.05) * (1 - n);
-    }
-    this.fogDens = lerp(0.0026, 0.0085, n) + low * 0.0016;
-    this.exposure = lerp(2.35, 1.5, n) * QCFG.color.exposure;   /* днём ярче, ночью честно темно */
-    /* к вечеру облака гуще, а поверхности «влажнее» и сильнее бликуют */
-    this.cloud = 0.42 + low * 0.24;
-    /* ветер: с облаками крепчает, направление уводит за сутки */
+    /* Прямой свет: прозрачность атмосферы вдоль луча на солнце. Отсюда и
+       красное низкое солнце, и то, что ниже горизонта оно гаснет само —
+       палитра солнца день/закат/ночь больше не нужна.
+       Множитель sunK — переводной коэффициент между условными единицами
+       модели рассеяния и освещённостью сцены; калиброван по контрольным
+       сценам, а не выведен из физики: у диска и у неба в этой модели разные
+       единицы, и связать их честно можно только телесным углом солнца. */
+    const T = SkyJS.transmittance(this._t, this.sun);
+    const kI = QCFG.light.sunK;
+    for (let i = 0; i < 3; i++) this.sunIrr[i] = T[i] * kI;
+    /* тот же цвет, нормированный, — для диска и подсветки облаков */
+    const mx = Math.max(T[0], T[1], T[2], 1e-4);
+    for (let i = 0; i < 3; i++) this.sunTint[i] = T[i] / mx;
+
+    this.fogDens = lerp(K.fogDens[0], K.fogDens[1], n) + low * K.fogSunset;
+    /* Экспозиция — ключевые точки день/закат/ночь, без автоэкспозиции:
+       глаз к смене освещения привыкает, а автоэкспозиция «дышала» бы на
+       каждом повороте камеры. */
+    const E = QCFG.post.exposure;
+    this.exposure = lerp(lerp(E.day, E.sunset, low), E.night, n);
+    this.cloud = K.cloud.cover[0] + low * K.cloud.cover[1];
     const wd = 0.7 + Math.sin(hour * 0.31) * 0.9;
     this.windX = Math.cos(wd); this.windZ = Math.sin(wd);
     this.windAmp = 0.09 + this.cloud * 0.13;
     this.glossMul = lerp(1, 1.45, n);
-    /* Палитры выше авторские, в sRGB. Шейдер считает в линейном свете и в
-       конце кодирует обратно, поэтому сюда они уходят через ту же гамму;
-       коэффициенты QCFG.color правят баланс солнца, рассеянного и неба. */
-    const K = QCFG.color, L = this.L;
-    /* Солнце уходит в шейдер освещённостью, а не «цветом»: диффуз считается
-       как albedo/PI · E · NoL, и множитель PI живёт здесь, чтобы в шейдере не
-       было ни одного числа освещения. */
-    lin3(L.sunCol, this.sunCol, K.sunK * QCFG.light.sunK * Math.PI);
-    lin3(L.ambSky, this.ambSky, K.ambK * QCFG.light.ambK); lin3(L.ambGround, this.ambGround, K.ambK * QCFG.light.ambK);
-    lin3(L.fog, this.fog, K.fogK); lin3(L.zenith, this.zenith, K.skyK); lin3(L.horizon, this.horizon, K.skyK);
-    lin3(L.ground, this.ground, K.skyK);
+  }
+};
+
+/* --- Окружение из неба ------------------------------------------------
+   Кубмапа неба (RGBA16F с мипами) обновляется по грани за кадр и только
+   когда солнце сдвинулось заметно. Из неё в кадре берутся: фон, цвет тумана
+   по направлению взгляда, зеркальные отражения (через префильтр) и
+   рассеянный свет (через сферические гармоники, посчитанные на CPU по той же
+   формуле — обратно кубмапу никто не читает).
+
+   Базис граней в порядке TEXTURE_CUBE_MAP_POSITIVE_X..NEGATIVE_Z. Для куба
+   ось V направлена вниз, поэтому у всех граней, кроме ±Y, uFaceV = (0,−1,0). */
+const CUBE_FACES = [
+  { o: [ 1, 0, 0], u: [0, 0, -1], v: [0, -1,  0] },
+  { o: [-1, 0, 0], u: [0, 0,  1], v: [0, -1,  0] },
+  { o: [0,  1, 0], u: [1, 0,  0], v: [0,  0,  1] },
+  { o: [0, -1, 0], u: [1, 0,  0], v: [0,  0, -1] },
+  { o: [0, 0,  1], u: [1, 0,  0], v: [0, -1,  0] },
+  { o: [0, 0, -1], u: [-1, 0, 0], v: [0, -1,  0] }
+];
+
+const EnvMap = {
+  cube: null, fb: null, size: 0, face: 0, dirty: true, ready: false,
+  lastSun: [0, 0, 0], bytes: 0,
+  sh: new Float32Array(27),          /* девять коэффициентов по три канала */
+  _dir: [0, 0, 0], _col: [0, 0, 0],
+
+  init(gl) {
+    this.size = QCFG.env.cube;
+    this.cube = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.cube);
+    const levels = Math.floor(Math.log2(this.size)) + 1;
+    gl.texStorage2D(gl.TEXTURE_CUBE_MAP, levels, gl.RGBA16F, this.size, this.size);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    this.fb = gl.createFramebuffer();
+    let b = 0;
+    for (let l = 0; l < levels; l++) { const sz = Math.max(1, this.size >> l); b += sz * sz * 6 * 8; }
+    this.bytes = b;
+    this.dirty = true; this.face = 0;
+  },
+
+  /* солнце сдвинулось настолько, что окружение пора пересобрать? */
+  check() {
+    const s = Env.sun, l = this.lastSun;
+    const cos = s[0] * l[0] + s[1] * l[1] + s[2] * l[2];
+    if (cos < Math.cos(QCFG.env.sunStepDeg * D2R)) { this.dirty = true; }
+    if (this.dirty && this.face === 0) { l[0] = s[0]; l[1] = s[1]; l[2] = s[2]; }
+  },
+
+  /* Одна грань за кадр. Когда собраны все шесть — мипы и сферические
+     гармоники; при загрузке всё это прогоняется разом. */
+  update(gl, all) {
+    if (!this.dirty) return;
+    const P = R3.cube, n = all ? 6 : 1;
+    gl.useProgram(P.p);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb);
+    gl.disable(gl.DEPTH_TEST);
+    gl.viewport(0, 0, this.size, this.size);
+    gl.uniform3fv(P.u.uSunDir, Env.sun);
+    gl.uniform1f(P.u.uNight, Env.night);
+    gl.bindVertexArray(R3.skyVAO);
+    for (let k = 0; k < n; k++) {
+      const f = CUBE_FACES[this.face];
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_CUBE_MAP_POSITIVE_X + this.face, this.cube, 0);
+      gl.uniform3fv(P.u.uFaceO, f.o); gl.uniform3fv(P.u.uFaceU, f.u); gl.uniform3fv(P.u.uFaceV, f.v);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      this.face++;
+      if (this.face >= 6) {
+        this.face = 0; this.dirty = false; this.ready = true;
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, this.cube);
+        gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+        this.computeSH();
+        break;
+      }
+    }
+    gl.enable(gl.DEPTH_TEST);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  },
+
+  /* Сферические гармоники L2 по той же аналитической функции неба. Считаются
+     на CPU по сетке направлений: читать обратно кубмапу нельзя — откат на
+     тайловом GPU дороже всего расчёта. Формула Рамамурти–Ханрахана даёт
+     сразу освещённость, свёрнутую с косинусом. */
+  computeSH() {
+    const G = QCFG.env.shGrid, sh = this.sh, d = this._dir, c = this._col;
+    sh.fill(0);
+    let wsum = 0;
+    for (let f = 0; f < 6; f++) {
+      const F = CUBE_FACES[f];
+      for (let y = 0; y < G; y++) for (let x = 0; x < G; x++) {
+        const u = (x + 0.5) / G * 2 - 1, v = (y + 0.5) / G * 2 - 1;
+        d[0] = F.o[0] + F.u[0] * u + F.v[0] * v;
+        d[1] = F.o[1] + F.u[1] * u + F.v[1] * v;
+        d[2] = F.o[2] + F.u[2] * u + F.v[2] * v;
+        const l2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2], il = 1 / Math.sqrt(l2);
+        d[0] *= il; d[1] *= il; d[2] *= il;
+        /* телесный угол текселя куба: 1/(l²·√l²) с точностью до общего множителя */
+        const w = 1 / (l2 * Math.sqrt(l2));
+        wsum += w;
+        SkyJS.color(c, d, Env.sun, Env.night);
+        const X = d[0], Y = d[1], Z = d[2];
+        const B = [0.282095, 0.488603 * Y, 0.488603 * Z, 0.488603 * X,
+                   1.092548 * X * Y, 1.092548 * Y * Z, 0.315392 * (3 * Z * Z - 1),
+                   1.092548 * X * Z, 0.546274 * (X * X - Y * Y)];
+        for (let k = 0; k < 9; k++) {
+          const bw = B[k] * w;
+          sh[k * 3] += c[0] * bw; sh[k * 3 + 1] += c[1] * bw; sh[k * 3 + 2] += c[2] * bw;
+        }
+      }
+    }
+    const norm = 4 * Math.PI / wsum;
+    for (let i = 0; i < 27; i++) sh[i] *= norm;
   }
 };
 
@@ -4115,7 +4519,9 @@ function initRenderer(canvas) {
   R3.sky = program(gl, VS_SKY, FS_SKY, 'sky');
   R3.glow = program(gl, VS_GLOW, FS_GLOW, 'glow');
   R3.tone = program(gl, VS_TONE, FS_TONE, 'tone');
+  R3.cube = program(gl, VS_FACE, FS_CUBE, 'cube');
   initHDR(gl);
+  EnvMap.init(gl);
   /* полноэкранный треугольник для неба */
   R3.skyVAO = gl.createVertexArray();
   gl.bindVertexArray(R3.skyVAO);
@@ -4315,24 +4721,30 @@ function setCamera(eye, target) {
   m4mul(R3.invVP, R3.tmp, inv);
 }
 
+/* Небо рисуется ПОСЛЕДНИМ из непрозрачного: треугольник на дальней плоскости
+   с проверкой глубины LEQUAL. На тайловом GPU это значит, что под домами
+   шейдер неба не исполняется вовсе, а раньше он считал fbm для всего экрана
+   до всякой геометрии. */
 function drawSky() {
   const gl = GL.gl, P = R3.sky;
   gl.useProgram(P.p);
   gl.depthMask(false);
-  gl.disable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.LEQUAL);
   gl.uniformMatrix4fv(P.u.uInvVP, false, R3.invVP);
   gl.uniform3fv(P.u.uEye, R3.eye);
   gl.uniform3fv(P.u.uSunDir, Env.sun);
-  gl.uniform3fv(P.u.uZenith, Env.L.zenith);
-  gl.uniform3fv(P.u.uHorizon, Env.L.horizon);
-  gl.uniform3fv(P.u.uSunCol, Env.L.sunCol);
-  gl.uniform3fv(P.u.uGround, Env.L.ground);
+  gl.uniform3fv(P.u.uMoonDir, Env.moon);
+  gl.uniform3fv(P.u.uSunTint, Env.sunTint);
   gl.uniform1f(P.u.uCloud, Env.cloud);
   gl.uniform1f(P.u.uTime, R3.time);
+  gl.uniform1f(P.u.uNight, Env.night);
+  gl.uniform1i(P.u.uSky, 0);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_CUBE_MAP, EnvMap.cube);
   gl.bindVertexArray(R3.skyVAO);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
-  gl.enable(gl.DEPTH_TEST);
+  gl.depthFunc(gl.LESS);
   gl.depthMask(true);
+  R3.curGrp = null;                    /* небо сбило привязку нулевого слота */
 }
 
 function beginMain(lamps) {
@@ -4341,16 +4753,23 @@ function beginMain(lamps) {
   gl.uniformMatrix4fv(P.u.uProj, false, R3.proj);
   gl.uniformMatrix4fv(P.u.uView, false, R3.view);
   gl.uniform3fv(P.u.uSunDir, Env.sun);
-  gl.uniform3fv(P.u.uSunIrr, Env.L.sunCol);
-  gl.uniform3fv(P.u.uAmbSky, Env.L.ambSky);
-  gl.uniform3fv(P.u.uAmbGround, Env.L.ambGround);
-  gl.uniform3fv(P.u.uFogCol, Env.L.fog);
+  gl.uniform3fv(P.u.uSunIrr, Env.sunIrr);
+  gl.uniform3fv(P.u.uSH, EnvMap.sh);
   gl.uniform1f(P.u.uFogDens, Env.fogDens);
+  gl.uniform1f(P.u.uFogMip, QCFG.sky.fogMip);
   gl.uniform1f(P.u.uNight, Env.night);
+  /* Светящиеся окна, неон и свечения-спрайты — авторские, в экранных
+     единицах: раньше они смешивались уже после тонмаппинга и от экспозиции не
+     зависели. В HDR их надо привести к той экспозиции, которую применит
+     постобработка, иначе ночью (экспозиция 7) они выбиваются в белое. */
+  gl.uniform1f(P.u.uEmisK, 1 / Math.max(Env.exposure, 1e-3));
   gl.uniform1f(P.u.uGlossMul, Env.glossMul);
   gl.uniform3fv(P.u.uEye, R3.eye);
   gl.uniform1i(P.u.uTex, 0); gl.uniform1i(P.u.uSurf, 1); gl.uniform1i(P.u.uAO, 2); gl.uniform1i(P.u.uDetail, 3);
+  gl.uniform1i(P.u.uSky, 4);
   if (Tex.detail) { gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D_ARRAY, Tex.detail.tex); }
+  gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_CUBE_MAP, EnvMap.cube);
+  gl.activeTexture(gl.TEXTURE0);
   gl.uniform1f(P.u.uDetailK, Q.detail ? QCFG.tex.detailStrength : 0);
   gl.uniform3f(P.u.uDetailP, QCFG.tex.detailScale, QCFG.tex.detailNear, QCFG.tex.detailFar);
   R3.curGrp = null;
@@ -4361,6 +4780,7 @@ function beginMain(lamps) {
   gl.uniform1f(P.u.uSkin, 0);
   const LP = QCFG.light.lamp;
   gl.uniform1f(P.u.uLampR2, LP.radius * LP.radius);
+  gl.uniform1f(P.u.uLampR0, LP.srcR * LP.srcR);
   gl.uniform1f(P.u.uLampP, LP.power * Math.PI);
   const n = Math.min(QCFG.shader.maxLamps, Q.lamps, lamps ? lamps.length : 0);
   gl.uniform1i(P.u.uLampN, n);
@@ -4411,7 +4831,11 @@ function drawGlow(pos, size, color, alpha, hard) {
   gl.uniform3fv(P.u.uUp, R3.up);
   gl.uniform3f(P.u.uPos, pos[0], pos[1], pos[2]);
   gl.uniform2f(P.u.uSize, size, size);
-  gl.uniform4f(P.u.uColor, color[0], color[1], color[2], alpha);
+  /* Цвет авторский, в sRGB, и яркость задана «как на экране»: переводим в
+     линейный свет и делим на экспозицию кадра — свечения складываются в
+     HDR-буфер до тонмаппинга, а не поверх готовой картинки, как раньше. */
+  const k = QCFG.light.glowK / Math.max(Env.exposure, 1e-3);
+  gl.uniform4f(P.u.uColor, lin1(color[0]) * k, lin1(color[1]) * k, lin1(color[2]) * k, alpha);
   gl.uniform1f(P.u.uHard, hard || 2.0);
   gl.bindVertexArray(R3.glowVAO);
   gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -8583,7 +9007,7 @@ function drawTone() {
   gl.disable(gl.DEPTH_TEST);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, HDR.tex);
   gl.uniform1i(P.u.uHDR, 0);
-  gl.uniform1f(P.u.uExposure, Env.exposure * QCFG.post.exposure);
+  gl.uniform1f(P.u.uExposure, Env.exposure);
   gl.uniform1f(P.u.uSat, QCFG.post.sat);
   gl.uniform1f(P.u.uDither, QCFG.post.dither);
   gl.bindVertexArray(R3.skyVAO);
@@ -8604,13 +9028,17 @@ function renderFrame() {
   R3.time = S.t;                       /* облака медленно плывут */
   setCamera([S.cam.x, S.cam.y, S.cam.z], [S.cam.tx, S.cam.ty, S.cam.tz]);
 
+  /* Окружение: по грани кубмапы за кадр и только когда солнце сдвинулось. */
+  EnvMap.check();
+  EnvMap.update(gl, false);
+
   gl.bindFramebuffer(gl.FRAMEBUFFER, HDR.fb);
   gl.viewport(0, 0, HDR.w, HDR.h);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-  drawSky();
   beginMainLights();
   drawStatic();
   drawDynamic();
+  drawSky();                           /* последним из непрозрачного, с проверкой глубины */
   drawGlows();
   gl.invalidateFramebuffer(gl.FRAMEBUFFER, [gl.DEPTH_ATTACHMENT]);
 
@@ -9400,6 +9828,12 @@ async function boot() {
     Loader.set('собираем жителей и технику', 0.84); await Loader.yield();
     buildCharacters(gl);
     buildVehicles(gl);
+    /* Окружение собираем целиком один раз при загрузке: по грани за кадр оно
+       набралось бы только к шестому кадру, и первый кадр смены был бы без
+       неба и без рассеянного света. */
+    Env.update(12);
+    EnvMap.dirty = true; EnvMap.face = 0;
+    EnvMap.update(gl, true);
     Loader.set(null, 1);
     Input.init();
     resetWorld(true);
@@ -9416,6 +9850,11 @@ async function boot() {
     const kick = () => { Audio2.init(); Audio2.resume(); };
     window.addEventListener('pointerdown', kick);
     window.addEventListener('keydown', kick);
+    /* Крючок только для оснастки: tools/sky-test.mjs сверяет GLSL-модель неба
+       с её JS-двойником, а для этого ему нужны обе. Ставится исключительно
+       при запуске с ?mc3d-test — при обычном открытии из file:// в window
+       по-прежнему не торчит ничего. */
+    if (location.search.indexOf('mc3d-test') >= 0) window.__MC3D = { QCFG, SkyJS, Env, EnvMap, GL, R3, GLSL_SKY };
     Loader.hide();
     screenMenu();
     requestAnimationFrame(frame);
