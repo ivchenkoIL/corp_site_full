@@ -403,7 +403,8 @@
     [['RGBA8', 4], ['SRGB8_ALPHA8', 4], ['RGB8', 3], ['SRGB8', 3], ['RG8', 2], ['R8', 1],
      ['RGBA4', 2], ['RGB5_A1', 2], ['RGB565', 2], ['RGBA16F', 8], ['RGBA32F', 16], ['RG16F', 4], ['R16F', 2],
      ['R32F', 4], ['DEPTH_COMPONENT16', 2], ['DEPTH_COMPONENT24', 4], ['DEPTH24_STENCIL8', 4],
-     ['RGBA', 4], ['RGB', 3], ['LUMINANCE_ALPHA', 2], ['LUMINANCE', 1], ['ALPHA', 1]
+     ['RGBA', 4], ['RGB', 3], ['LUMINANCE_ALPHA', 2], ['LUMINANCE', 1], ['ALPHA', 1],
+     ['R11F_G11F_B10F', 4], ['RGB16F', 6], ['RG16F', 4], ['DEPTH_COMPONENT32F', 4]
     ].forEach(function (p) { if (gl[p[0]] !== undefined) FMT[gl[p[0]]] = { name: p[0], bpp: p[1] }; });
     function fmtOf(ifmt) { return FMT[ifmt] || { name: '0x' + Number(ifmt).toString(16), bpp: 4 }; }
     function levelsBytes(w, h, d, bpp, levels) {
@@ -411,18 +412,63 @@
       for (var l = 0; l < levels; l++) { total += Math.max(1, w >> l) * Math.max(1, h >> l) * d * bpp; }
       return total;
     }
-    /* учёт одной текстуры: L0 отдельно, с мипами отдельно; массивы — со всеми слоями */
+    /* Учёт одной текстуры: L0 отдельно, с мипами отдельно; массивы — со всеми
+       слоями. Пере-спецификация той же текстуры (texImage2D на каждом шаге
+       авто-масштаба для HDR-буфера) заменяет прежнюю запись, а не добавляет
+       новую: иначе инвентарь памяти растёт на пустом месте. */
     function account(target, w, h, layers, ifmt, levels) {
       var t = bound[target];
       var fi = fmtOf(ifmt), l0 = w * h * layers * fi.bpp;
-      var rec = { w: w, h: h, layers: layers, fmt: fi.name, bytes: l0, mips: levels > 1, target: target === gl.TEXTURE_2D_ARRAY ? '2d_array' : target === gl.TEXTURE_3D ? '3d' : '2d' };
+      var withMips = levels > 1 ? levelsBytes(w, h, layers, fi.bpp, levels) : l0;
+      var old = t ? texInfo.get(t) : null;
+      if (old) {
+        P.mem.texBytesL0 -= old.bytes;
+        P.mem.texBytesWithMips -= old.bytesMips;
+        var i = P.mem.textures.indexOf(old);
+        if (i >= 0) P.mem.textures.splice(i, 1);
+        P.mem.texCount--;
+      }
+      /* то же для случая без мультисэмплинга: сцена пишет прямо в текстуру */
+      if (target === gl.TEXTURE_2D && layers === 1 && levels === 1 &&
+          fi.name.indexOf('DEPTH') < 0 && w >= 320 && h >= 240) { P.sceneW = w; P.sceneH = h; }
+      var rec = { w: w, h: h, layers: layers, fmt: fi.name, bytes: l0, bytesMips: withMips,
+                  mips: levels > 1, target: target === gl.TEXTURE_CUBE_MAP ? 'cube' : target === gl.TEXTURE_2D_ARRAY ? '2d_array' : target === gl.TEXTURE_3D ? '3d' : '2d' };
+      if (target === gl.TEXTURE_CUBE_MAP) { rec.bytes *= 6; rec.bytesMips *= 6; }
       if (t) texInfo.set(t, rec);
       P.mem.textures.push(rec);
       P.mem.texCount++;
-      P.mem.texBytesL0 += l0;
-      P.mem.texBytesWithMips += levels > 1 ? levelsBytes(w, h, layers, fi.bpp, levels) : l0;
+      P.mem.texBytesL0 += rec.bytes;
+      P.mem.texBytesWithMips += rec.bytesMips;
       return rec;
     }
+    /* Буферы отрисовки: HDR-буфер сцены живёт в renderbuffer'ах, и без их
+       учёта инвентарь памяти врал бы на сотню мегабайт. */
+    P.mem.renderbuffers = [];
+    P.mem.rbBytes = 0;
+    var boundRB = null, rbInfo = new WeakMap();
+    var _bindRenderbuffer = gl.bindRenderbuffer.bind(gl);
+    gl.bindRenderbuffer = function (target, rb) { boundRB = rb; return _bindRenderbuffer(target, rb); };
+    function accountRB(w, h, ifmt, samples) {
+      var fi = fmtOf(ifmt), bytes = w * h * fi.bpp * Math.max(1, samples);
+      /* Размер буфера сцены. С этапа 03 масштаб рендера живёт не на холсте, а
+         на HDR-буфере: холст всегда в полной плотности, и gl.canvas.width
+         авто-масштаба больше не показывает. Берём размер цветного вложения. */
+      if (fi.name.indexOf('DEPTH') < 0 && fi.name.indexOf('STENCIL') < 0) { P.sceneW = w; P.sceneH = h; }
+      var old = boundRB ? rbInfo.get(boundRB) : null;
+      if (old) {
+        P.mem.rbBytes -= old.bytes;
+        var j = P.mem.renderbuffers.indexOf(old);
+        if (j >= 0) P.mem.renderbuffers.splice(j, 1);
+      }
+      var rec = { w: w, h: h, fmt: fi.name, samples: samples, bytes: bytes };
+      if (boundRB) rbInfo.set(boundRB, rec);
+      P.mem.renderbuffers.push(rec);
+      P.mem.rbBytes += bytes;
+    }
+    var _rbStorage = gl.renderbufferStorage.bind(gl);
+    gl.renderbufferStorage = function (t, ifmt, w, h) { accountRB(w, h, ifmt, 0); return _rbStorage(t, ifmt, w, h); };
+    var _rbStorageMS = gl.renderbufferStorageMultisample.bind(gl);
+    gl.renderbufferStorageMultisample = function (t, s, ifmt, w, h) { accountRB(w, h, ifmt, s); return _rbStorageMS(t, s, ifmt, w, h); };
     var _texImage2D = gl.texImage2D.bind(gl);
     gl.texImage2D = function (target, level, internalformat, a, b, c, d, e, g) {
       var w, h, bytes;
@@ -434,16 +480,10 @@
         h = (src && (src.height || src.videoHeight)) || 0;
         bytes = w * h * bpp(a, b);
       }
-      if (level === 0 && w && h) {
-        var t = bound[target];
-        var rec = { w: w, h: h, bytes: bytes, mips: false };
-        texInfo.set(t || {}, rec);
-        if (t) texInfo.set(t, rec);
-        P.mem.textures.push(rec);
-        P.mem.texCount++;
-        P.mem.texBytesL0 += bytes;
-        P.mem.texBytesWithMips += bytes;      /* мипы добавит generateMipmap */
-      }
+      /* Через общий учёт: он знает sized-форматы и заменяет прежнюю запись,
+         если ту же текстуру пере-специфицируют (HDR-буфер сцены делает это на
+         каждом шаге авто-масштаба). Мипы добавит generateMipmap. */
+      if (level === 0 && w && h) account(target, w, h, 1, internalformat, 1);
       return _texImage2D.apply(null, arguments);
     };
     var _generateMipmap = gl.generateMipmap.bind(gl);
@@ -545,7 +585,8 @@
           var cv = gl && gl.canvas;
           P.frames.push({
             ts: +ts.toFixed(3),
-            rw: cv ? cv.width : 0, rh: cv ? cv.height : 0,
+            rw: P.sceneW || (cv ? cv.width : 0), rh: P.sceneH || (cv ? cv.height : 0),
+            cw: cv ? cv.width : 0, ch: cv ? cv.height : 0,
             cpuMs: +cpu.toFixed(3),
             gpuMs: null,
             draws: cur.draws | 0,
@@ -670,7 +711,10 @@
     return {
       frames: fr.length,
       /* буфер отрисовки: медиана и крайние значения — при авто-масштабе они расходятся */
+      /* «render» — буфер сцены (его крутит авто-масштаб), «canvas» — холст,
+         в который пишет тонмаппинг; он всегда в полной плотности */
       render: { w: pct(rw, 50), h: pct(rh, 50), wMin: pct(rw, 0), wMax: pct(rw, 100), hMin: pct(rh, 0), hMax: pct(rh, 100) },
+      canvas: { w: pct(fr.map(function (x) { return x.cw || 0; }), 50), h: pct(fr.map(function (x) { return x.ch || 0; }), 50) },
       fpsMean: dt.length ? +(1000 / avg(dt)).toFixed(2) : null,
       fpsFromP50: dt.length ? +(1000 / pct(dt, 50)).toFixed(2) : null,
       frameMs: { p50: pct(dt, 50), p95: pct(dt, 95), p99: pct(dt, 99), min: pct(dt, 0), max: pct(dt, 100), mean: avg(dt) },
@@ -802,6 +846,10 @@
         texMiBL0: +(P.mem.texBytesL0 / 1048576).toFixed(3),
         texMiBWithMips: +(P.mem.texBytesWithMips / 1048576).toFixed(3),
         bufferMiB: +(P.mem.bufferBytes / 1048576).toFixed(3),
+        renderbufferMiB: +((P.mem.rbBytes || 0) / 1048576).toFixed(3),
+        renderbuffers: (P.mem.renderbuffers || []).map(function (r) {
+          return { size: r.w + 'x' + r.h + (r.samples ? '×' + r.samples : ''), fmt: r.fmt, kiB: Math.round(r.bytes / 1024) };
+        }),
         biggest: P.mem.textures.slice().sort(function (a, b) { return b.bytes - a.bytes; }).slice(0, 12)
           .map(function (t) { return { size: t.w + 'x' + t.h + (t.layers > 1 ? 'x' + t.layers : ''), fmt: t.fmt || 'RGBA8', kiB: Math.round(t.bytes / 1024) }; })
       }
