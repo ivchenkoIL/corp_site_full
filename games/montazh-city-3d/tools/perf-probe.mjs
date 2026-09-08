@@ -83,7 +83,9 @@ async function runScene(browser, sc, common) {
     } catch (e) { window.__MCPERF_STORAGE_FAIL = String(e); }
   }, { save: saveFor(sc), opts: OPTS, keys: { save: SAVE_KEY, opt: OPT_KEY } });
 
-  const url = pathToFileURL(GAME).href;
+  /* ?mc3d-cfg накладывает JSON поверх QCFG до применения профиля: развилки
+     меряются без пересборки файла, как в scale-probe и shot. */
+  const url = pathToFileURL(GAME).href + (argv.cfg ? '?mc3d-cfg=' + encodeURIComponent(argv.cfg) : '');
   const tNav = Date.now();
   await page.goto(url, { waitUntil: 'load' });
 

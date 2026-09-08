@@ -62,11 +62,14 @@ const r = await page.evaluate(async ({ fx }) => {
   const M = window.__MC3D, gl = M.GL.gl;
   /* камера идёт за игроком с задержкой — дать ей встать на место */
   await new Promise(res => { let k = 0; const f = () => (++k < 45 ? requestAnimationFrame(f) : res()); requestAnimationFrame(f); });
-  const K = fx === 'ssr' ? M.QCFG.ssr : M.QCFG.bloom;
-  const keep = K.strength;
+  /* Что именно выключается на «без»: у свечения и отражений — сила, у
+     размытия затенения выключать нечего, там сравниваются два исполнения. */
+  const K = fx === 'ssr' ? M.QCFG.ssr : fx === 'bloom' ? M.QCFG.bloom : M.QCFG.ssao;
+  const flag = fx === 'ssaoblur';
+  const keep = flag ? K.blurSep : K.strength;
   const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
   const shoot = (on) => {
-    K.strength = on ? keep : 0;
+    if (flag) K.blurSep = on; else K.strength = on ? keep : 0;
     M.renderFrame();
     const px = new Uint8Array(w * h * 4);
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
@@ -74,7 +77,7 @@ const r = await page.evaluate(async ({ fx }) => {
     return px;
   };
   const [A, B] = await new Promise(res => requestAnimationFrame(() => res([shoot(true), shoot(false)])));
-  K.strength = keep;
+  if (flag) K.blurSep = keep; else K.strength = keep;
   /* Кодируем прямо на странице: двадцать миллионов байт через мост
      инструмента не проходят, а холст 2D их сожмёт в PNG. */
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
