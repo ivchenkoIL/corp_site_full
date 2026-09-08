@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- ОГЛАВЛЕНИЕ:НАЧАЛО (пересобирается: node tools/toc.mjs) -->
 <!--
-  МОНТАЖ-СИТИ 3D — карта файла. Один файл, 11481 строк, без сборки и без
+  МОНТАЖ-СИТИ 3D — карта файла. Один файл, 11796 строк, без сборки и без
   зависимостей. Целиком его читать не надо: ниже строки, по которым видно,
   где что лежит. Диапазоны пересобираются командой `node tools/toc.mjs`,
   проверить актуальность — `node tools/toc.mjs --check`.
@@ -9,98 +9,98 @@
   Крупно:
       119-  285  CSS: HUD, диалоги, экраны, мини-игры
       287-  360  разметка: canvas #gl, слой HUD, диалог, экраны, загрузка
-      361-11478  вся игра: один IIFE, ничего не торчит в window
+      361-11793  вся игра: один IIFE, ничего не торчит в window
 
   По ролям:
-    рендер ·············· 864-1883, 4914-5917, 9821-10665
-    текстуры ············ 2412-3425
-    геометрия ··········· 1884-2411, 3679-3685, 3686-4057, 4058-4913, 6378-6682
-    геометрия+анимация ·· 5918-6377
-    жители+анимация ····· 8513-9052
-    физика ·············· 3595-3678, 8201-8398
-    камера ·············· 8399-8455
-    данные мира ········· 3426-3594
-    состояние ··········· 8076-8127, 8128-8200
-    игровая логика ······ 9053-9303, 9304-9761
-    интерфейс ··········· 6873-7029, 7030-7135, 7136-7887, 7888-8008, 8456-8512, 9762-9820, 10666-10761, 10762-11118
-    ввод ················ 8009-8075
-    звук ················ 6683-6827
-    сохранение ·········· 6828-6872, 11119-11214
-    основа ·············· 371-773, 774-863
-    цикл ················ 11215-11477
+    рендер ·············· 908-2069, 5100-6122, 10026-10980
+    текстуры ············ 2598-3611
+    геометрия ··········· 2070-2597, 3865-3871, 3872-4243, 4244-5099, 6583-6887
+    геометрия+анимация ·· 6123-6582
+    жители+анимация ····· 8718-9257
+    физика ·············· 3781-3864, 8406-8603
+    камера ·············· 8604-8660
+    данные мира ········· 3612-3780
+    состояние ··········· 8281-8332, 8333-8405
+    игровая логика ······ 9258-9508, 9509-9966
+    интерфейс ··········· 7078-7234, 7235-7340, 7341-8092, 8093-8213, 8661-8717, 9967-10025, 10981-11076, 11077-11433
+    ввод ················ 8214-8280
+    звук ················ 6888-7032
+    сохранение ·········· 7033-7077, 11434-11529
+    основа ·············· 371-817, 818-907
+    цикл ················ 11530-11792
 
   Разделы подряд:
-      371-  773  Конфигурация качества и производительности
+      371-  817  Конфигурация качества и производительности
                    QCFG — все числа качества: профили, авто-масштаб, частота монитора, текстуры, цвет; Q — активный профиль
-      774-  863  0. Утилиты и математика
+      818-  907  0. Утилиты и математика
                    мелочи и матрицы 4×4 в column-major, как их ждёт GL; lin1/lin3 — sRGB в линейный свет
-      864- 1883  1. WebGL: контекст, шейдеры, буферы
+      908- 2069  1. WebGL: контекст, шейдеры, буферы
                    GLSL целиком: VS/FS_MAIN (нормали из surf, triplanar, detail), VS/FS_SKY, VS/FS_GLOW, компиляция и разбор юниформ
-     1884- 2411  2. Меши: сборка геометрии
+     2070- 2597  2. Меши: сборка геометрии
                    класс Mesh: box, bevelBox, cyl, ellipsoid, extrudeZ, tube, wheel, сглаживание нормалей, upload в VAO
-     2412- 3425  3. Процедурные текстуры (рисуются кодом, ничего не загружается)
+     2598- 3611  3. Процедурные текстуры (рисуются кодом, ничего не загружается)
                    комплекты карт из canvas 2D: albedo (sRGB) + нормаль по Собелю из высот + roughness/metalness + AO; TEXTURE_2D_ARRAY по группам; генерация заданиями между кадрами
-     3426- 3594  4. Район: данные (всё в метрах)
+     3612- 3780  4. Район: данные (всё в метрах)
                    дома, киоски, опоры, точки интереса, реквизит, ямы; surfY и isRoad
-     3595- 3678  5. Столкновения: список AABB + равномерная сетка
+     3781- 3864  5. Столкновения: список AABB + равномерная сетка
                    равномерная сетка 8 м поверх списка AABB
-     3679- 3685  6. Генерация геометрии района
+     3865- 3871  6. Генерация геометрии района
                    Static.batches, Static.signs, Static.lamps — то, что рисуется каждый кадр
-     3686- 4057  Дорога: бордюрный камень, чугун, разметка и обстановка
+     3872- 4243  Дорога: бордюрный камень, чугун, разметка и обстановка
                    бордюр, люки, лужи, разметка, фасадный рельеф, кондиционеры, вывески
-     4058- 4913  Растительность: атлас, карты, ветер
+     4244- 5099  Растительность: атлас, карты, ветер
                    атлас листвы с альфа-тестом, кроны, ветер через атрибут aPart; в конце buildWorld собирает все батчи
-                   └ 4684-4913  сборка батчей района в Static.batches
-     4914- 5917  7. Рендерер
+                   └ 4870-5099  сборка батчей района в Static.batches
+     5100- 6122  7. Рендерер
                    R3, Env (солнце и время суток), initRenderer, resizeGL/applyRenderSize (масштаб рендера), Perf (монитор, GPU, авто-масштаб), applyProfile, drawSky, beginMain, bindMaterial/drawMesh, drawStatic
-     5918- 6377  8. Персонажи: модели со скелетом
+     6123- 6582  8. Персонажи: модели со скелетом
                    скелет на 20 костях, походки и позы; makeCharMesh строит, poseCharacter анимирует
-                   └ 6188-6377  позы и анимация скелета
-     6378- 6682  9. Велосипед и транспорт
+                   └ 6393-6582  позы и анимация скелета
+     6583- 6887  9. Велосипед и транспорт
                    кузова машин, велосипед, собака — те же кости, только меньше
-     6683- 6827  10. Звук: Web Audio, всё синтезируется на лету
+     6888- 7032  10. Звук: Web Audio, всё синтезируется на лету
                    осцилляторы, шумы и три радиостанции; ни одного загруженного файла
-     6828- 6872  11. Сохранение
+     7033- 7077  11. Сохранение
                    формат сохранения в localStorage; настройки лежат отдельным ключом
-     6873- 7029  12. Диалоги и портреты
+     7078- 7234  12. Диалоги и портреты
                    очередь реплик, портреты рисуются на canvas
-     7030- 7135  13. Мини-игры монтажа (двумерные схемы поверх сцены)
+     7235- 7340  13. Мини-игры монтажа (двумерные схемы поверх сцены)
                    общий каркас мини-игр поверх сцены
-     7136- 7887  23. Мини-игра «Монтаж двери» (условная схема)
+     7341- 8092  23. Мини-игра «Монтаж двери» (условная схема)
                    что происходит по E и по F рядом с объектом
-     7888- 8008  14. Радио и бегущая строка
+     8093- 8213  14. Радио и бегущая строка
                    станции, диджей, объявления и бегущая строка
-     8009- 8075  15. Ввод: клавиатура, мышь, обзор от третьего лица
+     8214- 8280  15. Ввод: клавиатура, мышь, обзор от третьего лица
                    клавиатура, мышь, захват курсора; Input.hit — нажатия за кадр
-     8076- 8127  16. Состояние игры
+     8281- 8332  16. Состояние игры
                    S — всё изменяемое состояние смены; BAL — баланс; TOOLS — инструменты
-     8128- 8200  17. Эффекты, тосты, показатели
+     8333- 8405  17. Эффекты, тосты, показатели
                    искры, всплывающий текст, тосты, деньги, репутация, розыск
-     8201- 8398  18. Движение Олега и велосипеда
+     8406- 8603  18. Движение Олега и велосипеда
                    скольжение по AABB, велосипед с креном и заносом
-     8399- 8455  19. Камера от третьего лица
+     8604- 8660  19. Камера от третьего лица
                    камера за спиной с ручным осмотром и возвратом
-     8456- 8512  20. Двумерный слой поверх сцены: реплики, метки, указатели
+     8661- 8717  20. Двумерный слой поверх сцены: реплики, метки, указатели
                    реплики, метки и стрелка к цели рисуются на canvas 2D поверх WebGL
-     8513- 9052  21. Жители района
+     8718- 9257  21. Жители района
                    машины, собаки, хулиганы, бабушки, прохожие; charPose — общий сборщик позы
-                   └ 8687-9052  сборка позы жителя для рендера
-     9053- 9303  22. Заявки
+                   └ 8892-9257  сборка позы жителя для рендера
+     9258- 9508  22. Заявки
                    сценарные заявки и генератор свободных
-     9304- 9761  Бригада: Ваня объясняет один раз, Костя делает на глаз и уезжает
+     9509- 9966  Бригада: Ваня объясняет один раз, Костя делает на глаз и уезжает
                    ход заявки от брифинга до сдачи, мини-игры монтажа, финальная оборона кабеля
-     9762- 9820  23. Взаимодействие
+     9967-10025  23. Взаимодействие
                    что происходит по E и по F рядом с объектом
-     9821-10665  24. Тени, маркеры и отрисовка кадра
+    10026-10980  24. Тени, маркеры и отрисовка кадра
                    drawDynamic, drawGlows, drawOverlay2D и renderFrame — порядок проходов кадра
-                   └ 10576-10665  порядок проходов кадра
-    10666-10761  25. Интерфейс
+                   └ 10884-10980  порядок проходов кадра
+    10981-11076  25. Интерфейс
                    HUD, миникарта
-    10762-11118  26. Экраны
+    11077-11433  26. Экраны
                    меню, пауза, карта, журнал, магазин, финал
-    11119-11214  27. Сохранение и обучение
+    11434-11529  27. Сохранение и обучение
                    saveGame/loadGame и обучение
-    11215-11477  28. Мир, цикл и запуск
+    11530-11792  28. Мир, цикл и запуск
                    resetWorld, updateWorld, step, frame, Loader и async boot — точка входа внизу файла
 
   Нумерация разделов в файле историческая и местами сбита (номер 23 занят
@@ -400,13 +400,14 @@ const QCFG = {
       csmSize: 512,       /* сторона слоя каскада, текселей */
       ssao: false,        /* затенение в складках по глубине */
       bloom: false,       /* свечение вокруг яркого */
+      ssr: false,         /* отражения в экранном пространстве */
       veg: { grass: 0.5, cards: 0.6 }   /* плотность травы и карт листвы */
     },
     medium: {
       title: 'среднее',
       dprMax: 1.25, scale: 1, scaleMin: 0.6, texSS: 2, aniso: 8, msaa: 2, detail: true,
       lamps: 8, lampPick: 5, glowR: 52, vis: 1, sparks: 1, scan: true,
-      csm: 2, csmSize: 1024, ssao: false, bloom: true,
+      csm: 2, csmSize: 1024, ssao: false, bloom: true, ssr: false,
       veg: { grass: 1, cards: 1 }
     },
     high: {
@@ -422,7 +423,7 @@ const QCFG = {
          остаётся — затенения там нет, глубина не нужна. */
       dprMax: 2, scale: 1, scaleMin: 0.6, texSS: 2, aniso: 16, msaa: 0, detail: true,
       lamps: 8, lampPick: 5, glowR: 52, vis: 1, sparks: 1, scan: true,
-      csm: 3, csmSize: 1024, ssao: true, bloom: true,
+      csm: 3, csmSize: 1024, ssao: true, bloom: true, ssr: true,
       veg: { grass: 1, cards: 1 }
     }
   },
@@ -681,6 +682,49 @@ const QCFG = {
     prefSamples: [1, 16, 24, 32, 32, 24],
     sunStepDeg: 1.5,    /* солнце сдвинулось на столько — пересобрать окружение */
     shGrid: 12          /* сетка направлений на грань для SH на CPU */
+  },
+  /* Отражения в экранном пространстве. Лужи, стёкла и мокрый асфальт до сих
+     пор отражали только НЕБО из префильтра окружения: дом в луже не
+     отражался, машина не отражалась. Здесь по буферу глубины пускается луч
+     отражения, а цвет берётся из буфера сцены.
+
+     Порядок в кадре. Проход идёт ДО главного, вместе с затенением: глубина к
+     этому моменту уже посчитана проходом глубины, а цвет в HDR.tex — ещё
+     прошлого кадра, потому что главный проход чистит его позже. Кадр
+     запаздывания незаметен на луже под ногами и стоит дешевле любой
+     альтернативы: иначе пришлось бы либо писать маску отражающего вторым
+     вложением главного прохода (лишняя полоса памяти на самом дорогом
+     проходе), либо складывать отражение поверх готового кадра — а тогда его
+     нечем смешать с небом, и переход читается границей. Точка попадания
+     перепроецируется матрицей ПРОШЛОГО кадра, поэтому поворот камеры
+     отражение не размазывает.
+
+     Маска. Марш по лучу — самое дорогое, что можно сделать на пиксель, и
+     делать его по всему кадру незачем: отражают лужи, стёкла и краска.
+     Маску пишет проход глубины вторым вложением (ему это почти ничего не
+     стоит: он и так идёт по всей геометрии, а цвета не писал вовсе), и
+     шейдер отражений выходит на первой же выборке там, где отражать нечего. */
+  ssr: {
+    on: true,            /* перекрывается профилем */
+    half: true,          /* считать в половину стороны буфера сцены */
+    steps: 24,           /* отсчётов по лучу */
+    refine: 4,           /* уточнений двоичным делением после попадания */
+    maxDist: 40,         /* дальше луч не идёт, м */
+    thickness: 0.5,      /* толщина сравнения: за какой «стенкой» считать попадание, м */
+    grow: 1.14,          /* во сколько раз растёт шаг: у поверхности точность, вдали охват */
+    /* Шероховатость, выше которой отражение уже не помогает. Не «на глаз»:
+       лужа днём имеет rough = 0.80·(1 − 0.72·0.85) = 0.31 (асфальт под ней
+       шершавый, глянец даёт вершинный канал), а ночью 0.12 — glossNight
+       делает поверхности «влажнее». При пороге 0.34 дневная лужа отсекалась
+       почти целиком и отражался только ночной вариант. */
+    rough: 0.45,
+    edge: 0.12,          /* доля кадра с краю, на которой отражение гаснет */
+    strength: 1.0,       /* сила подмешивания поверх префильтра неба */
+    mask: 0.03,          /* ниже этой «глянцевости» луч не пускается вовсе */
+    /* Отладочный показ вместо кадра: 1 — цвет отражения, 2 — уверенность,
+       3 — маска отражающего из прохода глубины. Читается при сборке шейдера:
+         node tools/shot.mjs --cfg='{"ssr":{"debug":2}}' */
+    debug: 0
   },
   /* Свечение вокруг яркого (bloom). Считается в ЛИНЕЙНОМ свете, до экспозиции
      и тонмаппинга: только там оно физично — яркое расплывается по кадру и
@@ -1254,6 +1298,8 @@ uniform vec4 uTint;
 uniform highp vec3 uEye;
 uniform sampler2D uAOScr;          /* затенение в складках, экранное */
 uniform vec3 uAOScrK;              /* 1/ширина, 1/высота буфера сцены, сила */
+uniform sampler2D uSSR;            /* отражения в экранном пространстве */
+uniform vec2 uSSRK;                /* сила и шероховатость, выше которой их нет */
 ${CSM > 0 ? `/* Каскады: слои одного массива с глубиной, выборка сравнивающая.
    highp обязателен — координаты каскада живут в метрах района, а в mediump
    (на Apple это половинная точность) сто метров кладутся с шагом в
@@ -1426,6 +1472,21 @@ ${CSM > 0 ? `           * sunShadow(vWorld, vNorG, max(dot(N, uSunDir), 0.0))` :
   float horiz = clamp(1.0 + ${gf(QCFG.light.horizonOccl)} * dot(R, vNorG), 0.0, 1.0);
   horiz *= horiz;
   vec3 skyRad = textureLod(uPref, R, rough * uPrefMax).rgb;
+  /* Отражения в экранном пространстве подменяют собой НЕБО, а не ложатся
+     поверх него: дальше идёт та же самая формула с envBRDF и зеркальной
+     окклюзией, поэтому лужа отражает дом ровно с той силой, с какой она
+     отражала бы небо. Где луч ушёл за кадр или ни во что не попал,
+     уверенность нулевая и остаётся префильтр — перехода не видно.
+     Ветка на юниформе: на среднем и низком профиле отражений нет, и выборка
+     не исполняется. */
+  if (uSSRK.x > 0.0) {
+    vec4 ssr = texture(uSSR, gl_FragCoord.xy * uAOScrK.xy);
+    float sw = ssr.a * uSSRK.x * (1.0 - smoothstep(uSSRK.y * 0.55, uSSRK.y, rough));
+    skyRad = mix(skyRad, ssr.rgb, clamp(sw, 0.0, 1.0));
+${QCFG.ssr.debug ? (QCFG.ssr.debug === 1 ? `
+    fragColor = vec4(ssr.rgb, 1.0); return;` : `
+    fragColor = vec4(vec3(ssr.a), 1.0); return;`) : ''}
+  }
   lit += diff * shIrradiance(N) * INV_PI * aoC;
   lit += skyRad * envBRDF(f0, rough, NoV) * specOcclusion(NoV, aoC, rough) * horiz;
 
@@ -1637,11 +1698,13 @@ const VS_DEPTH = `#version 300 es
 layout(location=0) in vec3 aPos;
 layout(location=2) in vec2 aUV;
 layout(location=5) in float aPart;
+layout(location=6) in float aGloss;
 uniform mat4 uProj, uView, uModel;
 uniform mat4 uBones[20];
 uniform float uSkin;
 uniform vec3 uWind;
 out highp vec2 vUV;
+out float vGloss;
 void main(){
   mat4 M = uSkin > 0.5 ? uBones[int(aPart)] : uModel;
   vec4 wp = M * vec4(aPos, 1.0);
@@ -1651,7 +1714,7 @@ void main(){
     wp.xz += uWind.xy * aPart * (0.55 + 0.45 * g);
     wp.y -= length(uWind.xy) * aPart * 0.28 * abs(g);
   }
-  vUV = aUV;
+  vUV = aUV; vGloss = aGloss;
   gl_Position = uProj * uView * wp;
 }`;
 
@@ -1660,12 +1723,21 @@ const FS_DEPTH = `#version 300 es
 precision mediump float;
 precision mediump sampler2DArray;
 in highp vec2 vUV;
+in float vGloss;
 uniform sampler2DArray uTex;
-uniform float uLayer, uAlphaMode, uCut;
+uniform float uLayer, uAlphaMode, uCut, uGlossMul, uMatGloss;
+/* Единственный выход прохода — маска «здесь есть что отражать». В проходе
+   теней буфер отрисовки объявлен как NONE, и запись просто выбрасывается:
+   лишней работы это не создаёт, а второй программы не требует.
+   Глянцевость берётся из вершин (лужи, краска, стёкла киосков) и из
+   материала (витринное стекло гладкое картой шероховатости, а не вершинами —
+   маска по одному vGloss пропустила бы все витрины). */
+out float fragColor;
 void main(){
-  /* Непрозрачному фрагментному шейдеру делать нечего — и это как раз то, чего
-     хочет тайловый GPU: ранний z работает в полную силу. */
+  /* Непрозрачному фрагментному шейдеру делать почти нечего — и это как раз
+     то, чего хочет тайловый GPU: ранний z работает в полную силу. */
   if (uAlphaMode > 0.5 && texture(uTex, vec3(vUV, uLayer)).a < uCut) discard;
+  fragColor = clamp(max(vGloss * uGlossMul, uMatGloss), 0.0, 1.0);
 }`;
 
 /* Та же программа под меткой прохода теней: оснастка замера различает проходы
@@ -1816,6 +1888,120 @@ void main(){
   soft = soft * soft * uThr.z;
   float w = max(soft, br - uThr.x) / max(br, 1e-4);
   fragColor = col * w;
+}`;
+
+/* --- Отражения в экранном пространстве ---------------------------------
+   Луч отражения марширует по буферу глубины, цвет берётся из буфера сцены
+   ПРЕДЫДУЩЕГО кадра (главный проход этого кадра его ещё не чистил) и
+   перепроецируется матрицей прошлого кадра — иначе на повороте камеры
+   отражение уезжает вместе с ней.
+
+   Нормаль восстанавливается из производных глубины, как в затенении: своего
+   буфера нормалей нет. Для луж и стёкол этого хватает — они плоские, — а на
+   мятом кузове отражение и так тонет в шероховатости.
+
+   Что отдаётся наружу: rgb — цвет отражения, a — уверенность. Смешивает с
+   небом главный проход, там же, где он берёт префильтр: только там известны
+   настоящая шероховатость и Френель, и только там переход между отражением
+   и небом не читается границей. */
+const FS_SSR = (STEPS, REFINE) => `#version 300 es
+/* PASS:ssr */
+precision mediump float;
+precision highp sampler2D;
+in vec2 vUV;
+uniform highp sampler2D uDepth;    /* глубина этого кадра */
+uniform sampler2D uColor;          /* цвет прошлого кадра, линейный HDR */
+uniform sampler2D uMask;           /* глянцевость из прохода глубины */
+uniform vec4 uProjInfo;            /* tanX, tanY, near, far */
+uniform vec2 uTexel;               /* 1/размер половинного буфера */
+uniform vec4 uParams;              /* дальность, толщина, край, порог маски */
+uniform mat4 uReproj;              /* из вида этого кадра в клип прошлого */
+out vec4 fragColor;
+
+highp float viewZ(vec2 uv){
+  highp float d = texture(uDepth, uv).r * 2.0 - 1.0;
+  highp float n = uProjInfo.z, f = uProjInfo.w;
+  return 2.0 * n * f / (f + n - d * (f - n));
+}
+highp vec3 viewPos(vec2 uv, highp float z){
+  return vec3((uv * 2.0 - 1.0) * uProjInfo.xy * z, z);
+}
+vec2 project(highp vec3 p){ return 0.5 + 0.5 * vec2(p.xy / (p.z * uProjInfo.xy)); }
+
+void main(){
+  fragColor = vec4(0.0);
+  /* Первая же выборка закрывает девяносто процентов кадра: марш по лучу
+     стоит дороже всего остального вместе взятого. */
+  if (texture(uMask, vUV).r < uParams.w) return;
+  highp float zc = viewZ(vUV);
+  if (zc >= uProjInfo.w * 0.99) return;             /* небо */
+  highp vec3 p = viewPos(vUV, zc);
+  highp float zr = viewZ(vUV + vec2(uTexel.x, 0.0)), zu = viewZ(vUV + vec2(0.0, uTexel.y));
+  /* Нормаль из производных врёт на СИЛУЭТЕ: соседний отсчёт там лежит на
+     другом объекте, крест даёт случайное направление, луч уходит куда попало
+     и приносит уверенное отражение чужого. В отладочном показе это видно
+     сразу — обводка по контуру всего блестящего. Разрыв глубины больше
+     сотой доли расстояния — не поверхность, а край: отражать нечего. */
+  if (abs(float(zr - zc)) > zc * 0.02 || abs(float(zu - zc)) > zc * 0.02) return;
+  highp vec3 pr = viewPos(vUV + vec2(uTexel.x, 0.0), zr);
+  highp vec3 pu = viewPos(vUV + vec2(0.0, uTexel.y), zu);
+  vec3 N = normalize(cross(vec3(pr - p), vec3(pu - p)));
+  if (N.z > 0.0) N = -N;                            /* нормаль смотрит на камеру */
+  vec3 V = normalize(vec3(p));
+  vec3 R = reflect(V, N);
+  if (R.z < 0.02) return;                           /* луч уходит за камеру */
+
+  /* Шаг растёт геометрически: у поверхности нужна точность, вдали — охват.
+     Начальный сдвиг вдоль луча снимает самозатенение первым же отсчётом. */
+  float far = uParams.x, thick = uParams.y;
+  float t = far * 0.02, step = far * 0.02, grow = ${gf(QCFG.ssr.grow)};
+  highp vec3 hit = vec3(0.0); float hitT = -1.0; vec2 hitUV = vec2(0.0);
+  highp vec3 prevQ = p + R * t;
+  for (int i = 0; i < ${STEPS}; i++) {
+    t += step; step *= grow;
+    if (t > far) break;
+    highp vec3 q = p + R * t;
+    if (q.z < uProjInfo.z) break;
+    vec2 uv = project(q);
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) break;
+    highp float sz = viewZ(uv);
+    /* Попадание: сцена оказалась БЛИЖЕ луча, но не настолько, чтобы луч
+       прошёл далеко за спиной у геометрии — иначе отражается фон сквозь
+       силуэт, и в луже висит кусок неба на месте машины. */
+    if (sz < q.z && sz > q.z - thick - step) {
+      /* Уточнение делением пополам: без него на пологом луче попадание
+         промахивается на целый шаг и отражение съезжает. */
+      highp vec3 a = prevQ, b = q;
+      for (int k = 0; k < ${REFINE}; k++) {
+        highp vec3 m = (a + b) * 0.5;
+        vec2 mu = project(m);
+        highp float mz = viewZ(mu);
+        if (mz < m.z) b = m; else a = m;
+      }
+      hit = b; hitUV = project(b); hitT = t;
+      break;
+    }
+    prevQ = q;
+  }
+  if (hitT < 0.0) return;
+
+  /* Цвет берётся из ПРОШЛОГО кадра, поэтому точка попадания перепроецируется
+     его матрицей: камера за кадр успевает повернуться. */
+  highp vec4 cp = uReproj * vec4(hit, 1.0);
+  if (cp.w <= 0.0) return;
+  vec2 cu = 0.5 + 0.5 * cp.xy / cp.w;
+  if (cu.x < 0.0 || cu.x > 1.0 || cu.y < 0.0 || cu.y > 1.0) return;
+
+  /* Уверенность. Гаснет у краёв кадра — там отражать нечем; гаснет, когда
+     луч летит на камеру — такой луч в экранном пространстве не проверить;
+     гаснет к дальнему концу луча. Всё это, чтобы стык отражения с небом не
+     читался границей. */
+  float e = uParams.z;
+  vec2 fe = smoothstep(vec2(0.0), vec2(e), cu) * (1.0 - smoothstep(vec2(1.0) - vec2(e), vec2(1.0), cu));
+  float conf = fe.x * fe.y;
+  conf *= smoothstep(0.0, 0.35, R.z);
+  conf *= 1.0 - smoothstep(far * 0.75, far, hitT);
+  fragColor = vec4(texture(uColor, cu).rgb, conf);
 }`;
 
 const VS_GLOW = `#version 300 es
@@ -4916,8 +5102,9 @@ function buildWorld(gl) {
 /* ------------------------------------------------------------------ */
 const R3 = {
   main: null, mainDay: null, mainNight: null, sky: null, glow: null, tone: null, cube: null, pref: null,
-  tonePlain: null, toneFxaa: null, tonePlainB: null, toneFxaaB: null, bloom: null,
-  depth: null, shadow: null, ssao: null, ssaoBlur: null, csmMax: 0, aoTex: null, bloomTex: null,
+  tonePlain: null, toneFxaa: null, tonePlainB: null, toneFxaaB: null, bloom: null, ssr: null,
+  depth: null, shadow: null, ssao: null, ssaoBlur: null, csmMax: 0,
+  aoTex: null, bloomTex: null, ssrTex: null,
   skyVAO: null, glowVAO: null,
   proj: m4(), view: m4(), model: m4(), invVP: m4(), viewProj: m4(), tmp: m4(), tmp2: m4(),
   eye: [0, 0, 0], right: [1, 0, 0], up: [0, 1, 0], fwd: [0, 0, -1], time: 0,
@@ -4946,7 +5133,7 @@ const HDR = {
 /* Нужна ли в этом кадре глубина текстурой. Пока её единственный потребитель —
    затенение в складках: на низком и среднем профиле его нет, и всей возни с
    глубиной тоже нет. */
-function needDepthTex() { return !!(Q.ssao && QCFG.ssao.on); }
+function needDepthTex() { return !!((Q.ssao && QCFG.ssao.on) || (Q.ssr && QCFG.ssr.on)); }
 
 /* Сколько сэмплов реально дают для этого формата. */
 function pickSamples(gl, ifmt, want) {
@@ -5069,6 +5256,7 @@ function resizeHDR(gl, w, h) {
 
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   if (SSAO.fb) SSAO.resize(gl, w, h);
+  if (SSR.fb) SSR.resize(gl, w, h);
   if (BLOOM.fb) BLOOM.resize(gl, w, h);
   HDR.ok = st1 === gl.FRAMEBUFFER_COMPLETE && st2 === gl.FRAMEBUFFER_COMPLETE && st3 === gl.FRAMEBUFFER_COMPLETE;
   HDR.bytes = w * h * (px + 4) * Math.max(1, samples) + (samples > 0 ? w * h * px : 0)
@@ -5329,7 +5517,9 @@ function initRenderer(canvas) {
   R3.shadow = program(gl, VS_DEPTH, FS_SHADOW, 'shadow');
   R3.ssao = program(gl, VS_FULL, FS_SSAO(QCFG.ssao.samples), 'ssao');
   R3.ssaoBlur = program(gl, VS_FULL, FS_SSAO_BLUR, 'ssao-blur');
+  R3.ssr = program(gl, VS_FULL, FS_SSR(QCFG.ssr.steps, QCFG.ssr.refine), 'ssr');
   BLOOM.init(gl);
+  SSR.init(gl);
   initHDR(gl);
   SHADOW.init(gl);
   SHADOW.resize(gl);
@@ -5510,6 +5700,10 @@ function applyProfile(name, live) {
   if (!live) { BootQ.msaa = Q.msaa; BootQ.veg = Q.veg; return; }
   resizeAll();
   SHADOW.resize(GL.gl);              /* число каскадов и их размер — из профиля */
+  /* Свечение и отражения включаются профилем, а не размером буфера: resizeHDR
+     до них не всегда доходит (он выходит рано, когда размер тот же). */
+  BLOOM.resize(GL.gl, HDR.w, HDR.h);
+  SSR.resize(GL.gl, HDR.w, HDR.h);
   if (prev.aniso !== Q.aniso) TexReg.setAniso(GL.gl, Q.aniso);
   if (prev.texSS !== Q.texSS) rebuildTextures();
   /* Мультисэмплинг теперь наш собственный (HDR-буфер) и применяется сразу;
@@ -5796,6 +5990,12 @@ function beginMain(lamps) {
   gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, R3.aoTex || SSAO.dummy);
   gl.activeTexture(gl.TEXTURE0);
   gl.uniform3f(P.u.uAOScrK, 1 / Math.max(1, HDR.w), 1 / Math.max(1, HDR.h), SSAO.on ? 1 : 0);
+  /* Отражения: слот привязывается всегда, при выключенных — заглушка 1×1
+     «отражения нет». Сила ноль закрывает ветку выборки целиком. */
+  gl.uniform1i(P.u.uSSR, 8);
+  gl.activeTexture(gl.TEXTURE8); gl.bindTexture(gl.TEXTURE_2D, R3.ssrTex || SSR.dummy);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.uniform2f(P.u.uSSRK, R3.ssrTex ? QCFG.ssr.strength : 0, QCFG.ssr.rough);
   gl.uniform1f(P.u.uDetailK, Q.detail ? QCFG.tex.detailStrength : 0);
   gl.uniform3f(P.u.uDetailP, QCFG.tex.detailScale, QCFG.tex.detailNear, QCFG.tex.detailFar);
   R3.curGrp = null;
@@ -5833,6 +6033,11 @@ function bindMaterial(mat) {
   gl.uniform1f(P.u.uLayer, mat.layer);
   gl.uniform2f(P.u.uMatRM, mat.rough, mat.metal);
   gl.uniform1f(P.u.uTriplanar, mat.tri || 0);
+  /* Глянцевость материала — только для маски отражений в проходе глубины.
+     Витринное стекло гладкое картой шероховатости, а не вершинами, и маска
+     по одному vGloss пропустила бы все витрины. Юниформа нет в главной
+     программе — локация null, запись GL игнорирует. */
+  gl.uniform1f(P.u.uMatGloss, Math.max(0, 1 - mat.rough / Math.max(0.01, QCFG.ssr.rough)));
 }
 function drawMesh(gpu, mat, model, opt) {
   const gl = GL.gl, P = R3.main;
@@ -10426,6 +10631,108 @@ const SSAO = {
   }
 };
 
+/* --- Отражения в экранном пространстве: маска, буфер и марш по лучу ------ */
+const SSR = {
+  fb: null, tex: null, dummy: null, maskFb: null, maskTex: null,
+  w: 0, h: 0, mw: 0, mh: 0, on: false, bytes: 0, hasPrev: false,
+  prevVP: m4(), reproj: m4(), _inv: m4(), projInfo: new Float32Array(4),
+
+  init(gl) {
+    this.fb = gl.createFramebuffer();
+    this.maskFb = gl.createFramebuffer();
+    this.tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    this.maskTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.maskTex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    /* Заглушка «отражений нет»: альфа ноль — уверенность ноль. */
+    this.dummy = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.dummy);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, 1, 1);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  },
+
+  /* Буфер отражений — половина стороны буфера сцены; маска — полная, потому
+     что делит вложение глубины с проходом глубины, а вложения одного буфера
+     обязаны совпадать по размеру. */
+  resize(gl, w, h) {
+    const on = !!(Q.ssr && QCFG.ssr.on && HDR.depthMode === 'direct');
+    const half = QCFG.ssr.half ? 2 : 1;
+    const nw = Math.max(1, Math.floor(w / half)), nh = Math.max(1, Math.floor(h / half));
+    if (this.on === on && this.w === nw && this.h === nh && this.mw === w && this.mh === h) return;
+    this.on = on; this.w = nw; this.h = nh; this.mw = w; this.mh = h; this.hasPrev = false;
+    this.bytes = on ? nw * nh * 8 + w * h : 0;
+    if (!on) return;
+    gl.bindTexture(gl.TEXTURE_2D, this.tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, nw, nh, 0, gl.RGBA, gl.HALF_FLOAT, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.tex, 0);
+    const st1 = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    gl.bindTexture(gl.TEXTURE_2D, this.maskTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, w, h, 0, gl.RED, gl.UNSIGNED_BYTE, null);
+    /* Маска и глубина — на одном буфере: проход глубины пишет их одним
+       заходом, и лишней смены буфера отрисовки в кадре не появляется. */
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.maskFb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.maskTex, 0);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, HDR.depthTex, 0);
+    const st2 = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    if (st1 !== gl.FRAMEBUFFER_COMPLETE || st2 !== gl.FRAMEBUFFER_COMPLETE) {
+      console.warn('буфер отражений неполон: 0x' + st1.toString(16) + ' / 0x' + st2.toString(16));
+      this.on = false;
+    }
+  },
+
+  /* Марш по лучу. Идёт ДО главного прохода: глубина уже посчитана, а в
+     HDR.tex ещё лежит прошлый кадр — его-то отражение и читает. */
+  draw(gl) {
+    if (!this.on || !this.hasPrev) return null;
+    const K = QCFG.ssr, P = R3.ssr;
+    const tanY = Math.tan(62 * D2R / 2), tanX = tanY * (HDR.w / Math.max(1, HDR.h));
+    this.projInfo[0] = tanX; this.projInfo[1] = tanY; this.projInfo[2] = 0.12; this.projInfo[3] = 460;
+    /* Из вида ЭТОГО кадра в клип ПРОШЛОГО. Третий столбец обратной матрицы
+       вида меняет знак: у восстановленной позиции ось z смотрит вперёд, а у
+       вида GL — назад. */
+    m4invRT(this._inv, R3.view);
+    this._inv[8] = -this._inv[8]; this._inv[9] = -this._inv[9]; this._inv[10] = -this._inv[10];
+    m4mul(this.reproj, this.prevVP, this._inv);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb);
+    gl.viewport(0, 0, this.w, this.h);
+    gl.disable(gl.DEPTH_TEST);
+    gl.useProgram(P.p);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, HDR.depthTex);
+    gl.uniform1i(P.u.uDepth, 0);
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, HDR.tex);
+    gl.uniform1i(P.u.uColor, 1);
+    gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, this.maskTex);
+    gl.uniform1i(P.u.uMask, 2);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.uniform4fv(P.u.uProjInfo, this.projInfo);
+    gl.uniform2f(P.u.uTexel, 1 / this.w, 1 / this.h);
+    gl.uniform4f(P.u.uParams, K.maxDist, K.thickness, K.edge, K.mask);
+    gl.uniformMatrix4fv(P.u.uReproj, false, this.reproj);
+    gl.bindVertexArray(R3.skyVAO);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.enable(gl.DEPTH_TEST);
+    R3.curGrp = null;
+    return this.tex;
+  },
+
+  /* Матрица кадра запоминается в конце: следующий кадр перепроецирует ею
+     точку попадания. */
+  keep() { if (this.on) { this.prevVP.set(R3.viewProj); this.hasPrev = true; } }
+};
+
 /* --- Свечение вокруг яркого: буфер с мип-цепочкой и проход порога -------- */
 const BLOOM = {
   fb: null, tex: null, dummy: null, w: 0, h: 0, on: false, levels: 0, bytes: 0,
@@ -10519,6 +10826,7 @@ function beginDepthProgram(P, proj, view, vis) {
   gl.uniform1f(P.u.uSkin, 0);
   gl.uniform3f(P.u.uWind, Env.windX * Env.windAmp, Env.windZ * Env.windAmp, R3.time);
   gl.uniform4f(P.u.uTint, 1, 1, 1, 1);
+  gl.uniform1f(P.u.uGlossMul, Env.glossMul);
   R3.curGrp = null;
   R3.depthVis = vis;
 }
@@ -10597,28 +10905,34 @@ function renderFrame() {
      которой пользуется сцена: она не считает глубину заново, а получает
      готовый ранний z, и проход наполовину окупает сам себя. С мультисэмплом
      так нельзя — там глубина многосэмпловая и общей быть не может. */
-  R3.aoTex = null;
-  const wantAO = HDR.depthMode === 'direct' && SSAO.on;
-  if (wantAO) {
-    gl.bindFramebuffer(gl.FRAMEBUFFER, HDR.fb);
+  R3.aoTex = null; R3.ssrTex = null;
+  const wantDepth = HDR.depthMode === 'direct' && (SSAO.on || SSR.on);
+  if (wantDepth) {
+    /* Проход глубины пишет заодно маску отражающего — в буфер, у которого та
+       же самая текстура глубины. Смен буфера от этого не прибавляется, а
+       второй проход по всей геометрии не нужен. Когда отражений нет, цвет
+       просто замаскирован, как и было. */
+    gl.bindFramebuffer(gl.FRAMEBUFFER, SSR.on ? SSR.maskFb : HDR.fb);
     gl.viewport(0, 0, HDR.w, HDR.h);
-    gl.colorMask(false, false, false, false);
-    gl.clear(gl.DEPTH_BUFFER_BIT);
+    if (SSR.on) gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    else { gl.colorMask(false, false, false, false); gl.clear(gl.DEPTH_BUFFER_BIT); }
     Cull.gate = 0;
     beginDepthProgram(R3.depth, R3.proj, R3.view, Cull.on ? Cull.vis : null);
     drawStatic();
     drawDynamicGeom();
     Cull.gate = 1;
-    gl.colorMask(true, true, true, true);
+    if (!SSR.on) gl.colorMask(true, true, true, true);
     R3.depthVis = null;
-    R3.aoTex = SSAO.draw(gl);          /* два прохода на половинном разрешении */
+    if (SSAO.on) R3.aoTex = SSAO.draw(gl);   /* два прохода на половинном разрешении */
+    /* Отражения читают ПРОШЛЫЙ кадр: главный проход чистит цвет ниже. */
+    R3.ssrTex = SSR.draw(gl);
   } else if (HDR.depthMode === 'prepass') {
     drawDepthPrepass();
   }
 
   gl.bindFramebuffer(gl.FRAMEBUFFER, HDR.fb);
   gl.viewport(0, 0, HDR.w, HDR.h);
-  if (wantAO) {
+  if (wantDepth) {
     /* Глубина уже посчитана проходом выше — чистим только цвет, а сравнение
        ведём на «не дальше»: повторной записи нет, ранний z отбрасывает всё
        закрытое до фрагментного шейдера. */
@@ -10632,7 +10946,7 @@ function renderFrame() {
   drawDynamic();
   drawSky();                           /* последним из непрозрачного, с проверкой глубины */
   drawGlows();
-  if (wantAO) gl.depthFunc(gl.LESS);
+  if (wantDepth) gl.depthFunc(gl.LESS);
   /* Глубина больше не нужна никому: затенение прочитало её до сцены. */
   gl.invalidateFramebuffer(gl.FRAMEBUFFER, [gl.DEPTH_ATTACHMENT]);
 
@@ -10656,6 +10970,7 @@ function renderFrame() {
      «поверх кадра» нет. */
   R3.bloomTex = BLOOM.draw(gl);
   drawTone();
+  SSR.keep();                          /* матрица кадра — для перепроекции в следующем */
 
   Perf.endFrame(gl);
   drawOverlay2D();
