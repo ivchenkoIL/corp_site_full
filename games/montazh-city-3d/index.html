@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- ОГЛАВЛЕНИЕ:НАЧАЛО (пересобирается: node tools/toc.mjs) -->
 <!--
-  МОНТАЖ-СИТИ 3D — карта файла. Один файл, 11290 строк, без сборки и без
+  МОНТАЖ-СИТИ 3D — карта файла. Один файл, 11481 строк, без сборки и без
   зависимостей. Целиком его читать не надо: ниже строки, по которым видно,
   где что лежит. Диапазоны пересобираются командой `node tools/toc.mjs`,
   проверить актуальность — `node tools/toc.mjs --check`.
@@ -9,98 +9,98 @@
   Крупно:
       119-  285  CSS: HUD, диалоги, экраны, мини-игры
       287-  360  разметка: canvas #gl, слой HUD, диалог, экраны, загрузка
-      361-11287  вся игра: один IIFE, ничего не торчит в window
+      361-11478  вся игра: один IIFE, ничего не торчит в window
 
   По ролям:
-    рендер ·············· 829-1792, 4823-5816, 9720-10474
-    текстуры ············ 2321-3334
-    геометрия ··········· 1793-2320, 3588-3594, 3595-3966, 3967-4822, 6277-6581
-    геометрия+анимация ·· 5817-6276
-    жители+анимация ····· 8412-8951
-    физика ·············· 3504-3587, 8100-8297
-    камера ·············· 8298-8354
-    данные мира ········· 3335-3503
-    состояние ··········· 7975-8026, 8027-8099
-    игровая логика ······ 8952-9202, 9203-9660
-    интерфейс ··········· 6772-6928, 6929-7034, 7035-7786, 7787-7907, 8355-8411, 9661-9719, 10475-10570, 10571-10927
-    ввод ················ 7908-7974
-    звук ················ 6582-6726
-    сохранение ·········· 6727-6771, 10928-11023
-    основа ·············· 371-738, 739-828
-    цикл ················ 11024-11286
+    рендер ·············· 864-1883, 4914-5917, 9821-10665
+    текстуры ············ 2412-3425
+    геометрия ··········· 1884-2411, 3679-3685, 3686-4057, 4058-4913, 6378-6682
+    геометрия+анимация ·· 5918-6377
+    жители+анимация ····· 8513-9052
+    физика ·············· 3595-3678, 8201-8398
+    камера ·············· 8399-8455
+    данные мира ········· 3426-3594
+    состояние ··········· 8076-8127, 8128-8200
+    игровая логика ······ 9053-9303, 9304-9761
+    интерфейс ··········· 6873-7029, 7030-7135, 7136-7887, 7888-8008, 8456-8512, 9762-9820, 10666-10761, 10762-11118
+    ввод ················ 8009-8075
+    звук ················ 6683-6827
+    сохранение ·········· 6828-6872, 11119-11214
+    основа ·············· 371-773, 774-863
+    цикл ················ 11215-11477
 
   Разделы подряд:
-      371-  738  Конфигурация качества и производительности
+      371-  773  Конфигурация качества и производительности
                    QCFG — все числа качества: профили, авто-масштаб, частота монитора, текстуры, цвет; Q — активный профиль
-      739-  828  0. Утилиты и математика
+      774-  863  0. Утилиты и математика
                    мелочи и матрицы 4×4 в column-major, как их ждёт GL; lin1/lin3 — sRGB в линейный свет
-      829- 1792  1. WebGL: контекст, шейдеры, буферы
+      864- 1883  1. WebGL: контекст, шейдеры, буферы
                    GLSL целиком: VS/FS_MAIN (нормали из surf, triplanar, detail), VS/FS_SKY, VS/FS_GLOW, компиляция и разбор юниформ
-     1793- 2320  2. Меши: сборка геометрии
+     1884- 2411  2. Меши: сборка геометрии
                    класс Mesh: box, bevelBox, cyl, ellipsoid, extrudeZ, tube, wheel, сглаживание нормалей, upload в VAO
-     2321- 3334  3. Процедурные текстуры (рисуются кодом, ничего не загружается)
+     2412- 3425  3. Процедурные текстуры (рисуются кодом, ничего не загружается)
                    комплекты карт из canvas 2D: albedo (sRGB) + нормаль по Собелю из высот + roughness/metalness + AO; TEXTURE_2D_ARRAY по группам; генерация заданиями между кадрами
-     3335- 3503  4. Район: данные (всё в метрах)
+     3426- 3594  4. Район: данные (всё в метрах)
                    дома, киоски, опоры, точки интереса, реквизит, ямы; surfY и isRoad
-     3504- 3587  5. Столкновения: список AABB + равномерная сетка
+     3595- 3678  5. Столкновения: список AABB + равномерная сетка
                    равномерная сетка 8 м поверх списка AABB
-     3588- 3594  6. Генерация геометрии района
+     3679- 3685  6. Генерация геометрии района
                    Static.batches, Static.signs, Static.lamps — то, что рисуется каждый кадр
-     3595- 3966  Дорога: бордюрный камень, чугун, разметка и обстановка
+     3686- 4057  Дорога: бордюрный камень, чугун, разметка и обстановка
                    бордюр, люки, лужи, разметка, фасадный рельеф, кондиционеры, вывески
-     3967- 4822  Растительность: атлас, карты, ветер
+     4058- 4913  Растительность: атлас, карты, ветер
                    атлас листвы с альфа-тестом, кроны, ветер через атрибут aPart; в конце buildWorld собирает все батчи
-                   └ 4593-4822  сборка батчей района в Static.batches
-     4823- 5816  7. Рендерер
+                   └ 4684-4913  сборка батчей района в Static.batches
+     4914- 5917  7. Рендерер
                    R3, Env (солнце и время суток), initRenderer, resizeGL/applyRenderSize (масштаб рендера), Perf (монитор, GPU, авто-масштаб), applyProfile, drawSky, beginMain, bindMaterial/drawMesh, drawStatic
-     5817- 6276  8. Персонажи: модели со скелетом
+     5918- 6377  8. Персонажи: модели со скелетом
                    скелет на 20 костях, походки и позы; makeCharMesh строит, poseCharacter анимирует
-                   └ 6087-6276  позы и анимация скелета
-     6277- 6581  9. Велосипед и транспорт
+                   └ 6188-6377  позы и анимация скелета
+     6378- 6682  9. Велосипед и транспорт
                    кузова машин, велосипед, собака — те же кости, только меньше
-     6582- 6726  10. Звук: Web Audio, всё синтезируется на лету
+     6683- 6827  10. Звук: Web Audio, всё синтезируется на лету
                    осцилляторы, шумы и три радиостанции; ни одного загруженного файла
-     6727- 6771  11. Сохранение
+     6828- 6872  11. Сохранение
                    формат сохранения в localStorage; настройки лежат отдельным ключом
-     6772- 6928  12. Диалоги и портреты
+     6873- 7029  12. Диалоги и портреты
                    очередь реплик, портреты рисуются на canvas
-     6929- 7034  13. Мини-игры монтажа (двумерные схемы поверх сцены)
+     7030- 7135  13. Мини-игры монтажа (двумерные схемы поверх сцены)
                    общий каркас мини-игр поверх сцены
-     7035- 7786  23. Мини-игра «Монтаж двери» (условная схема)
+     7136- 7887  23. Мини-игра «Монтаж двери» (условная схема)
                    что происходит по E и по F рядом с объектом
-     7787- 7907  14. Радио и бегущая строка
+     7888- 8008  14. Радио и бегущая строка
                    станции, диджей, объявления и бегущая строка
-     7908- 7974  15. Ввод: клавиатура, мышь, обзор от третьего лица
+     8009- 8075  15. Ввод: клавиатура, мышь, обзор от третьего лица
                    клавиатура, мышь, захват курсора; Input.hit — нажатия за кадр
-     7975- 8026  16. Состояние игры
+     8076- 8127  16. Состояние игры
                    S — всё изменяемое состояние смены; BAL — баланс; TOOLS — инструменты
-     8027- 8099  17. Эффекты, тосты, показатели
+     8128- 8200  17. Эффекты, тосты, показатели
                    искры, всплывающий текст, тосты, деньги, репутация, розыск
-     8100- 8297  18. Движение Олега и велосипеда
+     8201- 8398  18. Движение Олега и велосипеда
                    скольжение по AABB, велосипед с креном и заносом
-     8298- 8354  19. Камера от третьего лица
+     8399- 8455  19. Камера от третьего лица
                    камера за спиной с ручным осмотром и возвратом
-     8355- 8411  20. Двумерный слой поверх сцены: реплики, метки, указатели
+     8456- 8512  20. Двумерный слой поверх сцены: реплики, метки, указатели
                    реплики, метки и стрелка к цели рисуются на canvas 2D поверх WebGL
-     8412- 8951  21. Жители района
+     8513- 9052  21. Жители района
                    машины, собаки, хулиганы, бабушки, прохожие; charPose — общий сборщик позы
-                   └ 8586-8951  сборка позы жителя для рендера
-     8952- 9202  22. Заявки
+                   └ 8687-9052  сборка позы жителя для рендера
+     9053- 9303  22. Заявки
                    сценарные заявки и генератор свободных
-     9203- 9660  Бригада: Ваня объясняет один раз, Костя делает на глаз и уезжает
+     9304- 9761  Бригада: Ваня объясняет один раз, Костя делает на глаз и уезжает
                    ход заявки от брифинга до сдачи, мини-игры монтажа, финальная оборона кабеля
-     9661- 9719  23. Взаимодействие
+     9762- 9820  23. Взаимодействие
                    что происходит по E и по F рядом с объектом
-     9720-10474  24. Тени, маркеры и отрисовка кадра
+     9821-10665  24. Тени, маркеры и отрисовка кадра
                    drawDynamic, drawGlows, drawOverlay2D и renderFrame — порядок проходов кадра
-                   └ 10390-10474  порядок проходов кадра
-    10475-10570  25. Интерфейс
+                   └ 10576-10665  порядок проходов кадра
+    10666-10761  25. Интерфейс
                    HUD, миникарта
-    10571-10927  26. Экраны
+    10762-11118  26. Экраны
                    меню, пауза, карта, журнал, магазин, финал
-    10928-11023  27. Сохранение и обучение
+    11119-11214  27. Сохранение и обучение
                    saveGame/loadGame и обучение
-    11024-11286  28. Мир, цикл и запуск
+    11215-11477  28. Мир, цикл и запуск
                    resetWorld, updateWorld, step, frame, Loader и async boot — точка входа внизу файла
 
   Нумерация разделов в файле историческая и местами сбита (номер 23 занят
@@ -399,13 +399,14 @@ const QCFG = {
       csm: 1,             /* каскадов теней; 0 — прохода теней нет вовсе */
       csmSize: 512,       /* сторона слоя каскада, текселей */
       ssao: false,        /* затенение в складках по глубине */
+      bloom: false,       /* свечение вокруг яркого */
       veg: { grass: 0.5, cards: 0.6 }   /* плотность травы и карт листвы */
     },
     medium: {
       title: 'среднее',
       dprMax: 1.25, scale: 1, scaleMin: 0.6, texSS: 2, aniso: 8, msaa: 2, detail: true,
       lamps: 8, lampPick: 5, glowR: 52, vis: 1, sparks: 1, scan: true,
-      csm: 2, csmSize: 1024, ssao: false,
+      csm: 2, csmSize: 1024, ssao: false, bloom: true,
       veg: { grass: 1, cards: 1 }
     },
     high: {
@@ -421,7 +422,7 @@ const QCFG = {
          остаётся — затенения там нет, глубина не нужна. */
       dprMax: 2, scale: 1, scaleMin: 0.6, texSS: 2, aniso: 16, msaa: 0, detail: true,
       lamps: 8, lampPick: 5, glowR: 52, vis: 1, sparks: 1, scan: true,
-      csm: 3, csmSize: 1024, ssao: true,
+      csm: 3, csmSize: 1024, ssao: true, bloom: true,
       veg: { grass: 1, cards: 1 }
     }
   },
@@ -680,6 +681,40 @@ const QCFG = {
     prefSamples: [1, 16, 24, 32, 32, 24],
     sunStepDeg: 1.5,    /* солнце сдвинулось на столько — пересобрать окружение */
     shGrid: 12          /* сетка направлений на грань для SH на CPU */
+  },
+  /* Свечение вокруг яркого (bloom). Считается в ЛИНЕЙНОМ свете, до экспозиции
+     и тонмаппинга: только там оно физично — яркое расплывается по кадру и
+     тянет за собой тонмаппинг, а не подмешивается поверх готовой картинки.
+
+     Радиус берётся не цепочкой буферов «вниз-вверх», а мип-цепочкой ОДНОЙ
+     текстуры: уровень l вдвое шире предыдущего, textureLod с линейной
+     фильтрацией растягивает его обратно, и сумма уровней с убывающими весами
+     даёт широкое мягкое свечение. Цена в кадре — одна смена буфера отрисовки
+     на порог с уменьшением плюс generateMipmap, а не восемь смен на цепочку
+     из четырёх уровней. На тайловом GPU считается именно это. */
+  bloom: {
+    on: true,            /* перекрывается профилем */
+    scale: 2,            /* во сколько раз меньше стороны буфера сцены уровень 0 */
+    levels: 6,           /* сколько уровней мип-цепочки складывается — это и есть радиус */
+    /* Веса уровней. Единица — не «поровну на глаз»: у точечного источника
+       уровень l держит ту же энергию, размазанную вчетверо шире и вчетверо
+       слабее, поэтому равные веса дают правильный спад свечения от центра.
+       Меньше единицы — свечение поджимается к источнику, больше — расплывается
+       по всему кадру. */
+    falloff: 1.0,
+    /* Порог: ниже него ничего не растекается. В линейном свете до экспозиции,
+       поэтому привязан к тому, где насыщается ACES (около 1.5–3), а не к 1.0.
+       Мягкое колено вместо ступеньки: жёсткий порог даёт видимую границу на
+       градиенте неба, а порог около нуля превращает дневной кадр в молоко. */
+    threshold: 0.6,
+    knee: 0.65,          /* ширина колена в долях порога */
+    /* Сила. Веса уровней нормированы к единице, поэтому сила — это то, во
+       сколько раз надпороговая часть кадра добавляется к нему обратно.
+       Замерено по контрольным сценам (shot-stats, вся картинка): ночные
+       витрины +10.0 % яркости при РОСТЕ разброса 66.5 → 74.2, дневная улица
+       +3.9 % при 45.4 → 49.6. Разброс растёт — значит кадр не выцветает,
+       а получает свечение вокруг яркого. */
+    strength: 3.5
   },
   /* Постобработка. Сцена рисуется в HDR-буфер в линейном свете, и ровно один
      раз в конце кадра он превращается в картинку: экспозиция, ACES,
@@ -1037,13 +1072,15 @@ void main(){ vUV = aPos * 0.5 + 0.5; gl_Position = vec4(aPos, 0.0, 1.0); }`;
    Мультисэмплинг в буфере сцены выключен (замер этапа 04: разрешение
    мультисэмпла блитом стоило дороже, чем весь выигрыш от него), и ступеньки
    на силуэтах убирает FXAA прямо здесь — отдельного прохода он не заводит. */
-const FS_TONE = FXAA => `#version 300 es
+const FS_TONE = (FXAA, BLOOM) => `#version 300 es
 /* PASS:tone */
 precision mediump float;
 in vec2 vUV;
 uniform sampler2D uHDR;
 uniform float uExposure, uSat, uDither;
 uniform vec2 uTexel;               /* 1/размер буфера сцены */
+${BLOOM ? `uniform sampler2D uBloom;  /* мип-цепочка свечения */
+uniform float uBloomK;             /* общая сила */` : ''}
 out vec4 fragColor;
 /* ACES, аппроксимация Наркович: одна дробь вместо матриц RRT и ODT */
 vec3 aces(vec3 x){
@@ -1055,15 +1092,22 @@ float ign(vec2 p){ return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.005
 /* Кадр в экранном цвете: тонмаппинг применяется ДО поиска краёв, потому что
    искать их в HDR бесполезно — там перепад яркости у неба и у асфальта
    отличается на порядки, и один порог на оба не встаёт. */
-vec3 grade(vec2 uv){
-  vec3 c = aces(texture(uHDR, uv).rgb * uExposure);
+vec3 grade(vec2 uv, vec3 bloom){
+  vec3 c = aces((texture(uHDR, uv).rgb + bloom) * uExposure);
   float g = dot(c, vec3(0.2126, 0.7152, 0.0722));
   c = mix(vec3(g), c, uSat);
   return pow(max(c, vec3(0.0)), vec3(1.0 / ${QCFG.color.gamma.toFixed(2)}));
 }
 float luma(vec3 c){ return dot(c, vec3(0.299, 0.587, 0.114)); }
 void main(){
-  vec3 c = grade(vUV);
+  /* Свечение складывается в ЛИНЕЙНОМ свете, до экспозиции: только так яркое
+     тянет за собой тонмаппинг, а не ложится плёнкой поверх готовой картинки.
+     Уровни мип-цепочки берутся один раз на пиксель: свечение — самая низкая
+     частота в кадре, и четырём соседям постфильтра сглаживания оно одно и
+     то же, так что пять вызовов grade получают уже посчитанное. */
+  vec3 bl = vec3(0.0);
+${BLOOM ? BLOOM : ''}
+  vec3 c = grade(vUV, bl);
 ${FXAA ? `
   /* FXAA: край ищется по яркости четырёх соседей крестом, направление —
      по тому, где перепад круче, и вдоль него берётся одна дополнительная
@@ -1071,10 +1115,10 @@ ${FXAA ? `
      длинный поиск конца края, зато стоит пять выборок вместо тридцати, а
      ступеньку на проводах и на краю крыши убирает. */
   float lC = luma(c);
-  float lN = luma(grade(vUV + vec2(0.0, -uTexel.y)));
-  float lS = luma(grade(vUV + vec2(0.0,  uTexel.y)));
-  float lW = luma(grade(vUV + vec2(-uTexel.x, 0.0)));
-  float lE = luma(grade(vUV + vec2( uTexel.x, 0.0)));
+  float lN = luma(grade(vUV + vec2(0.0, -uTexel.y), bl));
+  float lS = luma(grade(vUV + vec2(0.0,  uTexel.y), bl));
+  float lW = luma(grade(vUV + vec2(-uTexel.x, 0.0), bl));
+  float lE = luma(grade(vUV + vec2( uTexel.x, 0.0), bl));
   float lo = min(lC, min(min(lN, lS), min(lW, lE)));
   float hi = max(lC, max(max(lN, lS), max(lW, lE)));
   float range = hi - lo;
@@ -1084,7 +1128,7 @@ ${FXAA ? `
     float m = max(abs(dir.x), abs(dir.y));
     if (m > 1e-5) {
       dir = clamp(dir / m, -1.0, 1.0) * uTexel * 0.5;
-      vec3 a = grade(vUV + dir), b = grade(vUV - dir);
+      vec3 a = grade(vUV + dir, bl), b = grade(vUV - dir, bl);
       vec3 mixed = (a + b) * 0.5;
       /* если размытие увело яркость за пределы соседей — край был не там */
       float lm = luma(mixed);
@@ -1740,6 +1784,40 @@ void main(){
   fragColor = sum / max(wsum, 1e-4);
 }`;
 
+/* --- Свечение вокруг яркого: порог с уменьшением вдвое --------------------
+   Один проход. Дальше размытие делает мип-цепочка, а складывает уровни
+   проход тонмаппинга — отдельных проходов «вниз» и «вверх» нет.
+
+   Тринадцать отсчётов вместо четырёх: уменьшение вдвое четырьмя отсчётами
+   ловит одиночные яркие точки через кадр, и свечение мерцает на движении.
+   Здесь четыре центральных квадрата по 0.125 и внешняя решётка 3×3 — фильтр
+   шире шага, поэтому точка не может проскочить между отсчётами. */
+const FS_BLOOM = `#version 300 es
+/* PASS:bloom */
+precision mediump float;
+in vec2 vUV;
+uniform sampler2D uHDR;
+uniform vec2 uTexel;               /* 1/размер буфера сцены */
+uniform vec3 uThr;                 /* порог, полуколено, 1/(4·полуколено) */
+out vec3 fragColor;
+vec3 tap(vec2 o){ return texture(uHDR, vUV + o * uTexel).rgb; }
+void main(){
+  vec3 a = tap(vec2(-2.0, 2.0)), b = tap(vec2(0.0, 2.0)), c = tap(vec2(2.0, 2.0));
+  vec3 d = tap(vec2(-2.0, 0.0)), e = tap(vec2(0.0, 0.0)), f = tap(vec2(2.0, 0.0));
+  vec3 g = tap(vec2(-2.0,-2.0)), h = tap(vec2(0.0,-2.0)), i = tap(vec2(2.0,-2.0));
+  vec3 j = tap(vec2(-1.0, 1.0)), k = tap(vec2(1.0, 1.0));
+  vec3 l = tap(vec2(-1.0,-1.0)), m = tap(vec2(1.0,-1.0));
+  vec3 col = e * 0.125 + (a + c + g + i) * 0.03125 + (b + d + f + h) * 0.0625
+           + (j + k + l + m) * 0.125;
+  /* Порог с мягким коленом. Без колена граница свечения читается ступенькой
+     на градиенте неба; без порога вовсе дневное небо превращается в молоко. */
+  float br = max(col.r, max(col.g, col.b));
+  float soft = clamp(br - uThr.x + uThr.y, 0.0, 2.0 * uThr.y);
+  soft = soft * soft * uThr.z;
+  float w = max(soft, br - uThr.x) / max(br, 1e-4);
+  fragColor = col * w;
+}`;
+
 const VS_GLOW = `#version 300 es
 layout(location=0) in vec2 aCorner;
 uniform mat4 uProj, uView;
@@ -1764,6 +1842,19 @@ void main(){
   if (uMode > 0.5) fragColor = vec4(uColor.rgb, a * uColor.a);   /* тень: обычное смешивание */
   else fragColor = vec4(uColor.rgb * a * uColor.a, 1.0);         /* свечение: аддитивно */
 }`;
+
+/* Веса уровней мип-цепочки: геометрическая прогрессия, нормированная к
+   единице. Считаются на JS и вклеиваются в шейдер числами — цикла по
+   уровням в шейдере нет, а значит нет и динамического textureLod. */
+function bloomGLSL() {
+  const K = QCFG.bloom, n = Math.max(1, K.levels | 0);
+  const w = []; let sum = 0;
+  for (let i = 0; i < n; i++) { const v = Math.pow(K.falloff, i); w.push(v); sum += v; }
+  let out = '';
+  for (let i = 0; i < n; i++)
+    out += `  bl += textureLod(uBloom, vUV, ${i.toFixed(1)}).rgb * ${(w[i] / sum).toFixed(5)};\n`;
+  return out + '  bl *= uBloomK;\n';
+}
 
 function compile(gl, type, src, name) {
   const sh = gl.createShader(type);
@@ -4825,7 +4916,8 @@ function buildWorld(gl) {
 /* ------------------------------------------------------------------ */
 const R3 = {
   main: null, mainDay: null, mainNight: null, sky: null, glow: null, tone: null, cube: null, pref: null,
-  tonePlain: null, toneFxaa: null, depth: null, shadow: null, ssao: null, ssaoBlur: null, csmMax: 0, aoTex: null,
+  tonePlain: null, toneFxaa: null, tonePlainB: null, toneFxaaB: null, bloom: null,
+  depth: null, shadow: null, ssao: null, ssaoBlur: null, csmMax: 0, aoTex: null, bloomTex: null,
   skyVAO: null, glowVAO: null,
   proj: m4(), view: m4(), model: m4(), invVP: m4(), viewProj: m4(), tmp: m4(), tmp2: m4(),
   eye: [0, 0, 0], right: [1, 0, 0], up: [0, 1, 0], fwd: [0, 0, -1], time: 0,
@@ -4977,6 +5069,7 @@ function resizeHDR(gl, w, h) {
 
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   if (SSAO.fb) SSAO.resize(gl, w, h);
+  if (BLOOM.fb) BLOOM.resize(gl, w, h);
   HDR.ok = st1 === gl.FRAMEBUFFER_COMPLETE && st2 === gl.FRAMEBUFFER_COMPLETE && st3 === gl.FRAMEBUFFER_COMPLETE;
   HDR.bytes = w * h * (px + 4) * Math.max(1, samples) + (samples > 0 ? w * h * px : 0)
             + (wantDepth && HDR.depthMode !== 'direct' ? w * h * 4 : 0);
@@ -5220,8 +5313,15 @@ function initRenderer(canvas) {
   R3.main = R3.mainDay;
   R3.sky = program(gl, VS_SKY, FS_SKY, 'sky');
   R3.glow = program(gl, VS_GLOW, FS_GLOW, 'glow');
-  R3.tonePlain = program(gl, VS_TONE, FS_TONE(false), 'tone');
-  R3.toneFxaa = program(gl, VS_TONE, FS_TONE(true), 'tone-fxaa');
+  /* Тонмаппинг собирается в четырёх сборках: со сглаживанием и без, со
+     свечением и без. Все четыре — крошечные, а выбирать ветку юниформом
+     значило бы платить шесть выборок из мип-цепочки там, где свечения нет. */
+  const BL = bloomGLSL();
+  R3.tonePlain = program(gl, VS_TONE, FS_TONE(false, ''), 'tone');
+  R3.toneFxaa = program(gl, VS_TONE, FS_TONE(true, ''), 'tone-fxaa');
+  R3.tonePlainB = program(gl, VS_TONE, FS_TONE(false, BL), 'tone-bloom');
+  R3.toneFxaaB = program(gl, VS_TONE, FS_TONE(true, BL), 'tone-fxaa-bloom');
+  R3.bloom = program(gl, VS_FULL, FS_BLOOM, 'bloom');
   R3.tone = R3.tonePlain;
   R3.cube = program(gl, VS_FACE, FS_CUBE, 'cube');
   R3.pref = program(gl, VS_FACE, FS_PREF, 'pref');
@@ -5229,6 +5329,7 @@ function initRenderer(canvas) {
   R3.shadow = program(gl, VS_DEPTH, FS_SHADOW, 'shadow');
   R3.ssao = program(gl, VS_FULL, FS_SSAO(QCFG.ssao.samples), 'ssao');
   R3.ssaoBlur = program(gl, VS_FULL, FS_SSAO_BLUR, 'ssao-blur');
+  BLOOM.init(gl);
   initHDR(gl);
   SHADOW.init(gl);
   SHADOW.resize(gl);
@@ -10325,6 +10426,83 @@ const SSAO = {
   }
 };
 
+/* --- Свечение вокруг яркого: буфер с мип-цепочкой и проход порога -------- */
+const BLOOM = {
+  fb: null, tex: null, dummy: null, w: 0, h: 0, on: false, levels: 0, bytes: 0,
+
+  init(gl) {
+    this.fb = gl.createFramebuffer();
+    this.tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.tex);
+    /* LINEAR_MIPMAP_LINEAR: уровни складываются textureLod'ом, и между
+       уровнями тоже нужна линейная выборка — иначе широкое свечение идёт
+       ступеньками по яркости. */
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    /* Заглушка «свечения нет». Юниформ-семплер обязан указывать на живую
+       текстуру всегда — история с теневым семплером на нулевом слоте стоила
+       этапу 04 выброшенных ночных замеров. */
+    this.dummy = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.dummy);
+    gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, 1, 1);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  },
+
+  /* Уровень 0 — сторона буфера сцены, делённая на scale. Уровней столько,
+     сколько задано, но не больше, чем помещается в текстуру. */
+  resize(gl, w, h) {
+    const K = QCFG.bloom, on = !!(Q.bloom && K.on);
+    const sc = Math.max(1, K.scale | 0);
+    const nw = Math.max(1, Math.floor(w / sc)), nh = Math.max(1, Math.floor(h / sc));
+    const lv = Math.max(1, Math.min(K.levels | 0, 1 + Math.floor(Math.log2(Math.max(nw, nh)))));
+    if (this.on === on && this.w === nw && this.h === nh && this.levels === lv) return;
+    this.on = on; this.w = nw; this.h = nh; this.levels = lv;
+    this.bytes = on ? Math.round(nw * nh * HDR.px * 4 / 3) : 0;
+    if (!on) return;
+    gl.bindTexture(gl.TEXTURE_2D, this.tex);
+    /* MAX_LEVEL режет цепочку: generateMipmap строит ровно те уровни, что
+       складываются, а не всю лестницу до одного текселя. */
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, lv - 1);
+    gl.texImage2D(gl.TEXTURE_2D, 0, HDR.fmt, nw, nh, 0, HDR.extFmt, HDR.type, null);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.tex, 0);
+    const st = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    if (st !== gl.FRAMEBUFFER_COMPLETE) { console.warn('буфер свечения неполон: 0x' + st.toString(16)); this.on = false; }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  },
+
+  /* Один проход с порогом и уменьшением вдвое, потом мип-цепочка. Смена
+     буфера отрисовки в кадре ровно одна. */
+  draw(gl) {
+    if (!this.on) return this.dummy;
+    const K = QCFG.bloom, P = R3.bloom;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fb);
+    gl.viewport(0, 0, this.w, this.h);
+    gl.disable(gl.DEPTH_TEST);
+    gl.useProgram(P.p);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, HDR.tex);
+    gl.uniform1i(P.u.uHDR, 0);
+    gl.uniform2f(P.u.uTexel, 1 / Math.max(1, HDR.w), 1 / Math.max(1, HDR.h));
+    const knee = Math.max(1e-4, K.threshold * K.knee);
+    gl.uniform3f(P.u.uThr, K.threshold, knee, 1 / (4 * knee));
+    gl.bindVertexArray(R3.skyVAO);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    /* Отвязываем буфер ДО построения цепочки: текстура висит его вложением,
+       и строить по ней мипы, не отцепив, — читать то, во что пишешь. */
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindTexture(gl.TEXTURE_2D, this.tex);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.enable(gl.DEPTH_TEST);
+    R3.curGrp = null;
+    return this.tex;
+  }
+};
+
 /* Прицелить программу глубины и прогнать по ней геометрию. Программа несёт
    подмножество юниформ главной, поэтому вся обвязка отрисовки (drawStatic,
    drawDynamic, отсев по клеткам, альфа-тест зелени) работает без изменений:
@@ -10363,8 +10541,10 @@ function drawDepthPrepass() {
 /* Тонмаппинг: единственный проход, который пишет в холст. */
 function drawTone() {
   const gl = GL.gl;
-  /* Постфильтр сглаживания нужен ровно там, где нет мультисэмплинга. */
-  R3.tone = (HDR.samples === 0 && QCFG.post.fxaa) ? R3.toneFxaa : R3.tonePlain;
+  /* Постфильтр сглаживания нужен ровно там, где нет мультисэмплинга;
+     свечение — там, где его посчитали. Четыре сборки, а не юниформ-ветка. */
+  const fx = HDR.samples === 0 && QCFG.post.fxaa, bl = BLOOM.on;
+  R3.tone = fx ? (bl ? R3.toneFxaaB : R3.toneFxaa) : (bl ? R3.tonePlainB : R3.tonePlain);
   const P = R3.tone;
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.viewport(0, 0, GL.canvas.width, GL.canvas.height);
@@ -10372,6 +10552,12 @@ function drawTone() {
   gl.disable(gl.DEPTH_TEST);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, HDR.tex);
   gl.uniform1i(P.u.uHDR, 0);
+  if (bl) {
+    gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, R3.bloomTex || BLOOM.dummy);
+    gl.uniform1i(P.u.uBloom, 1);
+    gl.uniform1f(P.u.uBloomK, QCFG.bloom.strength);
+    gl.activeTexture(gl.TEXTURE0);
+  }
   gl.uniform1f(P.u.uExposure, Env.exposure);
   gl.uniform1f(P.u.uSat, QCFG.post.sat);
   gl.uniform1f(P.u.uDither, QCFG.post.dither);
@@ -10464,6 +10650,11 @@ function renderFrame() {
     gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null);
     gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
   }
+  /* Свечение вокруг яркого: читает готовый кадр (то есть ПРЕДЫДУЩИЙ проход, а
+     не тот, что рисует), кладёт порог в свой буфер и строит мип-цепочку.
+     Складывает уровни обратно проход тонмаппинга — отдельного прохода
+     «поверх кадра» нет. */
+  R3.bloomTex = BLOOM.draw(gl);
   drawTone();
 
   Perf.endFrame(gl);
