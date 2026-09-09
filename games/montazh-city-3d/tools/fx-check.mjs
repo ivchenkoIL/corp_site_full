@@ -12,6 +12,10 @@
 
      node tools/fx-check.mjs --fx=ssr   --scene=street --x=90 --z=11 --yaw=0
      node tools/fx-check.mjs --fx=bloom --scene=shops
+     node tools/fx-check.mjs --fx=bloom --scene=shops --full   # в размер буфера
+
+   Кадры кладутся в размер ОКНА: на высоком профиле буфер вдвое плотнее, и
+   пара «с | без» в полном размере весит одиннадцать мегабайт на файл.
    ===================================================================== */
 import { loadPlaywright } from './find-playwright.mjs';
 import { SCENES, saveFor, optsFor, SAVE_KEY, OPT_KEY } from './scenes.mjs';
@@ -58,7 +62,7 @@ await page.waitForFunction(() => !!window.__MC3D, null, { timeout: 120000 });
 await page.click('#bCont');
 await page.waitForTimeout(4500);
 
-const r = await page.evaluate(async ({ fx }) => {
+const r = await page.evaluate(async ({ fx, full }) => {
   const M = window.__MC3D, gl = M.GL.gl;
   /* камера идёт за игроком с задержкой — дать ей встать на место */
   await new Promise(res => { let k = 0; const f = () => (++k < 45 ? requestAnimationFrame(f) : res()); requestAnimationFrame(f); });
@@ -68,6 +72,8 @@ const r = await page.evaluate(async ({ fx }) => {
   const flag = fx === 'ssaoblur';
   const keep = flag ? K.blurSep : K.strength;
   const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+  /* размер выдачи: размер окна, если не попросили полный */
+  const ow = full ? w : Math.round(window.innerWidth), oh = full ? h : Math.round(window.innerHeight);
   const shoot = (on) => {
     if (flag) K.blurSep = on; else K.strength = on ? keep : 0;
     M.renderFrame();
@@ -80,13 +86,23 @@ const r = await page.evaluate(async ({ fx }) => {
   if (flag) K.blurSep = keep; else K.strength = keep;
   /* Кодируем прямо на странице: двадцать миллионов байт через мост
      инструмента не проходят, а холст 2D их сожмёт в PNG. */
+  /* Кадры кладутся в размер ОКНА, а не буфера отрисовки. На высоком профиле
+     буфер вдвое плотнее холста, и пара «с | без» в полном размере весит по
+     одиннадцать мегабайт: этап 05 успел положить в docs/shots 107 МБ против
+     26 у предыдущего, прежде чем это заметили. Разница эффекта видна и в
+     половине стороны, а разность всё равно усилена шестикратно. */
   const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
   const cx = cv.getContext('2d');
+  const half = document.createElement('canvas'); half.width = ow; half.height = oh;
+  const hx = half.getContext('2d');
+  hx.imageSmoothingEnabled = true; hx.imageSmoothingQuality = 'high';
   const put = (src) => {                       /* readPixels отдаёт строки снизу вверх */
     const im = cx.createImageData(w, h);
     for (let y = 0; y < h; y++) im.data.set(src.subarray((h - 1 - y) * w * 4, (h - y) * w * 4), y * w * 4);
     cx.putImageData(im, 0, 0);
-    return cv.toDataURL('image/png');
+    if (ow === w && oh === h) return cv.toDataURL('image/png');
+    hx.drawImage(cv, 0, 0, ow, oh);
+    return half.toDataURL('image/png');
   };
   const D = new Uint8Array(w * h * 4);
   let diff = 0, maxd = 0, sum = 0;
@@ -99,7 +115,7 @@ const r = await page.evaluate(async ({ fx }) => {
     D[i*4] = D[i*4+1] = D[i*4+2] = v; D[i*4+3] = 255;
   }
   return { w, h, diff, maxd, mean: sum / (w * h), on: put(A), off: put(B), dif: put(D) };
-}, { fx: FX });
+}, { fx: FX, full: argv.full === 'true' });
 
 fs.mkdirSync(OUT, { recursive: true });
 const save = (name, url) => fs.writeFileSync(path.join(OUT, name), Buffer.from(url.split(',')[1], 'base64'));
