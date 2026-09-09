@@ -1,0 +1,276 @@
+{
+  "scene": "traffic",
+  "seconds": 20,
+  "viewport": {
+    "css": [
+      1440,
+      900
+    ],
+    "dpr": 2
+  },
+  "profileMs": 21202,
+  "samples": 111142,
+  "frames": 31,
+  "frameMs": {
+    "p50": 516.6,
+    "p95": 550,
+    "p99": 550,
+    "min": 466.6,
+    "max": 550,
+    "mean": 513.423
+  },
+  "cpuMs": {
+    "p50": 1.4,
+    "p95": 2,
+    "mean": 1.49,
+    "max": 2.1
+  },
+  "draws": {
+    "p50": 123,
+    "p95": 125,
+    "mean": 122.806,
+    "max": 125
+  },
+  "top": [
+    {
+      "what": "(program)  [—:0]",
+      "samples": 110682,
+      "sharePct": 99.59,
+      "msPerFrame": 681.105
+    },
+    {
+      "what": "(garbage collector)  [—:0]",
+      "samples": 89,
+      "sharePct": 0.08,
+      "msPerFrame": 0.548
+    },
+    {
+      "what": "set textContent  [—:0]",
+      "samples": 19,
+      "sharePct": 0.02,
+      "msPerFrame": 0.117
+    },
+    {
+      "what": "(idle)  [—:0]",
+      "samples": 15,
+      "sharePct": 0.01,
+      "msPerFrame": 0.092
+    },
+    {
+      "what": "bindVertexArray  [—:0]",
+      "samples": 15,
+      "sharePct": 0.01,
+      "msPerFrame": 0.092
+    },
+    {
+      "what": "updateHud  [index.html:7630]",
+      "samples": 14,
+      "sharePct": 0.01,
+      "msPerFrame": 0.086
+    },
+    {
+      "what": "uniformMatrix4fv  [—:0]",
+      "samples": 11,
+      "sharePct": 0.01,
+      "msPerFrame": 0.068
+    },
+    {
+      "what": "drawDynamic  [index.html:7406]",
+      "samples": 11,
+      "sharePct": 0.01,
+      "msPerFrame": 0.068
+    },
+    {
+      "what": "updateWorld  [index.html:8256]",
+      "samples": 11,
+      "sharePct": 0.01,
+      "msPerFrame": 0.068
+    },
+    {
+      "what": "(аноним)  [perf-inject.js:330]",
+      "samples": 10,
+      "sharePct": 0.01,
+      "msPerFrame": 0.062
+    },
+    {
+      "what": "drawCharacter  [index.html:3925]",
+      "samples": 10,
+      "sharePct": 0.01,
+      "msPerFrame": 0.062
+    },
+    {
+      "what": "clear  [—:0]",
+      "samples": 8,
+      "sharePct": 0.01,
+      "msPerFrame": 0.049
+    },
+    {
+      "what": "createOscillator  [—:0]",
+      "samples": 8,
+      "sharePct": 0.01,
+      "msPerFrame": 0.049
+    },
+    {
+      "what": "tickGait  [index.html:6179]",
+      "samples": 8,
+      "sharePct": 0.01,
+      "msPerFrame": 0.049
+    },
+    {
+      "what": "surfY  [index.html:1912]",
+      "samples": 8,
+      "sharePct": 0.01,
+      "msPerFrame": 0.049
+    },
+    {
+      "what": "uniform1f  [—:0]",
+      "samples": 7,
+      "sharePct": 0.01,
+      "msPerFrame": 0.043
+    },
+    {
+      "what": "_pump  [index.html:4327]",
+      "samples": 7,
+      "sharePct": 0.01,
+      "msPerFrame": 0.043
+    },
+    {
+      "what": "poseCharacter  [index.html:3745]",
+      "samples": 7,
+      "sharePct": 0.01,
+      "msPerFrame": 0.043
+    },
+    {
+      "what": "updateCars  [index.html:6266]",
+      "samples": 6,
+      "sharePct": 0.01,
+      "msPerFrame": 0.037
+    },
+    {
+      "what": "drawMesh  [index.html:3418]",
+      "samples": 6,
+      "sharePct": 0.01,
+      "msPerFrame": 0.037
+    },
+    {
+      "what": "createGain  [—:0]",
+      "samples": 6,
+      "sharePct": 0.01,
+      "msPerFrame": 0.037
+    },
+    {
+      "what": "renderFrame  [index.html:7609]",
+      "samples": 6,
+      "sharePct": 0.01,
+      "msPerFrame": 0.037
+    },
+    {
+      "what": "charPose  [index.html:6244]",
+      "samples": 6,
+      "sharePct": 0.01,
+      "msPerFrame": 0.037
+    },
+    {
+      "what": "drawMiniWorld  [index.html:7683]",
+      "samples": 6,
+      "sharePct": 0.01,
+      "msPerFrame": 0.037
+    },
+    {
+      "what": "m4compose  [index.html:426]",
+      "samples": 6,
+      "sharePct": 0.01,
+      "msPerFrame": 0.037
+    },
+    {
+      "what": "step  [index.html:8319]",
+      "samples": 5,
+      "sharePct": 0,
+      "msPerFrame": 0.031
+    },
+    {
+      "what": "m4mul  [index.html:395]",
+      "samples": 5,
+      "sharePct": 0,
+      "msPerFrame": 0.031
+    },
+    {
+      "what": "fmtMoney  [index.html:379]",
+      "samples": 5,
+      "sharePct": 0,
+      "msPerFrame": 0.031
+    },
+    {
+      "what": "_mnoise  [index.html:4367]",
+      "samples": 4,
+      "sharePct": 0,
+      "msPerFrame": 0.025
+    },
+    {
+      "what": "getElementById  [—:0]",
+      "samples": 4,
+      "sharePct": 0,
+      "msPerFrame": 0.025
+    },
+    {
+      "what": "_mnote  [index.html:4351]",
+      "samples": 4,
+      "sharePct": 0,
+      "msPerFrame": 0.025
+    },
+    {
+      "what": "createBiquadFilter  [—:0]",
+      "samples": 4,
+      "sharePct": 0,
+      "msPerFrame": 0.025
+    },
+    {
+      "what": "movePlayerOnFoot  [index.html:5827]",
+      "samples": 4,
+      "sharePct": 0,
+      "msPerFrame": 0.025
+    },
+    {
+      "what": "drawShadow  [index.html:7388]",
+      "samples": 4,
+      "sharePct": 0,
+      "msPerFrame": 0.025
+    },
+    {
+      "what": "clearRect  [—:0]",
+      "samples": 4,
+      "sharePct": 0,
+      "msPerFrame": 0.025
+    },
+    {
+      "what": "drawDog3  [index.html:7469]",
+      "samples": 4,
+      "sharePct": 0,
+      "msPerFrame": 0.025
+    },
+    {
+      "what": "bindTexture  [—:0]",
+      "samples": 4,
+      "sharePct": 0,
+      "msPerFrame": 0.025
+    },
+    {
+      "what": "beginMain  [index.html:3387]",
+      "samples": 4,
+      "sharePct": 0,
+      "msPerFrame": 0.025
+    },
+    {
+      "what": "taskText  [index.html:7017]",
+      "samples": 4,
+      "sharePct": 0,
+      "msPerFrame": 0.025
+    },
+    {
+      "what": "updatePeds  [index.html:6406]",
+      "samples": 4,
+      "sharePct": 0,
+      "msPerFrame": 0.025
+    }
+  ]
+}

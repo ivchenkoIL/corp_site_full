@@ -1,0 +1,276 @@
+{
+  "scene": "dense",
+  "seconds": 20,
+  "viewport": {
+    "css": [
+      1440,
+      900
+    ],
+    "dpr": 2
+  },
+  "profileMs": 21227.3,
+  "samples": 113081,
+  "frames": 31,
+  "frameMs": {
+    "p50": 500,
+    "p95": 533.3,
+    "p99": 533.3,
+    "min": 449.9,
+    "max": 533.3,
+    "mean": 492.99
+  },
+  "cpuMs": {
+    "p50": 1.8,
+    "p95": 3.5,
+    "mean": 1.942,
+    "max": 5.5
+  },
+  "draws": {
+    "p50": 105,
+    "p95": 105,
+    "mean": 104.742,
+    "max": 107
+  },
+  "top": [
+    {
+      "what": "(program)  [—:0]",
+      "samples": 112599,
+      "sharePct": 99.57,
+      "msPerFrame": 681.832
+    },
+    {
+      "what": "drawOverlay2D  [index.html:7554]",
+      "samples": 27,
+      "sharePct": 0.02,
+      "msPerFrame": 0.163
+    },
+    {
+      "what": "poseCharacter  [index.html:3745]",
+      "samples": 24,
+      "sharePct": 0.02,
+      "msPerFrame": 0.145
+    },
+    {
+      "what": "set textContent  [—:0]",
+      "samples": 23,
+      "sharePct": 0.02,
+      "msPerFrame": 0.139
+    },
+    {
+      "what": "(garbage collector)  [—:0]",
+      "samples": 23,
+      "sharePct": 0.02,
+      "msPerFrame": 0.139
+    },
+    {
+      "what": "drawCharacter  [index.html:3925]",
+      "samples": 22,
+      "sharePct": 0.02,
+      "msPerFrame": 0.133
+    },
+    {
+      "what": "drawDynamic  [index.html:7406]",
+      "samples": 15,
+      "sharePct": 0.01,
+      "msPerFrame": 0.091
+    },
+    {
+      "what": "updateWorld  [index.html:8256]",
+      "samples": 14,
+      "sharePct": 0.01,
+      "msPerFrame": 0.085
+    },
+    {
+      "what": "(idle)  [—:0]",
+      "samples": 13,
+      "sharePct": 0.01,
+      "msPerFrame": 0.079
+    },
+    {
+      "what": "createBiquadFilter  [—:0]",
+      "samples": 12,
+      "sharePct": 0.01,
+      "msPerFrame": 0.073
+    },
+    {
+      "what": "updatePeds  [index.html:6406]",
+      "samples": 12,
+      "sharePct": 0.01,
+      "msPerFrame": 0.073
+    },
+    {
+      "what": "updateHud  [index.html:7630]",
+      "samples": 12,
+      "sharePct": 0.01,
+      "msPerFrame": 0.073
+    },
+    {
+      "what": "(аноним)  [index.html:4260]",
+      "samples": 12,
+      "sharePct": 0.01,
+      "msPerFrame": 0.073
+    },
+    {
+      "what": "updatePrompt  [index.html:8242]",
+      "samples": 11,
+      "sharePct": 0.01,
+      "msPerFrame": 0.067
+    },
+    {
+      "what": "updateCars  [index.html:6266]",
+      "samples": 11,
+      "sharePct": 0.01,
+      "msPerFrame": 0.067
+    },
+    {
+      "what": "uniformMatrix4fv  [—:0]",
+      "samples": 10,
+      "sharePct": 0.01,
+      "msPerFrame": 0.061
+    },
+    {
+      "what": "(аноним)  [perf-inject.js:330]",
+      "samples": 9,
+      "sharePct": 0.01,
+      "msPerFrame": 0.054
+    },
+    {
+      "what": "createGain  [—:0]",
+      "samples": 9,
+      "sharePct": 0.01,
+      "msPerFrame": 0.054
+    },
+    {
+      "what": "bindTexture  [—:0]",
+      "samples": 9,
+      "sharePct": 0.01,
+      "msPerFrame": 0.054
+    },
+    {
+      "what": "updateRadio  [index.html:5469]",
+      "samples": 9,
+      "sharePct": 0.01,
+      "msPerFrame": 0.054
+    },
+    {
+      "what": "uniform1f  [—:0]",
+      "samples": 8,
+      "sharePct": 0.01,
+      "msPerFrame": 0.048
+    },
+    {
+      "what": "renderFrame  [index.html:7609]",
+      "samples": 8,
+      "sharePct": 0.01,
+      "msPerFrame": 0.048
+    },
+    {
+      "what": "createOscillator  [—:0]",
+      "samples": 8,
+      "sharePct": 0.01,
+      "msPerFrame": 0.048
+    },
+    {
+      "what": "dlgOpen  [perf-inject.js:389]",
+      "samples": 8,
+      "sharePct": 0.01,
+      "msPerFrame": 0.048
+    },
+    {
+      "what": "bindVertexArray  [—:0]",
+      "samples": 7,
+      "sharePct": 0.01,
+      "msPerFrame": 0.042
+    },
+    {
+      "what": "strokeText  [—:0]",
+      "samples": 7,
+      "sharePct": 0.01,
+      "msPerFrame": 0.042
+    },
+    {
+      "what": "m4mul  [index.html:395]",
+      "samples": 6,
+      "sharePct": 0.01,
+      "msPerFrame": 0.036
+    },
+    {
+      "what": "_mnoise  [index.html:4367]",
+      "samples": 5,
+      "sharePct": 0,
+      "msPerFrame": 0.03
+    },
+    {
+      "what": "fmtMoney  [index.html:379]",
+      "samples": 5,
+      "sharePct": 0,
+      "msPerFrame": 0.03
+    },
+    {
+      "what": "clearRect  [—:0]",
+      "samples": 5,
+      "sharePct": 0,
+      "msPerFrame": 0.03
+    },
+    {
+      "what": "connect  [—:0]",
+      "samples": 5,
+      "sharePct": 0,
+      "msPerFrame": 0.03
+    },
+    {
+      "what": "drawMiniWorld  [index.html:7683]",
+      "samples": 5,
+      "sharePct": 0,
+      "msPerFrame": 0.03
+    },
+    {
+      "what": "getElementById  [—:0]",
+      "samples": 5,
+      "sharePct": 0,
+      "msPerFrame": 0.03
+    },
+    {
+      "what": "drawElements  [—:0]",
+      "samples": 4,
+      "sharePct": 0,
+      "msPerFrame": 0.024
+    },
+    {
+      "what": "surfY  [index.html:1912]",
+      "samples": 4,
+      "sharePct": 0,
+      "msPerFrame": 0.024
+    },
+    {
+      "what": "drawDog3  [index.html:7469]",
+      "samples": 4,
+      "sharePct": 0,
+      "msPerFrame": 0.024
+    },
+    {
+      "what": "drawMesh  [index.html:3418]",
+      "samples": 4,
+      "sharePct": 0,
+      "msPerFrame": 0.024
+    },
+    {
+      "what": "tickGaze  [index.html:6199]",
+      "samples": 3,
+      "sharePct": 0,
+      "msPerFrame": 0.018
+    },
+    {
+      "what": "clear  [—:0]",
+      "samples": 3,
+      "sharePct": 0,
+      "msPerFrame": 0.018
+    },
+    {
+      "what": "createBufferSource  [—:0]",
+      "samples": 3,
+      "sharePct": 0,
+      "msPerFrame": 0.018
+    }
+  ]
+}
