@@ -1,106 +1,107 @@
 <!DOCTYPE html>
 <!-- ОГЛАВЛЕНИЕ:НАЧАЛО (пересобирается: node tools/toc.mjs) -->
 <!--
-  МОНТАЖ-СИТИ 3D — карта файла. Один файл, 11852 строк, без сборки и без
+  МОНТАЖ-СИТИ 3D — карта файла. Один файл, 12653 строк, без сборки и без
   зависимостей. Целиком его читать не надо: ниже строки, по которым видно,
   где что лежит. Диапазоны пересобираются командой `node tools/toc.mjs`,
   проверить актуальность — `node tools/toc.mjs --check`.
 
   Крупно:
-      119-  285  CSS: HUD, диалоги, экраны, мини-игры
-      287-  360  разметка: canvas #gl, слой HUD, диалог, экраны, загрузка
-      361-11849  вся игра: один IIFE, ничего не торчит в window
+      120-  324  CSS: HUD, диалоги, экраны, мини-игры
+      326-  399  разметка: canvas #gl, слой HUD, диалог, экраны, загрузка
+      400-12650  вся игра: один IIFE, ничего не торчит в window
 
   По ролям:
-    рендер ·············· 921-2108, 5139-6162, 10066-11036
-    текстуры ············ 2637-3650
-    геометрия ··········· 2109-2636, 3904-3910, 3911-4282, 4283-5138, 6623-6927
-    геометрия+анимация ·· 6163-6622
-    жители+анимация ····· 8758-9297
-    физика ·············· 3820-3903, 8446-8643
-    камера ·············· 8644-8700
-    данные мира ········· 3651-3819
-    состояние ··········· 8321-8372, 8373-8445
-    игровая логика ······ 9298-9548, 9549-10006
-    интерфейс ··········· 7118-7274, 7275-7380, 7381-8132, 8133-8253, 8701-8757, 10007-10065, 11037-11132, 11133-11489
-    ввод ················ 8254-8320
-    звук ················ 6928-7072
-    сохранение ·········· 7073-7117, 11490-11585
-    основа ·············· 371-830, 831-920
-    цикл ················ 11586-11848
+    рендер ·············· 960-2147, 5346-6369, 10785-11781
+    текстуры ············ 2676-3705
+    геометрия ··········· 2148-2675, 3970-3976, 3977-4460, 4461-5345, 6930-7272
+    геометрия+анимация ·· 6370-6929
+    жители+анимация ····· 9453-10014
+    физика ·············· 3886-3969, 9132-9329
+    камера ·············· 9330-9386
+    данные мира ········· 3706-3885
+    состояние ··········· 9004-9058, 9059-9131
+    игровая логика ······ 10015-10265, 10266-10723
+    интерфейс ··········· 7463-7551, 7957-8062, 8063-8814, 8815-8935, 9387-9452, 10724-10784, 11782-11877, 11878-12268
+    ввод ················ 8936-9003
+    звук ················ 7273-7417
+    сохранение ·········· 7418-7462, 12269-12364
+    основа ·············· 410-869, 870-959
+    цикл ················ 12365-12649
 
   Разделы подряд:
-      371-  830  Конфигурация качества и производительности
+      410-  869  Конфигурация качества и производительности
                    QCFG — все числа качества: профили, авто-масштаб, частота монитора, текстуры, цвет; Q — активный профиль
-      831-  920  0. Утилиты и математика
+      870-  959  0. Утилиты и математика
                    мелочи и матрицы 4×4 в column-major, как их ждёт GL; lin1/lin3 — sRGB в линейный свет
-      921- 2108  1. WebGL: контекст, шейдеры, буферы
+      960- 2147  1. WebGL: контекст, шейдеры, буферы
                    GLSL целиком: VS/FS_MAIN (нормали из surf, triplanar, detail), VS/FS_SKY, VS/FS_GLOW, компиляция и разбор юниформ
-     2109- 2636  2. Меши: сборка геометрии
+     2148- 2675  2. Меши: сборка геометрии
                    класс Mesh: box, bevelBox, cyl, ellipsoid, extrudeZ, tube, wheel, сглаживание нормалей, upload в VAO
-     2637- 3650  3. Процедурные текстуры (рисуются кодом, ничего не загружается)
+     2676- 3705  3. Процедурные текстуры (рисуются кодом, ничего не загружается)
                    комплекты карт из canvas 2D: albedo (sRGB) + нормаль по Собелю из высот + roughness/metalness + AO; TEXTURE_2D_ARRAY по группам; генерация заданиями между кадрами
-     3651- 3819  4. Район: данные (всё в метрах)
+     3706- 3885  4. Район: данные (всё в метрах)
                    дома, киоски, опоры, точки интереса, реквизит, ямы; surfY и isRoad
-     3820- 3903  5. Столкновения: список AABB + равномерная сетка
+     3886- 3969  5. Столкновения: список AABB + равномерная сетка
                    равномерная сетка 8 м поверх списка AABB
-     3904- 3910  6. Генерация геометрии района
+     3970- 3976  6. Генерация геометрии района
                    Static.batches, Static.signs, Static.lamps — то, что рисуется каждый кадр
-     3911- 4282  Дорога: бордюрный камень, чугун, разметка и обстановка
+     3977- 4460  Дорога: бордюрный камень, чугун, разметка и обстановка
                    бордюр, люки, лужи, разметка, фасадный рельеф, кондиционеры, вывески
-     4283- 5138  Растительность: атлас, карты, ветер
+     4461- 5345  Растительность: атлас, карты, ветер
                    атлас листвы с альфа-тестом, кроны, ветер через атрибут aPart; в конце buildWorld собирает все батчи
-                   └ 4909-5138  сборка батчей района в Static.batches
-     5139- 6162  7. Рендерер
+                   └ 5116-5345  сборка батчей района в Static.batches
+     5346- 6369  7. Рендерер
                    R3, Env (солнце и время суток), initRenderer, resizeGL/applyRenderSize (масштаб рендера), Perf (монитор, GPU, авто-масштаб), applyProfile, drawSky, beginMain, bindMaterial/drawMesh, drawStatic
-     6163- 6622  8. Персонажи: модели со скелетом
+     6370- 6929  8. Персонажи: модели со скелетом
                    скелет на 20 костях, походки и позы; makeCharMesh строит, poseCharacter анимирует
-                   └ 6433-6622  позы и анимация скелета
-     6623- 6927  9. Велосипед и транспорт
+                   └ 6740-6929  позы и анимация скелета
+     6930- 7272  9. Велосипед и транспорт
                    кузова машин, велосипед, собака — те же кости, только меньше
-     6928- 7072  10. Звук: Web Audio, всё синтезируется на лету
+     7273- 7417  10. Звук: Web Audio, всё синтезируется на лету
                    осцилляторы, шумы и три радиостанции; ни одного загруженного файла
-     7073- 7117  11. Сохранение
+     7418- 7462  11. Сохранение
                    формат сохранения в localStorage; настройки лежат отдельным ключом
-     7118- 7274  12. Диалоги и портреты
+     7463- 7551  12. Диалоги и портреты
                    очередь реплик, портреты рисуются на canvas
-     7275- 7380  13. Мини-игры монтажа (двумерные схемы поверх сцены)
+     7552- 7956  12а. Личный телефон: книжка и звонки
+     7957- 8062  13. Мини-игры монтажа (двумерные схемы поверх сцены)
                    общий каркас мини-игр поверх сцены
-     7381- 8132  23. Мини-игра «Монтаж двери» (условная схема)
+     8063- 8814  23. Мини-игра «Монтаж двери» (условная схема)
                    что происходит по E и по F рядом с объектом
-     8133- 8253  14. Радио и бегущая строка
+     8815- 8935  14. Радио и бегущая строка
                    станции, диджей, объявления и бегущая строка
-     8254- 8320  15. Ввод: клавиатура, мышь, обзор от третьего лица
+     8936- 9003  15. Ввод: клавиатура, мышь, обзор от третьего лица
                    клавиатура, мышь, захват курсора; Input.hit — нажатия за кадр
-     8321- 8372  16. Состояние игры
+     9004- 9058  16. Состояние игры
                    S — всё изменяемое состояние смены; BAL — баланс; TOOLS — инструменты
-     8373- 8445  17. Эффекты, тосты, показатели
+     9059- 9131  17. Эффекты, тосты, показатели
                    искры, всплывающий текст, тосты, деньги, репутация, розыск
-     8446- 8643  18. Движение Олега и велосипеда
+     9132- 9329  18. Движение Олега и велосипеда
                    скольжение по AABB, велосипед с креном и заносом
-     8644- 8700  19. Камера от третьего лица
+     9330- 9386  19. Камера от третьего лица
                    камера за спиной с ручным осмотром и возвратом
-     8701- 8757  20. Двумерный слой поверх сцены: реплики, метки, указатели
+     9387- 9452  20. Двумерный слой поверх сцены: реплики, метки, указатели
                    реплики, метки и стрелка к цели рисуются на canvas 2D поверх WebGL
-     8758- 9297  21. Жители района
+     9453-10014  21. Жители района
                    машины, собаки, хулиганы, бабушки, прохожие; charPose — общий сборщик позы
-                   └ 8932-9297  сборка позы жителя для рендера
-     9298- 9548  22. Заявки
+                   └ 9633-10014  сборка позы жителя для рендера
+    10015-10265  22. Заявки
                    сценарные заявки и генератор свободных
-     9549-10006  Бригада: Ваня объясняет один раз, Костя делает на глаз и уезжает
+    10266-10723  Бригада: Ваня объясняет один раз, Костя делает на глаз и уезжает
                    ход заявки от брифинга до сдачи, мини-игры монтажа, финальная оборона кабеля
-    10007-10065  23. Взаимодействие
+    10724-10784  23. Взаимодействие
                    что происходит по E и по F рядом с объектом
-    10066-11036  24. Тени, маркеры и отрисовка кадра
+    10785-11781  24. Тени, маркеры и отрисовка кадра
                    drawDynamic, drawGlows, drawOverlay2D и renderFrame — порядок проходов кадра
-                   └ 10940-11036  порядок проходов кадра
-    11037-11132  25. Интерфейс
+                   └ 11685-11781  порядок проходов кадра
+    11782-11877  25. Интерфейс
                    HUD, миникарта
-    11133-11489  26. Экраны
+    11878-12268  26. Экраны
                    меню, пауза, карта, журнал, магазин, финал
-    11490-11585  27. Сохранение и обучение
+    12269-12364  27. Сохранение и обучение
                    saveGame/loadGame и обучение
-    11586-11848  28. Мир, цикл и запуск
+    12365-12649  28. Мир, цикл и запуск
                    resetWorld, updateWorld, step, frame, Loader и async boot — точка входа внизу файла
 
   Нумерация разделов в файле историческая и местами сбита (номер 23 занят
@@ -248,6 +249,44 @@ canvas{display:block}
 .card span{font:400 12px/1.35 var(--ui);flex:1}
 .card .price{font:900 15px/1 var(--mono);color:var(--cyan)}
 .card.owned{border-color:var(--good);opacity:.85}
+/* ---------- личный телефон: корпус, экран, список контактов ---------- */
+.phone{width:min(360px,92vw);margin:0 auto;padding:9px 9px 13px;border-radius:36px;
+  background:linear-gradient(160deg,#33333c,#16161c 42%,#0a0a0e);
+  border:1px solid rgba(255,255,255,.13);
+  box-shadow:0 0 0 2px #05050a,0 18px 44px rgba(0,0,0,.72)}
+.phScreen{border-radius:28px;overflow:hidden;border:1px solid rgba(255,255,255,.06);
+  background:linear-gradient(180deg,#101725,#0a0d14 60%,#080a10)}
+.phNotch{height:20px;display:flex;align-items:center;justify-content:center}
+.phNotch i{width:56px;height:5px;border-radius:3px;background:#05050a;display:block}
+.phBar{display:flex;align-items:center;gap:7px;padding:0 14px 7px;font:700 11px/1 var(--mono);color:#cfd6e4}
+.phBar .sp{flex:1}
+.phSig{display:inline-flex;align-items:flex-end;gap:2px;height:10px}
+.phSig s{display:block;width:3px;border-radius:1px;text-decoration:none;background:rgba(207,214,228,.26)}
+.phSig s.on{background:#cfd6e4}
+.phBat{display:inline-block;width:22px;height:10px;border:1px solid rgba(207,214,228,.55);
+  border-radius:3px;padding:1px;position:relative}
+.phBat::after{content:'';position:absolute;right:-3px;top:3px;width:2px;height:4px;
+  background:rgba(207,214,228,.55);border-radius:0 1px 1px 0}
+.phBat i{display:block;height:100%;border-radius:1px;background:#4be36b}
+.phBat.low i{background:#ff8a1f}
+.phBat.dead i{background:#ff4d5e}
+.phTitle{padding:2px 14px 8px;font:900 18px/1.1 var(--head);color:#fff}
+.phList{max-height:min(54vh,430px);overflow:auto;padding:0 8px 6px}
+.phRow{display:flex;align-items:center;gap:10px;padding:7px 8px;margin-bottom:6px;border-radius:13px;
+  background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.05)}
+.phRow.off{opacity:.42}
+.phAv{flex:0 0 38px;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font:900 15px/1 var(--head);color:#0b0b0f}
+.phWho{flex:1;min-width:0}
+.phWho b{display:block;font:700 13px/1.25 var(--ui);color:#eef2f8;text-transform:none}
+.phWho span{display:block;font:400 11px/1.3 var(--ui);color:#8b93a4;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.phDial{flex:0 0 34px;width:34px;height:34px;border-radius:50%;border:0;cursor:pointer;
+  background:#2ecc71;color:#06301a;font:900 18px/1 var(--head);box-shadow:0 2px 8px rgba(46,204,113,.4)}
+.phDial:hover{filter:brightness(1.12)}
+.phDial:active{transform:translateY(2px)}
+.phRow.off .phDial{background:#5a6070;color:#20242c;box-shadow:none;cursor:not-allowed}
+.phFoot{padding:7px 14px 2px;font:600 10px/1.35 var(--ui);color:#6b7385;text-align:center;letter-spacing:.05em}
 .stats{display:grid;grid-template-columns:1fr auto;gap:2px 14px;font:600 13px/1.5 var(--ui);max-width:420px}
 .stats i{font-style:normal;color:var(--dim)}
 .stats b{font-family:var(--mono);color:var(--yellow)}
@@ -3548,7 +3587,7 @@ function buildDetail(gl) {
   return rec;
 }
 /* вывеска: текст светится ночью (альфа = маска свечения) */
-function buildSignLayer(gl, grp, layer, text, color) {
+function buildSignLayer(gl, grp, layer, text, color, fill) {
   const [lw, lh] = QCFG.tex.signSize;
   const { c, x } = cv2d(lw, lh);
   x.fillStyle = '#241a33'; x.fillRect(0, 0, lw, lh);
@@ -3559,11 +3598,27 @@ function buildSignLayer(gl, grp, layer, text, color) {
     size -= 1.5; x.font = '900 ' + size + 'px "Arial Black", sans-serif';
   }
   x.textAlign = 'center'; x.textBaseline = 'middle';
+  /* fill: длинная строка ужимается по ширине слоя и занимает по высоте пятую
+     часть холста — на щите такие буквы не прочитать. Растягиваем их по вертикали
+     на весь слой, а высоту квада в BUILDINGS задаём равной высоте букв. */
+  /* transform, а не setTransform: у холста уже стоит масштаб TEX_SS из cv2d,
+     и сбросить его — значит нарисовать текст вдвое мельче и не по центру. */
+  x.save();
+  if (fill) {
+    const k = (lh - 6) / (size * 0.74);
+    x.transform(1, 0, 0, k, 0, lh / 2 - (lh / 2) * k);
+  }
   x.shadowColor = color; x.shadowBlur = 13 * TEX_SS;   /* тень не масштабируется трансформом */
   x.fillStyle = color; x.fillText(text, lw / 2, lh / 2 + 1);
   x.shadowBlur = 0;
-  x.fillStyle = 'rgba(255,255,255,.55)'; x.font = '900 ' + size + 'px "Arial Black", sans-serif';
+  /* Второй проход добирает непрозрачность: alphaFromLuma считает альфу по
+     яркости, и чистый красный дал бы полупрозрачные буквы. Обычным вывескам
+     район ставит белую сердцевину, вокзалу — светло-красную, чтобы надпись
+     осталась цвета РЖД, а не розовой. */
+  x.fillStyle = fill ? 'rgba(255,122,126,.86)' : 'rgba(255,255,255,.55)';
+  x.font = '900 ' + size + 'px "Arial Black", sans-serif';
   x.fillText(text, lw / 2, lh / 2);
+  x.restore();
   const d = pix(c);
   alphaFromLuma(d);
   uploadLayer(gl, grp.albedo, layer, flipRows(d, grp.w, grp.h, 4));
@@ -3619,7 +3674,7 @@ async function buildSignsAsync(gl, progress) {
   if (!n) { if (progress) progress(1); return; }
   const [lw, lh] = QCFG.tex.signSize;
   const g = makeGroup(gl, lw * TEX_SS, lh * TEX_SS, Static.signs.map(s => s.text), { clamp: true });
-  const jobs = Static.signs.map((sg, i) => ['вывеска ' + (i + 1), () => buildSignLayer(gl, g, i, sg.text, sg.color)]);
+  const jobs = Static.signs.map((sg, i) => ['вывеска ' + (i + 1), () => buildSignLayer(gl, g, i, sg.text, sg.color, sg.fill)]);
   jobs.push(['mipmaps вывесок', () => {
     finishGroup(gl, g.recs);
     Static.signs.forEach((sg, i) => { sg.mat = matRec(g, i, 0.5, 0); });
@@ -3693,6 +3748,12 @@ const BUILDINGS = [
   { x: 185, z: 87.5, w: 11.9, d: 16.2, h: 3, kind: 'garage', rows: 4, vert: true },
   { x: 183.7, z: 137.5, w: 13.7, d: 7.5, h: 7, kind: 'indust', tint: [.9,.88,.85] },
 
+  /* Вокзал «Верещагино»: восточный край промзоны, главным фасадом на запад,
+     между двумя рядами гаражей. За ним со временем лягут пути. */
+  { x: 187, z: 52, w: 12, d: 34, h: 7.5, kind: 'station', tint: [1,.94,.74], name: 'ВОКЗАЛ ВЕРЕЩАГИНО',
+    sign: { t: 'ЖД ВОКЗАЛ ВЕРЕЩАГИНО РЖД', c: '#e0242c', side: 'W',
+            w: 9.6, h: 0.9, y: 10.3, out: 0.55, fill: 1 } },
+
   { x: 37.5, z: 138.1, w: 18.7, d: 8.1, h: 5, kind: 'indust', tint: [.85,.92,.95], sign: { t: 'АВТОМОЙКА «БЛЕСК»', c: '#25e8dc', side: 'N' } },
   { x: 75.8, z: 139.4, w: 16.2, d: 6.9, h: 3, kind: 'garage', rows: 4 },
   { x: 131.2, z: 138.7, w: 21.2, d: 7.5, h: 5.5, kind: 'indust', tint: [.95,.9,.82], sign: { t: 'ШИНОМОНТАЖ 24', c: '#ff8a1f', side: 'N' } },
@@ -3765,6 +3826,11 @@ const PROPS = [];
   add('bench', 62.5, 109.4, { a: 0 }); add('bin', 67.5, 110); add('cone', 37.5, 103.1);
   add('board', 73.7, 101.2, { t: 'СДАЁТСЯ УГОЛ' });
   add('barrel', 35, 114.4); add('pallet', 51.2, 106.2);
+  /* привокзальная площадь: памятник Верещагину на постаменте с оградой */
+  add('monument', 184.2, 69);
+  add('bench', 184.4, 60, { a: Math.PI / 2 }); add('bench', 184.4, 78, { a: Math.PI / 2 });
+  add('bin', 185.0, 64.5); add('tree', 184.6, 55, { sp: 'birch' }); add('tree', 184.6, 83, { sp: 'birch' });
+
   /* большой объект */
   add('fence', 106.2, 92.5, { len: 12.5 }); add('cone', 125, 118.7); add('cone', 127.5, 119.4);
   add('coil', 131.2, 118.7); add('block', 156.2, 101.2); add('block', 158.7, 103.7);
@@ -3905,8 +3971,8 @@ function freeSpot(x, z, r) {
 /* 6. Генерация геометрии района                                        */
 /* ------------------------------------------------------------------ */
 const Static = { batches: [], signs: [], lamps: [] };
-const UVS = { panel: 6, stucco: 5, brick: 2.5, indust: 8, garage: 3, office: 5 };
-const KIND_TEX = { panel: 'panel', stucco: 'stucco', brick: 'brick', indust: 'indust', garage: 'stucco', office: 'stucco' };
+const UVS = { panel: 6, stucco: 5, brick: 2.5, indust: 8, garage: 3, office: 5, station: 5 };
+const KIND_TEX = { panel: 'panel', stucco: 'stucco', brick: 'brick', indust: 'indust', garage: 'stucco', office: 'stucco', station: 'stucco' };
 
 /* ------------------------------------------------------------------ */
 /* Дорога: бордюрный камень, чугун, разметка и обстановка               */
@@ -4147,7 +4213,95 @@ function emitDish(M, x, y, z, ax, dir) {
   }
 }
 
+/* --------------------------------------------------------------------
+   Вокзал «Верещагино». Длинный симметричный корпус с тремя ризалитами:
+   два по краям и один посередине, повыше, с вывеской. Окна, пилястры,
+   карниз и парапет собраны геометрией, а не нарисованы в текстуре: у
+   штукатурки в атласе свои окна, и для вокзальных они не годятся.
+   Главный фасад смотрит на запад, то есть в −X: длинная сторона идёт
+   вдоль Z.                                                             */
+function emitStation(b, M) {
+  const WH = M.white, S = M.stucco, R = M.roof, G = M.shopGlass, MT = M.metal;
+  const wall = b.tint || [1, .94, .74];      /* тёплая охра, как на фотографии */
+  const trim = [1, .99, .95];                /* белые тяги и наличники */
+  const x0 = b.x, x1 = b.x + b.w, z0 = b.z, z1 = b.z + b.d;
+  const cx = x0 + b.w / 2, cz = z0 + b.d / 2;
+  const H = b.h;                             /* высота основного корпуса */
+  const uv = 5;
+
+  /* цоколь и отмостка */
+  M.sidewalk.box(cx, 0, cz, b.w + 0.5, 0.62, b.d + 0.5, [.70, .68, .72], { uv: 2, skipTop: true });
+  emitApron(b, M, 1.6, 0.185);
+
+  /* основной корпус */
+  S.box(cx, 0.62, cz, b.w, H - 0.62, b.d, wall, { uv, skipTop: true });
+
+  /* три ризалита: по краям и в середине. dz — половина длины по Z. */
+  const RIS = [
+    { c: z0 + 3.2, dz: 3.2, h: H + 0.5 },
+    { c: cz,       dz: 4.4, h: H + 1.8 },
+    { c: z1 - 3.2, dz: 3.2, h: H + 0.5 }
+  ];
+  for (const r of RIS) {
+    S.box(x0 - 0.28, 0.62, r.c, 0.56 + b.w * 0.06, r.h - 0.62, r.dz * 2, wall, { uv, skipTop: true });
+    /* карниз ризалита */
+    WH.box(x0 - 0.34, r.h, r.c, 0.9, 0.34, r.dz * 2 + 0.5, trim, { uv: 2 });
+    /* парапет: столбики поверху */
+    const n = Math.max(2, Math.round(r.dz * 2 / 1.5));
+    for (let i = 0; i <= n; i++)
+      WH.box(x0 - 0.28, r.h + 0.34, r.c - r.dz + i * (r.dz * 2 / n), 0.42, 0.62, 0.28, trim, { uv: 1 });
+    WH.box(x0 - 0.28, r.h + 0.34, r.c, 0.34, 0.20, r.dz * 2, trim, { uv: 1 });
+  }
+
+  /* карниз и парапет основного корпуса */
+  WH.box(cx, H, cz, b.w + 0.62, 0.30, b.d + 0.62, trim, { uv: 2 });
+  R.box(cx, H + 0.30, cz, b.w + 0.34, 0.34, b.d + 0.34, [.46, .44, .48], { uv: 3 });
+
+  /* пилястры по западному фасаду между окнами */
+  const bays = 14, step = b.d / bays;
+  for (let i = 0; i <= bays; i++) {
+    const z = z0 + i * step;
+    if (Math.abs(z - cz) < 4.6) continue;                 /* середину занимает ризалит */
+    const inRis = z < z0 + 6.6 || z > z1 - 6.6;
+    WH.box(x0 - (inRis ? 0.50 : 0.14), 0.62, z, 0.30, H - 1.0, 0.46, trim, { uv: 1, skipTop: true });
+  }
+
+  /* окна первого этажа: высокие, с белой перемычкой и подоконником */
+  for (let i = 0; i < bays; i++) {
+    const z = z0 + (i + 0.5) * step;
+    if (Math.abs(z - cz) < 4.4) continue;
+    const inRis = z < z0 + 6.6 || z > z1 - 6.6;
+    const xf = x0 - (inRis ? 0.52 : 0.02);
+    G.box(xf, 1.35, z, 0.16, 3.4, 1.35, [.42, .52, .62], { uv: 2, gloss: 0.75 });
+    WH.box(xf - 0.06, 1.15, z, 0.22, 0.22, 1.75, trim, { uv: 1 });        /* подоконник */
+    WH.box(xf - 0.06, 4.75, z, 0.26, 0.34, 1.85, trim, { uv: 1 });        /* перемычка */
+  }
+  /* окна второго света в среднем ризалите, над вывеской */
+  for (const dz of [-2.7, -0.9, 0.9, 2.7])
+    G.box(x0 - 0.56, 5.5, cz + dz, 0.16, 1.5, 0.7, [.42, .52, .62], { uv: 2, gloss: 0.75 });
+
+  /* вход: двойные двери в среднем ризалите и козырёк над ними */
+  G.box(x0 - 0.60, 0.62, cz, 0.14, 2.9, 2.5, [.30, .34, .40], { uv: 2, gloss: 0.6 });
+  WH.box(x0 - 0.60, 0.62, cz, 0.20, 2.9, 0.16, trim, { uv: 1 });          /* средник */
+  WH.box(x0 - 0.66, 3.52, cz, 1.30, 0.22, 3.2, trim, { uv: 2 });          /* козырёк */
+  for (const dz of [-1.35, 1.35])
+    MT.cyl(x0 - 1.16, 0.62, cz + dz, 0.05, 2.9, 6, [.55, .56, .60], { gloss: 0.5 });
+
+  /* восточная сторона: глухая стена под будущие пути, только двери на перрон */
+  for (const dz of [-6, 0, 6])
+    G.box(x1 + 0.02, 0.62, cz + dz, 0.12, 2.6, 1.6, [.30, .34, .40], { uv: 2, gloss: 0.6 });
+
+  /* вентиляция и мачта на кровле — как у соседей по промзоне */
+  const RND = mulberry32(20260905);
+  R.box(cx + 1.2, H + 0.64, cz - 6, 1.6, 1.1, 1.4, [.62, .62, .66], { uv: 2 });
+  MT.cyl(cx - 2.2, H + 0.64, cz + 7, 0.05, 3.4, 5, [.72, .73, .78], {});
+  for (let i = 0; i < 4; i++)
+    MT.box(cx + (RND() - 0.5) * (b.w - 3), H + 0.64, cz + (RND() - 0.5) * (b.d - 4),
+      0.6 + RND() * 0.5, 0.4 + RND() * 0.4, 0.6 + RND() * 0.5, [.68, .70, .74], { uv: 1 });
+}
+
 function emitBuilding(b, M) {
+  if (b.kind === 'station') { emitStation(b, M); return; }
   const texKey = KIND_TEX[b.kind] || 'stucco';
   const m = M[texKey], uv = UVS[b.kind] || 5;
   const cx = b.x + b.w / 2, cz = b.z + b.d / 2;
@@ -4263,21 +4417,45 @@ function emitBuilding(b, M) {
 function emitSign(gl, b) {
   if (!b.sign) return;
   const s = b.sign;
-  const wsign = Math.min(b.w - 1.2, s.small ? 3 : 9);
-  const hsign = wsign / 4;
-  const y = b.shop ? 3.35 : (b.h - hsign - 0.8);
+  /* У западной и восточной стороны длина щита берётся по глубине дома: там
+     фасад идёт вдоль Z. Высоту и ширину можно задать в самой вывеске — у
+     вокзала щит висит между окнами второго света, а не под карнизом. */
+  const along = (s.side === 'W' || s.side === 'E') ? b.d : b.w;
+  const wsign = s.w || Math.min(along - 1.2, s.small ? 3 : 9);
+  const hsign = s.h || wsign / 4;
+  const y = s.y !== undefined ? s.y : (b.shop ? 3.35 : (b.h - hsign - 0.8));
   const m = new Mesh();
   const cx = b.x + b.w / 2;
+  const czm = b.z + b.d / 2;
+  /* Слои вывесок грузятся уже перевёрнутыми по строкам (flipRows заменяет
+     UNPACK_FLIP_Y, которого у texSubImage3D нет), поэтому v=0 — это низ
+     холста. Развёртка же осталась от старого порядка и отдавала верху квада
+     v=0: текст на всех вывесках района стоял вверх ногами, отчего «Т»
+     читалась как «⊥», «М» как «W», а «И» как «N». */
+  const UV = [0,0, 1,0, 1,1, 0,1];
+  if (s.side === 'W' || s.side === 'E') {
+    /* Взгляд на западный фасад идёт в +X, и экранное «вправо» там — это +Z;
+       на восточный наоборот. Отсюда порядок вершин. */
+    const west = s.side === 'W';
+    const x = west ? b.x - (s.out || 0.06) : b.x + b.w + (s.out || 0.06);
+    const z0 = czm - wsign / 2, z1 = czm + wsign / 2;
+    const a = west ? z0 : z1, c2 = west ? z1 : z0;
+    m.quad([x, y, a], [x, y, c2], [x, y + hsign, c2], [x, y + hsign, a],
+      west ? -1 : 1, 0, 0, UV, [1,1,1], 1, 0);
+    Static.signs.push({ text: s.t, color: s.c, fill: s.fill, gpu: m.upload(gl),
+      pos: [west ? b.x - 0.4 : b.x + b.w + 0.4, y + hsign / 2, czm], mat: null });
+    return;
+  }
   if (s.side === 'N') {
     const z = b.z - 0.06;
     m.quad([cx + wsign/2, y, z], [cx - wsign/2, y, z], [cx - wsign/2, y + hsign, z], [cx + wsign/2, y + hsign, z],
-      0, 0, -1, [0,1, 1,1, 1,0, 0,0], [1,1,1], 1, 0);
+      0, 0, -1, UV, [1,1,1], 1, 0);
   } else {
     const z = b.z + b.d + 0.06;
     m.quad([cx - wsign/2, y, z], [cx + wsign/2, y, z], [cx + wsign/2, y + hsign, z], [cx - wsign/2, y + hsign, z],
-      0, 0, 1, [0,1, 1,1, 1,0, 0,0], [1,1,1], 1, 0);
+      0, 0, 1, UV, [1,1,1], 1, 0);
   }
-  Static.signs.push({ text: s.t, color: s.c, gpu: m.upload(gl), pos: [cx, y + hsign / 2, s.side === 'N' ? b.z - 0.4 : b.z + b.d + 0.4], mat: null });
+  Static.signs.push({ text: s.t, color: s.c, fill: s.fill, gpu: m.upload(gl), pos: [cx, y + hsign / 2, s.side === 'N' ? b.z - 0.4 : b.z + b.d + 0.4], mat: null });
 }
 
 /* ------------------------------------------------------------------ */
@@ -4713,6 +4891,35 @@ function emitProp(p, M) {
       M.metal.cyl(x, 0.34, z, 0.20, 0.14, 10, [.95, .95, .97], { cap: false, gloss: 0.4 });
       M.metal.bevelBox(x, 0, z, 0.66, 0.06, 0.66, [.90, .38, .13], { bev: 0.015, r: 0.05, cs: 2, uv: .4, gloss: 0.3 });
       break;
+    /* Памятник на привокзальной площади: гранитный стилобат, высокий
+       постамент, тёмная фигура и кованая ограда по периметру. */
+    case 'monument': {
+      const GR = [.42, .40, .43], PED = [.34, .33, .36], BR = [.20, .17, .14];
+      M.sidewalk.box(x, 0.02, z, 3.6, 0.22, 3.6, [.66, .64, .68], { uv: 1.4, skipTop: false });
+      M.sidewalk.box(x, 0.24, z, 2.5, 0.20, 2.5, [.60, .58, .62], { uv: 1.2 });
+      M.brick.bevelBox(x, 0.44, z, 1.30, 0.34, 1.30, GR, { bev: 0.04, r: 0.05, cs: 2, uv: 1, gloss: 0.3 });
+      M.brick.bevelBox(x, 0.78, z, 1.00, 2.30, 1.00, PED, { bev: 0.05, r: 0.06, cs: 2, uv: 1.2, gloss: 0.28, taper: [0.92, 0.92] });
+      M.brick.bevelBox(x, 3.08, z, 1.24, 0.22, 1.24, GR, { bev: 0.04, r: 0.05, cs: 2, uv: 1, gloss: 0.3 });
+      /* фигура: пальто, плечи, голова — обобщённо, как и все люди в районе */
+      M.metal.bevelBox(x, 3.30, z, 0.62, 1.10, 0.46, BR, { bev: 0.07, r: 0.10, cs: 2, uv: 1, gloss: 0.35, taper: [0.86, 0.86] });
+      M.metal.ellipsoid(x, 4.52, z, 0.30, 0.20, 0.26, 9, 5, BR, { gloss: 0.35 });
+      M.metal.ellipsoid(x, 4.80, z + 0.02, 0.16, 0.19, 0.17, 9, 6, BR, { gloss: 0.4 });
+      M.metal.box(x, 3.34, z + 0.20, 0.44, 0.72, 0.10, [.17, .14, .12], { uv: .6, gloss: 0.3 });
+      /* ограда: столбики по углам и пики между ними */
+      const R2 = 1.75;
+      for (let i = 0; i < 4; i++) {
+        const a = i * Math.PI / 2 + Math.PI / 4, px = x + Math.cos(a) * R2 * 1.41, pz = z + Math.sin(a) * R2 * 1.41;
+        M.metal.cyl(px, 0.24, pz, 0.055, 0.95, 6, [.16, .16, .18], { gloss: 0.4 });
+      }
+      for (const [ax, az] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const bx = x + ax * R2, bz = z + az * R2;
+        for (const y of [0.42, 0.86])
+          M.metal.tube([[bx - az * R2, y, bz - ax * R2], [bx + az * R2, y, bz + ax * R2]], 0.018, 5, [.16, .16, .18], { gloss: 0.4 });
+        for (let k = -3; k <= 3; k++)
+          M.metal.cyl(bx - az * (k * 0.44), 0.26, bz - ax * (k * 0.44), 0.016, 0.78, 4, [.16, .16, .18], { gloss: 0.4 });
+      }
+      break;
+    }
     case 'board': {
       for (const sx of [-0.7, 0.7]) M.metal.tube([[x + sx, 0, z], [x + sx, 2.0, z]], 0.05, 6, [.48, .5, .56], { gloss: 0.4 });
       M.sidewalk.bevelBox(x, 1.28, z, 1.86, 1.24, 0.12, [.90, .88, .90], { bev: 0.02, r: 0.03, cs: 1, uv: 1 });
@@ -6250,6 +6457,58 @@ function makeCharMesh(gl, pal) {
     m.box(0, -0.02, 0.120 * bw, 0.014, 0.245, 0.008, mul(v, 0.55), { part: BONE.CHEST, gloss: 0.3 });  /* молния */
     for (const sx of [-1, 1])             /* плечевые лямки */
       m.box(sx * 0.105 * bw, 0.235, 0, 0.070, 0.02, 0.19 * bw, v, { part: BONE.CHEST, gloss: 0.22 });
+
+    /* Название конторы по спине. Буквы набраны трубками по ломаной: в этой
+       игре ни одного загруженного шрифта нет, а на жилете надпись нужна. */
+    if (pal.vestText) {
+      const T = pal.vestText, zb = -0.1245 * bw;
+      /* Спина смотрит в −Z, и для взгляда оттуда экранное «вправо» — это мир −X.
+         Поэтому всю раскладку зеркалим по x: одновременно разворачивается и
+         порядок букв, и форма каждой из них, — и надпись читается слева
+         направо, как ей положено. */
+      const st = (pts, r) => m.tube(pts.map(q => [-q[0], q[1], zb]), r || 0.0055, 4, T,
+        { part: BONE.CHEST, gloss: 0.4 });
+      /* Одна буква рисуется в своей коробке x..x+w, y..y+h. */
+      const glyph = (ch, x, y, w, h, r) => {
+        const xm = x + w / 2, x1 = x + w, y1 = y + h, ym = y + h / 2;
+        if (ch === 'О') st([[x + w * .28, y1], [x + w * .72, y1], [x1, y1 - h * .28], [x1, y + h * .28],
+                            [x + w * .72, y], [x + w * .28, y], [x, y + h * .28], [x, y1 - h * .28], [x + w * .28, y1]], r);
+        if (ch === 'В') { st([[x, y], [x, y1]], r);
+          st([[x, y1], [x + w * .68, y1], [x1, y1 - h * .17], [x + w * .68, ym], [x, ym]], r);
+          st([[x, ym], [x + w * .78, ym], [x1, ym - h * .22], [x + w * .78, y], [x, y]], r); }
+        if (ch === 'Е') { st([[x1, y1], [x, y1], [x, y], [x1, y]], r); st([[x, ym], [x + w * .74, ym]], r); }
+        if (ch === 'С') st([[x1, y1 - h * .16], [x + w * .74, y1], [x + w * .26, y1], [x, y1 - h * .30],
+                            [x, y + h * .30], [x + w * .26, y], [x + w * .74, y], [x1, y + h * .16]], r);
+        if (ch === 'Т') { st([[x, y1], [x1, y1]], r); st([[xm, y1], [xm, y]], r); }
+        if (ch === '«') { st([[x + w * .8, y1], [x + w * .2, ym], [x + w * .8, y]], r); }
+        if (ch === '»') { st([[x + w * .2, y1], [x + w * .8, ym], [x + w * .2, y]], r); }
+      };
+      const line = (text, cx, y, w, h, gap, r) => {
+        const total = text.length * w + (text.length - 1) * gap;
+        let x = cx - total / 2;
+        for (const ch of text) { glyph(ch, x, y, w, h, r); x += w + gap; }
+      };
+      /* «ООО» мелко над верхней полосой, «ВЕСТ» крупно между полосами */
+      line('ООО', 0, 0.182, 0.030, 0.040, 0.010, 0.0042);
+      line('«ВЕСТ»', 0, 0.082, 0.038, 0.046, 0.008, 0.0055);
+    }
+  }
+
+  /* ---------- портупея поверх жилета ---------- */
+  if (pal.harness) {
+    const H = pal.harness, HD = mul(H, 0.82);
+    /* через грудь наискось от правого плеча к левому боку */
+    m.tube([[0.118 * bw, 0.225, -0.02], [0.070, 0.115, 0.108], [-0.020, 0.020, 0.120],
+            [-0.120, -0.065, 0.070], [-0.158 * bw, -0.085, -0.05]], 0.017, 5, H,
+      { part: BONE.CHEST, gloss: 0.24 });
+    /* и по спине — вместе с ремнём сумки получается крест */
+    m.tube([[0.118 * bw, 0.225, -0.02], [0.062, 0.130, -0.112], [-0.040, 0.030, -0.124],
+            [-0.132, -0.055, -0.078]], 0.015, 5, HD, { part: BONE.CHEST, gloss: 0.24 });
+    /* пряжка на груди и подсумок под мышкой */
+    m.bevelBox(0.028, 0.035, 0.122 * bw, 0.058, 0.042, 0.020, pal.buckle || [.72, .74, .78],
+      { bev: 0.006, r: 0.008, cs: 1, part: BONE.CHEST, gloss: 0.75 });
+    m.bevelBox(-0.098, -0.060, 0.104 * bw, 0.058, 0.090, 0.038, HD,
+      { bev: 0.008, r: 0.014, cs: 2, part: BONE.CHEST, gloss: 0.2 });
   }
 
   /* ---------- шея и голова ---------- */
@@ -6276,7 +6535,19 @@ function makeCharMesh(gl, pal) {
   }
 
   /* ---------- волосы, шапка, платок ---------- */
-  if (pal.cap) {
+  if (pal.helmet) {                      /* кожаный шлем с наушниками и подбородочным ремнём */
+    const H = pal.helmet, HD = mul(H, 0.76);
+    m.ellipsoid(0, 0.156, -0.006, 0.103, 0.126, 0.113, 12, 6, H, { part: BONE.CAP, cut: 0.14, gloss: 0.26 });
+    m.bevelBox(0, 0.060, -0.086, 0.176, 0.100, 0.060, H,
+      { bev: 0.014, r: 0.03, cs: 2, part: BONE.CAP, gloss: 0.26, skipTop: true });     /* назатыльник */
+    for (const sx of [-1, 1]) {
+      m.ellipsoid(sx * 0.096, 0.124, -0.010, 0.024, 0.050, 0.046, 7, 4, HD, { part: BONE.CAP, gloss: 0.28 });
+      m.tube([[sx * 0.094, 0.096, -0.006], [sx * 0.084, 0.040, 0.018], [sx * 0.046, 0.012, 0.044]],
+        0.008, 4, HD, { part: BONE.CAP, gloss: 0.22 });                                /* ремешок */
+      m.box(sx * 0.090, 0.058, 0.004, 0.022, 0.024, 0.016, pal.buckle || [.72, .74, .78],
+        { part: BONE.CAP, gloss: 0.72 });                                              /* застёжка */
+    }
+  } else if (pal.cap) {
     m.ellipsoid(0, 0.153, -0.004, 0.099, 0.122, 0.108, 12, 6, pal.cap, { part: BONE.CAP, cut: 0.15, gloss: 0.12 });
     m.bevelBox(0, 0.168, -0.004, 0.198, 0.020, 0.216, mul(pal.cap, 0.92),
       { bev: 0.006, r: 0.09, cs: 3, part: BONE.CAP, gloss: 0.14, skipTop: true });   /* околыш */
@@ -6299,7 +6570,7 @@ function makeCharMesh(gl, pal) {
 
   /* ---------- очки на лбу и гарнитура ---------- */
   if (pal.goggles) {                     /* защитные очки, сдвинутые на лоб: линза и резинка */
-    const lens = [.74, .80, .62];
+    const lens = pal.lens || [.74, .80, .62];
     m.bevelBox(0, 0.186, 0.080, 0.152, 0.042, 0.058, lens,
       { bev: 0.010, r: 0.022, cs: 2, part: BONE.CAP, gloss: 0.75 });
     m.tube([[-0.080, 0.206, 0.046], [-0.096, 0.212, -0.030], [0, 0.216, -0.104], [0.096, 0.212, -0.030], [0.080, 0.206, 0.046]],
@@ -6312,22 +6583,36 @@ function makeCharMesh(gl, pal) {
   }
 
   /* ---------- руки ---------- */
+  /* В майке рукавов нет: плечо и предплечье — кожа, а не ткань. */
+  const armU = pal.tank ? skin : shirt, armD = pal.tank ? skin : sleeve;
+  const armG = pal.tank ? SKIN_G : CLOTH;
   for (const [u, d, hnd] of [[BONE.ARMLU, BONE.ARMLD, BONE.HANDL], [BONE.ARMRU, BONE.ARMRD, BONE.HANDR]]) {
-    m.ellipsoid(0, 0.005, 0, 0.055, 0.05, 0.058, 8, 4, shirt, { part: u, gloss: CLOTH });
-    m.bevelBox(0, -0.30, 0, 0.098, 0.31, 0.104, shirt,
-      { bev: 0.022, r: 0.03, cs: 2, part: u, gloss: CLOTH, uv: 0.5, taper: [1.06, 1.06], skipTop: true });
-    m.bevelBox(0, -0.27, 0, 0.084, 0.28, 0.088, sleeve,
-      { bev: 0.02, r: 0.028, cs: 2, part: d, gloss: CLOTH, uv: 0.5, taper: [1.14, 1.14], skipTop: true });
-    if (pal.cuff) m.bevelBox(0, -0.275, 0, 0.09, 0.03, 0.094, pal.cuff,
+    m.ellipsoid(0, 0.005, 0, 0.055, 0.05, 0.058, 8, 4, armU, { part: u, gloss: armG });
+    m.bevelBox(0, -0.30, 0, 0.098, 0.31, 0.104, armU,
+      { bev: 0.022, r: 0.03, cs: 2, part: u, gloss: armG, uv: 0.5, taper: [1.06, 1.06], skipTop: true });
+    m.bevelBox(0, -0.27, 0, 0.084, 0.28, 0.088, armD,
+      { bev: 0.02, r: 0.028, cs: 2, part: d, gloss: armG, uv: 0.5, taper: [1.14, 1.14], skipTop: true });
+    if (pal.wraps) m.bevelBox(0, -0.255, 0, 0.092, 0.150, 0.096, pal.wraps,
+      { bev: 0.012, r: 0.028, cs: 2, part: d, gloss: 0.07, skipTop: true });   /* бинты на предплечье */
+    if (pal.cuff && !pal.tank) m.bevelBox(0, -0.275, 0, 0.09, 0.03, 0.094, pal.cuff,
       { bev: 0.006, r: 0.028, cs: 2, part: d, gloss: 0.12, skipTop: true });
     /* кисть: ладонь и обобщённые пальцы */
     m.ellipsoid(0, -0.045, 0.004, 0.040, 0.048, 0.026, 7, 4, skin, { part: hnd, gloss: SKIN_G });
     m.bevelBox(0, -0.115, 0.004, 0.062, 0.075, 0.042, skin,
       { bev: 0.012, r: 0.018, cs: 2, part: hnd, gloss: SKIN_G, skipTop: true });
+    /* перчатка без пальцев: ладонь закрыта, накладка на тыльной стороне */
+    if (pal.gloves) {
+      m.bevelBox(0, -0.062, 0.004, 0.048, 0.070, 0.034, pal.gloves,
+        { bev: 0.010, r: 0.016, cs: 2, part: hnd, gloss: 0.20 });
+      m.bevelBox(0, -0.058, -0.018, 0.042, 0.058, 0.014, mul(pal.gloves, 1.35),
+        { bev: 0.006, r: 0.012, cs: 2, part: hnd, gloss: 0.32 });
+    }
   }
 
   /* ---------- ноги ---------- */
-  for (const [u, d, f] of [[BONE.LEGLU, BONE.LEGLD, BONE.FOOTL], [BONE.LEGRU, BONE.LEGRD, BONE.FOOTR]]) {
+  const LEGS = [[BONE.LEGLU, BONE.LEGLD, BONE.FOOTL], [BONE.LEGRU, BONE.LEGRD, BONE.FOOTR]];
+  for (let li = 0; li < LEGS.length; li++) {
+    const [u, d, f] = LEGS[li];
     m.bevelBox(0, -0.45, 0, 0.145 * bw, 0.46, 0.155 * bw, pants,
       { bev: 0.028, r: 0.045, cs: 2, part: u, gloss: CLOTH, uv: 0.5, taper: [0.86, 0.88], skipTop: true });
     m.bevelBox(0, -0.40, -0.004, 0.122 * bw, 0.41, 0.132 * bw, pants,
@@ -6339,6 +6624,19 @@ function makeCharMesh(gl, pal) {
       { bev: 0.008, r: 0.035, cs: 2, part: f, gloss: 0.1, skipTop: true, bottom: true });
     m.bevelBox(0, -0.028, -0.038, 0.108, 0.075, 0.10, sh,
       { bev: 0.014, r: 0.03, cs: 2, part: f, gloss: BOOT });
+    /* ремешки на бедре и наколенник — то, что носят, когда лазают */
+    if (pal.thighStraps) for (const y of [-0.30, -0.40])
+      m.bevelBox(0, y, 0, 0.150 * bw, 0.024, 0.160 * bw, pal.thighStraps,
+        { bev: 0.005, r: 0.045, cs: 2, part: u, gloss: 0.24, skipTop: true });
+    if (pal.holster) {
+      const side = li === 1 ? 1 : -1;
+      m.bevelBox(side * 0.082 * bw, -0.40, 0.010, 0.052, 0.145, 0.046, pal.holster,
+        { bev: 0.008, r: 0.014, cs: 2, part: u, gloss: 0.22 });
+      m.bevelBox(side * 0.082 * bw, -0.255, 0.010, 0.058, 0.028, 0.052, mul(pal.holster, 0.8),
+        { bev: 0.006, r: 0.014, cs: 2, part: u, gloss: 0.26 });
+    }
+    if (pal.kneePads)
+      m.ellipsoid(0, -0.030, 0.066, 0.064, 0.072, 0.040, 9, 5, pal.kneePads, { part: d, gloss: 0.30 });
   }
 
   /* ---------- рация на ремне (у бригадира вместо инструмента) ---------- */
@@ -6372,9 +6670,18 @@ function makeCharMesh(gl, pal) {
 const CHAR_MESHES = {};
 function buildCharacters(gl) {
   const P = {
-    oleg:   { skin: [.95,.72,.55], shirt: [.34,.38,.54], sleeve: [.30,.34,.50], pants: [.26,.28,.42], hair: [.42,.28,.17],
-              cap: [.24,.24,.32], vest: [1.25,.62,.14], bag: [.36,.26,.2], bagStripe: [1.3,1.0,.3], shoes: [.20,.18,.23],
-              belt: [.18,.14,.12], buckle: [.85,.72,.35], collar: [.28,.31,.46], cuff: [.28,.31,.46] },
+    /* Олег переодет: кожаный шлем с очками на лбу, майка, портупея крестом
+       с ремнём сумки, бинты на предплечьях, перчатки без пальцев, широкий
+       ремень, оранжевые штаны с ремешками и наколенниками. Поверх всего —
+       жёлтый сигнальный жилет с названием конторы по спине. */
+    oleg:   { skin: [.95,.72,.55], shirt: [.88,.85,.76], sleeve: [.88,.85,.76], pants: [1.05,.44,.13],
+              hair: [.42,.28,.17], collar: [.90,.87,.78],
+              helmet: [.44,.31,.22], goggles: [.30,.23,.17], lens: [.34,.74,.92],
+              vest: [1.32,1.02,.14], vestText: [.10,.09,.08],
+              tank: true, harness: [.33,.25,.18], wraps: [.90,.88,.80], gloves: [.25,.22,.21],
+              kneePads: [.74,.74,.72], thighStraps: [.31,.24,.18], holster: [.36,.31,.29],
+              bag: [.36,.26,.2], bagStripe: [1.3,1.0,.3], shoes: [.22,.19,.18],
+              belt: [.26,.20,.15], buckle: [.80,.81,.85] },
     sanya:  { skin: [.93,.71,.54], shirt: [.16,.62,.60], sleeve: [.14,.55,.54], pants: [.24,.24,.36], hair: [.34,.24,.15],
               cap: [.09,.42,.40], vest: [.28,1.15,1.1], bag: [.3,.4,.42], shoes: [.18,.2,.24], build: 1.06,
               belt: [.16,.16,.2], collar: [.13,.5,.5] },
@@ -6845,38 +7152,62 @@ function buildVehicles(gl) {
   VEH.van = buildCar(gl, CAR_SPEC.van);
   VEH.pickup = buildCar(gl, CAR_SPEC.pickup);
   /* --- дворовая собака: 0 корпус, 1 голова, 2 челюсть, 3/4 передние плечи,
-         5/6 задние бёдра, 7 хвост, 8..11 голени тех же лап --- */
+         5/6 задние бёдра, 7 хвост, 8..11 голени тех же лап.
+         Ось Z смотрит вперёд, начало координат кости 0 — на 0.42 над землёй. --- */
   {
     const m = new Mesh();
-    const fur = [.62, .46, .3], dfur = [.5, .36, .24];
-    m.ellipsoid(0, -0.10, 0, 0.15, 0.16, 0.36, 10, 6, fur, { part: 0, gloss: 0.14 });
-    m.ellipsoid(0, -0.08, -0.26, 0.12, 0.13, 0.16, 9, 5, fur, { part: 0, gloss: 0.14 });   /* круп */
-    /* голова: координаты от пивота кости 1 (0, 0.02, 0.30) */
-    m.ellipsoid(0, 0, -0.26, 0.11, 0.11, 0.14, 9, 5, fur, { part: 1, gloss: 0.14 });
-    m.ellipsoid(0, -0.008, -0.145, 0.060, 0.032, 0.088, 8, 4, dfur, { part: 1, gloss: 0.18 });   /* верх морды */
-    m.ellipsoid(0, -0.015, -0.065, 0.026, 0.022, 0.02, 6, 3, [.14, .12, .14], { part: 1, gloss: 0.6 });  /* нос */
+    /* Дворняга рыжей масти: по хребту тёмное седло, грудь, живот и лапы
+       светлее, морда и уши тёмные. Цвет вершинный, материал общий. */
+    const fur = [.60, .43, .27], back = [.40, .29, .20],
+          pale = [.80, .68, .52], dark = [.26, .20, .17];
+    const G = { gloss: 0.14 };
+    /* Корпус тремя объёмами: грудь глубокая и узкая, поясница подобрана,
+       круп круглый. Одним шаром собака читалась бочкой на палках. */
+    m.ellipsoid(0, -0.098, 0.112, 0.098, 0.128, 0.162, 12, 7, fur, { part: 0, ...G });
+    m.ellipsoid(0, -0.118, -0.038, 0.081, 0.097, 0.125, 11, 6, fur, { part: 0, ...G });
+    m.ellipsoid(0, -0.082, -0.180, 0.098, 0.112, 0.126, 11, 6, fur, { part: 0, ...G });
+    m.ellipsoid(0, -0.148, 0.085, 0.073, 0.071, 0.130, 10, 5, pale, { part: 0, ...G });
+    m.ellipsoid(0, -0.168, -0.050, 0.059, 0.053, 0.108, 9, 5, pale, { part: 0, ...G });
+    m.ellipsoid(0, -0.018, -0.020, 0.077, 0.054, 0.222, 11, 5, back, { part: 0, ...G });
+    /* шея от холки вперёд-вверх; сустав головы стоит на её конце */
+    m.ellipsoid(0, -0.004, 0.208, 0.077, 0.091, 0.084, 10, 5, fur, { part: 0, ...G });
+    m.ellipsoid(0, 0.056, 0.248, 0.061, 0.071, 0.062, 9, 5, fur, { part: 0, ...G });
+    /* --- голова, координаты от сустава кости 1 (0, 0.075, 0.30) --- */
+    m.ellipsoid(0, -0.005, -0.015, 0.063, 0.070, 0.055, 9, 5, fur, { part: 1, ...G });  /* затылок, закрывает сустав */
+    m.ellipsoid(0, 0.018, 0.048, 0.076, 0.073, 0.086, 11, 6, fur, { part: 1, ...G });   /* череп */
+    m.ellipsoid(0, -0.010, 0.110, 0.059, 0.051, 0.052, 10, 5, fur, { part: 1, ...G });  /* скулы */
+    m.ellipsoid(0, -0.017, 0.172, 0.041, 0.036, 0.070, 9, 5, [.40, .30, .23], { part: 1, gloss: 0.2 });   /* морда */
+    m.ellipsoid(0, -0.006, 0.234, 0.023, 0.020, 0.019, 7, 4, [.10, .09, .10], { part: 1, gloss: 0.65 }); /* нос */
     for (const sx of [-1, 1]) {
-      m.bevelBox(sx * 0.072, 0.08, -0.32, 0.045, 0.10, 0.055, fur, { bev: 0.012, r: 0.012, cs: 2, part: 1, gloss: 0.14 });
-      m.ellipsoid(sx * 0.048, 0.028, -0.172, 0.017, 0.016, 0.012, 6, 3, [.1, .1, .12], { part: 1, gloss: 0.75 });
+      m.ellipsoid(sx * 0.040, 0.030, 0.112, 0.014, 0.014, 0.012, 6, 4, [.09, .08, .10], { part: 1, gloss: 0.8 });
+      m.ellipsoid(sx * 0.040, 0.052, 0.100, 0.020, 0.009, 0.018, 6, 3, pale, { part: 1, ...G });  /* светлая бровь */
+      /* Ухо: сужающийся кверху клин. Плоским лоскутом оно смотрелось
+         картонкой — со стороны ребра исчезало, а с изнанки светилось. */
+      m.ellipsoid(sx * 0.050, 0.042, 0.014, 0.028, 0.024, 0.032, 7, 4, fur, { part: 1, ...G });
+      m.bevelBox(sx * 0.054, 0.046, 0.012, 0.030, 0.080, 0.052, [.37, .27, .21],
+        { bev: 0.008, r: 0.008, cs: 2, part: 1, gloss: 0.16, taper: [0.40, 0.42] });
     }
-    /* нижняя челюсть: своя кость, пивот в углу пасти (0, 0.005, 0.055) от кости 1 */
-    m.ellipsoid(0, -0.015, 0.100, 0.052, 0.026, 0.075, 8, 3, dfur, { part: 2, gloss: 0.18 });
-    /* Нога из двух звеньев: плечо (бедро) и голень с лапой. Одним бруском
-       нога читалась палкой — сустав нужен, чтобы она подламывалась на ходу.
-       Верх толще низа, поэтому бруски идут с расширением кверху. Сумма звеньев
-       0.175 + 0.145 = 0.32 — ровно от сустава до земли. */
-    const paw = [.42, .32, .22];
+    /* нижняя челюсть: своя кость, сустав под скулой (0, -0.030, 0.100) */
+    m.ellipsoid(0, -0.020, 0.058, 0.038, 0.026, 0.062, 8, 4, dark, { part: 2, gloss: 0.2 });
+    m.ellipsoid(0, -0.016, 0.104, 0.026, 0.018, 0.024, 7, 3, pale, { part: 2, ...G });
+    /* --- ноги --- Верх ноги — не брусок, а мышца: плечо спереди и бедро
+       сзади. Ниже сустава голень тонкая, на ней лапа. Сумма звеньев
+       0.175 + 0.145 = 0.32 — от сустава до земли на прямой ноге. */
     for (const [pt, lb] of [[3, 8], [4, 9], [5, 10], [6, 11]]) {
       const fr = pt < 5;
-      m.bevelBox(0, -0.175, 0, fr ? 0.050 : 0.056, 0.175, fr ? 0.056 : 0.062, fur,
-        { bev: 0.014, r: 0.014, cs: 2, part: pt, gloss: 0.14, taper: [1.36, fr ? 1.40 : 1.62], skipTop: true });
-      m.bevelBox(0, -0.145, 0, fr ? 0.046 : 0.044, 0.145, fr ? 0.052 : 0.050, fur,
-        { bev: 0.012, r: 0.012, cs: 2, part: lb, gloss: 0.14, taper: [1.14, 1.18], skipTop: true });
-      m.bevelBox(0, -0.145, 0.014, fr ? 0.062 : 0.060, 0.046, fr ? 0.082 : 0.078, paw,
-        { bev: 0.010, r: 0.016, cs: 2, part: lb, gloss: 0.2 });
+      m.ellipsoid(0, fr ? -0.048 : -0.044, fr ? -0.004 : -0.014,
+        fr ? 0.044 : 0.051, fr ? 0.072 : 0.082, fr ? 0.052 : 0.070, 9, 5, fur, { part: pt, ...G });
+      m.bevelBox(0, -0.175, 0, fr ? 0.042 : 0.046, 0.175, fr ? 0.048 : 0.054, fur,
+        { bev: 0.012, r: 0.012, cs: 2, part: pt, gloss: 0.14, taper: [1.5, 1.6], skipTop: true });
+      m.bevelBox(0, -0.145, 0, fr ? 0.033 : 0.031, 0.145, fr ? 0.037 : 0.035, fur,
+        { bev: 0.010, r: 0.010, cs: 2, part: lb, gloss: 0.14, taper: [1.22, 1.28], skipTop: true });
+      m.bevelBox(0, -0.145, 0.012, fr ? 0.050 : 0.048, 0.038, fr ? 0.070 : 0.066, pale,
+        { bev: 0.008, r: 0.014, cs: 2, part: lb, gloss: 0.2 });
     }
-    /* хвост от своего сустава назад-вверх */
-    m.tube([[0, 0, 0], [0, 0.10, -0.12], [0.02, 0.20, -0.18]], 0.035, 6, fur, { part: 7, gloss: 0.14 });
+    /* хвост серпом: три звена с убывающим радиусом и светлым кончиком */
+    m.tube([[0, 0, 0], [0, 0.050, -0.068], [0.004, 0.106, -0.100]], 0.030, 7, fur, { part: 7, ...G });
+    m.tube([[0.004, 0.106, -0.100], [0.012, 0.152, -0.112], [0.020, 0.190, -0.098]], 0.021, 6, fur, { part: 7, ...G });
+    m.tube([[0.020, 0.190, -0.098], [0.028, 0.218, -0.076]], 0.013, 6, pale, { part: 7, ...G });
     VEH.dog = m.upload(gl);
   }
   /* --- камера видеонаблюдения (ставится на опоры) --- */
@@ -6891,6 +7222,20 @@ function buildVehicles(gl) {
     m.box(0.0, 0.035, -0.06, 0.035, 0.02, 0.03, [1, .22, .2], { emis: 1, gloss: 0.7 });
     m.tube([[0, -0.06, -0.20], [0, -0.02, -0.30]], 0.012, 5, [.2, .2, .24], { gloss: 0.5 });
     VEH.cam = m.upload(gl);
+  }
+
+  /* --- периметральный прибор «АЗИМУТ-НЕТ»: щиток на заборе базы --- */
+  {
+    const m = new Mesh();
+    const BODY = [.80, .82, .78], DOOR = [.70, .72, .68], DARK = [.17, .18, .21];
+    m.box(0, -0.28, 0, 0.44, 0.56, 0.18, BODY, { gloss: 0.35 });          /* корпус */
+    m.box(0, -0.21, 0.094, 0.34, 0.40, 0.016, DOOR, { gloss: 0.5 });      /* откинутая крышка */
+    m.box(0, 0.26, 0, 0.40, 0.04, 0.21, DARK, { gloss: 0.3 });            /* козырёк от дождя */
+    m.box(0, -0.06, 0.104, 0.25, 0.06, 0.014, DARK, { gloss: 0.4 });      /* колодка клемм */
+    m.box(0, 0.06, 0.104, 0.25, 0.06, 0.014, DARK, { gloss: 0.4 });       /* вторая пара, та самая */
+    m.box(-0.14, 0.16, 0.104, 0.035, 0.025, 0.014, [1, .22, .2], { emis: 1, gloss: 0.7 });
+    m.tube([[0, -0.28, -0.06], [0, -0.56, -0.06]], 0.014, 5, DARK, { gloss: 0.5 });       /* гофра вниз */
+    VEH.aznet = m.upload(gl);
   }
 }
 
@@ -7198,8 +7543,342 @@ const CHARS = {
   predsed:  { name: 'ПРЕДСЕДАТЕЛЬ ДОМА', c: '#4be36b' },
   director: { name: 'ЗАКАЗЧИК БЦ', c: '#8a2be2' },
   kostya:   { name: 'МОНТАЖНИК КОСТЯ', c: '#9ae64b' },
-  vanya:    { name: 'БРИГАДИР ВАНЯ', c: '#5b8dff' }
+  vanya:    { name: 'БРИГАДИР ВАНЯ', c: '#5b8dff' },
+  egorov:   { name: 'ЕГОРОВ СЕРГЕЙ', c: '#e8643c' },
+  ambul:    { name: 'СКОРАЯ ПОМОЩЬ', c: '#ff4d5e' },
+  pnd:      { name: 'ПНД, ДЕЖУРНЫЙ', c: '#8a2be2' }
 };
+
+/* ------------------------------------------------------------------ */
+/* 12а. Личный телефон: книжка и звонки                                 */
+/* ------------------------------------------------------------------ */
+/* Телефон в районе есть у каждого, и в книжке у каждого записаны все
+   остальные: свой номер себе не пишут. Тамара, скорая и ПНД стоят у всех
+   без исключения. Игроку доступна книжка Олега, остальные книжки нужны,
+   чтобы жители звонили друг другу — это слышно репликами во дворе. */
+const PHONE = {
+  people: ['vanya', 'kostya', 'sanya', 'oleg', 'egorov'],
+  services: ['tamara', 'ambul', 'pnd'],
+  book(who) { return this.people.filter(p => p !== who).concat(this.services); },
+  /* У каждого свой аппарат — в книжке он подписан, как в жизни. */
+  model: {
+    vanya:  'iPhone 15 Pro Max',
+    kostya: 'iPhone 13 Pro',
+    sanya:  'iPhone 17 Pro Max',
+    oleg:   'Xiaomi · Android',
+    egorov: 'Samsung Galaxy A55',
+    tamara: 'рабочий, с проводом',
+    ambul:  'единый номер',
+    pnd:    'городской'
+  },
+  short: {
+    vanya: 'Ваня', kostya: 'Костя', sanya: 'Саня', oleg: 'Олег',
+    egorov: 'Егоров Сергей', tamara: 'Тамара', ambul: 'Скорая помощь', pnd: 'ПНД'
+  },
+  note: {
+    vanya:  'бригадир · объясняет один раз',
+    kostya: 'монтажник · уже уехал',
+    sanya:  'напарник · приедет, может быть',
+    oleg:   'это ты',
+    egorov: 'ставил тут всё до нас',
+    tamara: 'диспетчер · заявки и адреса',
+    ambul:  'вызов на адрес · платный',
+    pnd:    'дежурный · круглосуточно'
+  }
+};
+
+/* --------------------------------------------------------------------
+   Личная история Олега. Ваня звонит и гонит на периметр, на объекте стоит
+   прибор, у прибора две клеммы, и Олег честно выбирает, какую проверить.
+   Выбор ни на что не влияет: и там и там он подаёт 220, прибор уходит с
+   дымом, а Олег уходит в запой. Провалить это нельзя — это не задание, а
+   то, что случается. Названия выдуманы, как и всё остальное в районе.  */
+const EGG = {
+  mark: { x: 118, z: 66.2, label: 'база «Заводская», периметр' },
+  dev:  { x: 118, y: 1.18, z: 67.5 }
+};
+const EGG_MAT = m4();
+
+/* Заряд садится за смену: в пять вечера полный, к глубокой ночи треть. */
+function phoneBattery() {
+  const spent = ((hour() - START_HOUR + 24) % 24) / 12;
+  return Math.round(clamp(100 - spent * 68, 12, 100));
+}
+/* Связь: в промзоне железо и бетон, по краям района — просто никому не надо. */
+function phoneSignal() {
+  const p = S.player;
+  if (p.x > 100 && p.z < 70) return 1;
+  if (p.x < 12 || p.x > W.x - 12 || p.z < 10 || p.z > W.z - 10) return 2;
+  return 4;
+}
+
+/* Что бригада роняет в эфир между делом. Эти же реплики всплывают пузырями
+   над Ваней, Костей и Саней, когда они стоят рядом, и над самим Олегом. */
+const CREW_LINES = {
+  vanya: [
+    'Ой, да там хуйня делов.',
+    'Да, мы это сделаем.',
+    'А мы зарабатываем не на работе, а на монтажниках.',
+    'Меня опять наебали.',
+    'Какие деньги? У меня их никогда нет.',
+    'Ты чё, не видел мои долги?',
+    'Ребят, может уже работать будем?'
+  ],
+  kostya: [
+    'Ой да ладно, чё ты? Я просто тебя проверял.',
+    'А чё я? Я лысый, что ли?',
+    'Ну что за негатив.',
+    'Что, блядь, опять на Ишим?'
+  ],
+  sanya: [
+    'Щас бы лучше на Мириады поехать работать.',
+    'Куда угодно, только не на Ишим.',
+    'Нет-нет, я же сказал: на Ишим я не поеду.',
+    'Пойдёмте сходим за пивом.',
+    'Что-то пива не хватило. Надо больше пива.'
+  ],
+  oleg: [
+    'Водка? Да нет, я не пью.',
+    'Давай меня закодируем.',
+    'Да нет, я тебе говорю: вообще больше не пью.',
+    'Я всё. Теперь только работать. Пить не буду.'
+  ]
+};
+/* Отдельно и редко — та самая, ради которой всё и затевалось. */
+const OLEG_VANYA_LINE = 'Ты гандон, Ваня. Понял? Ты гандон.';
+
+/* Егоров Сергей монтировал этот район до бригады и убеждён, что делал это
+   безупречно. Отвечает по кругу, а на четвёртый звонок подряд перестаёт. */
+const EGOROV_LINES = [
+  'Да чё вы там не можете? Я это всё вот этими руками делал.',
+  'Отвалите, я вообще-то сейчас ТикТок смотрю.',
+  'Опять опоздали. С вас бутылка коньяка. Или виски, я не гордый.',
+  'С вас пачка синих с кнопкой — и тогда, может, вспомню, где там щиток.',
+  'Я на этом объекте работал, когда ты изоленту от стяжки не отличал.',
+  'Всё там держалось двенадцать лет. Пришли вы — перестало.'
+];
+
+/* Олег думает вслух. Пузырь над головой — тот же, что у жителей. */
+function olegMutter(text) {
+  const p = S.player;
+  p.say = 3.6; p.line = text;
+}
+
+/* Ваня звонит сам. Один раз за сохранение, когда заявки нет и есть минута. */
+function eggRing() {
+  S.egg.stage = 'call';
+  Audio2.phone();
+  toast('Звонит Ваня', 'info', 2200);
+  Dlg.seq([
+    { who: 'vanya', text: 'Олег. Бросай что делаешь.' },
+    { who: 'vanya', text: 'На базе периметр лёг. Весь. Езжай и почини, там делов на пять минут.' },
+    { who: 'oleg',  text: 'А что там стоит-то?' },
+    { who: 'vanya', text: 'Да прибор какой-то. Ты разберёшься, ты же умный. ' + MOTTO },
+    { who: 'oleg',  text: 'Понял. Еду.' }
+  ], () => {
+    S.egg.stage = 'go';
+    toast('Периметр на базе «Заводская». Метка на карте', 'info', 3200);
+  });
+}
+
+/* Развилка, у которой один исход. Обе клеммы ведут в одно и то же место —
+   в этом вся шутка, и провалить это невозможно. */
+function eggOpenDevice() {
+  const ask = () => Dlg.one('oleg',
+    'Так. Периметральный прибор «АЗИМУТ-НЕТ», завод «Метеорит». Крышка вскрыта, внутри две пары клемм. ' +
+    'Подписи стёрлись. Проверять чем-то надо.',
+    [
+      { label: 'Проверить питание 12 В', hint: 'шлейф, как положено', fn: () => eggBurn('12') },
+      { label: 'Проверить 220', hint: 'сеть, чтоб наверняка', fn: () => eggBurn('220') }
+    ]);
+  Dlg.seq([
+    { who: 'oleg', text: 'База. Забор. Прибор висит, лампочка не горит. Всё как обещали.' }
+  ], ask);
+}
+
+function eggBurn(choice) {
+  const p = S.player;
+  S.egg.stage = 'burn'; S.egg.burnt = 1;
+  const lines = choice === '12'
+    ? [
+        { who: 'oleg', text: 'Двенадцать вольт. Ставлю щупы на нижнюю пару.' },
+        { who: 'oleg', text: 'Так. А почему тестер показывает двести двадцать.' },
+        { who: 'oleg', text: 'А, это верхняя пара. Я на верхней.' }
+      ]
+    : [
+        { who: 'oleg', text: 'Ладно. Двести двадцать так двести двадцать, чего мелочиться.' },
+        { who: 'oleg', text: 'Ставлю щупы. Всё правильно ставлю.' },
+        { who: 'oleg', text: 'Только это не клеммы. Это шлейф.' }
+      ];
+  Dlg.seq(lines, () => {
+    /* Прибор уходит с дымом. Дальше уже ничего не решается. */
+    Audio2.crash(); shake(11);
+    for (let i = 0; i < 3; i++) fx3(EGG.dev.x, EGG.dev.y, EGG.dev.z, 'spark', 12);
+    floater(EGG.dev.x, EGG.dev.y + 0.5, EGG.dev.z, 'ПФ-Ф-Ф', '#ff8a1f');
+    Dlg.seq([
+      { who: 'oleg',  text: 'Пфф. Дым. Из прибора идёт дым.' },
+      { who: 'oleg',  text: 'Он не должен так делать. Он вообще не должен дымить.' },
+      { who: 'vanya', text: 'Олег? Ты чего трубку не берёшь? Олег!' },
+      { who: 'oleg',  text: 'Меня тут нет.' }
+    ], eggBender);
+  });
+}
+
+/* Запой. Пять дней проходят сами, смена начинается заново, и никто ничего
+   не спрашивает — прибор списали как сгоревший сам. */
+function eggBender() {
+  const p = S.player;
+  S.egg.stage = 'done';
+  S.flags.aznetDone = true;
+  const spent = Math.min(p.money, 1200 + Math.floor(Math.random() * 1800));
+  S.day += 5;
+  S.clock = 9 * 3600;
+  p.money = Math.max(0, p.money - spent);
+  p.drunk = 100;
+  p.health = clamp(p.health - 18, 12, 100);
+  p.stamina = 30;
+  p.x = 12; p.z = 52; p.vx = p.vz = 0; p.onBike = false;
+  S.bike.x = 15; S.bike.z = 52; S.bike.parked = true;
+  S.cam.tx = p.x; S.cam.tz = p.z;
+  Audio2.lose();
+  showSheet('<h1>Пять дней</h1><div class="sub">периметр · база «Заводская»</div>' +
+    '<p>Олег не помнит, как доехал до дома. Помнит только дым и то, что дым шёл не оттуда, откуда должен.</p>' +
+    '<p>Прибор списали как сгоревший сам по себе: на «Заводской» и до Олега всё горело регулярно. ' +
+    'Ваня звонил четыре раза, потом перестал. Тамара заявку закрыла с формулировкой «оборудование исчерпало ресурс».</p>' +
+    '<div class="stats">' +
+    '<i>Прошло дней</i><b>5</b>' +
+    '<i>Пропито</i><b>' + fmtMoney(spent) + '</b>' +
+    '<i>В кармане осталось</i><b>' + fmtMoney(p.money) + '</b>' +
+    '<i>Состояние</i><b>тяжёлое</b>' +
+    '</div>' +
+    '<div class="note">Это не провал. Провалить это было нельзя: обе клеммы вели в одно и то же место. ' +
+    'Смена продолжается, только теперь с похмелья.</div>' +
+    '<div class="btns"><button class="btn p" id="bWake">Встать и пойти работать</button></div>', 'egg');
+  wire('bWake', () => {
+    closeSheet();
+    toast('День ' + S.day + '. Голова гудит, но руки помнят', 'info', 3200);
+    saveGame(true);
+  });
+}
+
+function callContact(who) {
+  if (Dlg.open) return;
+  closeSheet();
+  /* Плохая связь — звонок просто не проходит. Неудачную попытку не считаем:
+     Егоров и так не бесконечно терпеливый. */
+  if (phoneSignal() <= 1 && Math.random() < 0.34) {
+    Audio2.nope();
+    toast('Связь пропала. Промзона', 'bad', 2200);
+    return;
+  }
+  const n = (S.phone.calls[who] = (S.phone.calls[who] || 0) + 1);
+  const say = (w, t) => ({ who: w, text: t });
+  const M = S.mission;
+  let seq = [];
+  let after = null;
+
+  switch (who) {
+    case 'vanya':
+      seq.push(say('vanya', pick(CREW_LINES.vanya)));
+      seq.push(say('vanya', 'А, Олег. Слушаю.'));
+      after = () => { if (Math.random() < 0.5) olegMutter(OLEG_VANYA_LINE); };
+      if (M) {
+        seq.push(say('oleg', 'По «' + M.def.title + '» вопрос…'));
+        seq.push(say('vanya', 'Я объяснял. ' + MOTTO));
+        seq.push(say('vanya', 'Ладно. ' + taskText().step + '. Всё, работаем.'));
+      } else if (!S.flags.aznetDone && S.egg.stage === 'none') {
+        seq.push(say('vanya', 'О, кстати. Раз ты всё равно свободен — есть дело.'));
+        after = () => eggRing();
+      } else {
+        seq.push(say('vanya', 'Заявки нет — значит, отдыхай. Появится — Тамара позвонит.'));
+      }
+      break;
+
+    case 'kostya':
+      seq.push(say('kostya', pick(CREW_LINES.kostya)));
+      seq.push(say('kostya', 'О, Олег! Я там уже всё посмотрел, всё нормально.'));
+      seq.push(say('oleg', 'Костя, ты вообще на каком объекте?'));
+      seq.push(say('kostya', 'На нужном. Ты главное не переделывай, а то опять скажут, что я криво.'));
+      break;
+
+    case 'sanya':
+      seq.push(say('sanya', pick(CREW_LINES.sanya)));
+      if (callPartner()) {
+        seq.push(say('sanya', 'Еду. Пять минут.'));
+        seq.push(say('oleg', 'Саня, твои пять минут — это сколько?'));
+        seq.push(say('sanya', 'Десять. Но еду же.'));
+      } else {
+        seq.push(say('sanya', 'Не могу сейчас. Совсем. Правда.'));
+      }
+      break;
+
+    case 'tamara':
+      seq.push(say('tamara', 'Диспетчерская. Тамара.'));
+      if (M) {
+        const t = taskText();
+        seq.push(say('tamara', t.title + '. ' + t.step + '.'));
+        if (t.hint) seq.push(say('tamara', t.hint));
+      } else {
+        seq.push(say('tamara', 'Заявок на тебя пока нет. Отдыхай, пока дают.'));
+      }
+      break;
+
+    case 'egorov': {
+      if (n > 3) {
+        Audio2.nope();
+        toast('Егоров сбросил. Гудки', 'bad', 2200);
+        return;
+      }
+      seq.push(say('oleg', 'Сергей, здравствуйте. По объекту вопрос.'));
+      /* Вторая реплика заведомо не совпадает с первой: сдвиг никогда не кратен длине. */
+      const i0 = (n - 1 + S.day) % EGOROV_LINES.length;
+      seq.push(say('egorov', EGOROV_LINES[i0]));
+      seq.push(say('egorov', EGOROV_LINES[(i0 + 2 + (n % 3)) % EGOROV_LINES.length]));
+      break;
+    }
+
+    case 'ambul': {
+      const p = S.player;
+      seq.push(say('ambul', 'Скорая. Что у вас?'));
+      if (p.health < 55) {
+        const fee = 900;
+        if (p.money >= fee) {
+          seq.push(say('oleg', 'Упал с велосипеда. Бордюр оказался быстрее.'));
+          seq.push(say('ambul', 'Подъедем. Перевязка, зелёнка, счёт.'));
+          after = () => {
+            p.health = clamp(p.health + 40, 0, 100);
+            addMoney(-fee, 'Выезд скорой');
+            toast('Перевязали. Ездить аккуратнее не научили', 'good', 2600);
+          };
+        } else {
+          seq.push(say('ambul', 'Выезд платный. У вас на него не хватает. Дойдите до чайной, съешьте пирожок.'));
+        }
+      } else {
+        seq.push(say('oleg', 'Да я так, узнать.'));
+        seq.push(say('ambul', 'Здоровы. Не занимайте линию.'));
+      }
+      break;
+    }
+
+    case 'pnd':
+      seq.push(say('pnd', 'Психоневрологический диспансер, дежурный слушает.'));
+      if (S.player.drunk > 45) {
+        seq.push(say('oleg', 'А вы… это… работаете?'));
+        seq.push(say('pnd', 'Работаем. Но вам, судя по голосу, не к нам, а поспать.'));
+      } else {
+        seq.push(say('oleg', 'Мне бригадир объясняет один раз.'));
+        seq.push(say('pnd', 'Это не по нашей части. Это по части бригадира.'));
+      }
+      break;
+
+    default:
+      seq.push(say(who, 'Абонент не отвечает.'));
+  }
+
+  Audio2.phone();
+  Dlg.seq(seq, after);
+}
+
 
 function drawPortrait(who) {
   const cv = $('portrait'), x = cv.getContext('2d');
@@ -7225,7 +7904,10 @@ function drawPortrait(who) {
     predsed:  { hat: '#4be36b', hair: '#c8c8d0', body: '#2a4a3a', beard: 0, cap: 0, glass: 1, scarf: 1 },
     director: { hat: '#8a2be2', hair: '#1a1a22', body: '#241a3a', beard: 0, cap: 0, glass: 1 },
     kostya:   { hat: '#2a2a34', hair: '#4a4038', body: '#3d5a44', beard: 0, cap: 0, glass: 0, bald: 1, goggles: 1 },
-    vanya:    { hat: '#4a76c8', hair: '#3a2c1e', body: '#3a3e46', beard: 2, cap: 1, glass: 0, short: 1 }
+    vanya:    { hat: '#4a76c8', hair: '#3a2c1e', body: '#3a3e46', beard: 2, cap: 1, glass: 0, short: 1 },
+    egorov:   { hat: '#e8643c', hair: '#6a5a4a', body: '#4a4038', beard: 1, cap: 1, glass: 0 },
+    ambul:    { hat: '#ff4d5e', hair: '#3a3a42', body: '#dfe4ea', beard: 0, cap: 1, glass: 0 },
+    pnd:      { hat: '#8a2be2', hair: '#7a7a86', body: '#dfe4ea', beard: 0, cap: 0, glass: 1 }
   }[who] || { hat: '#888', hair: '#333', body: '#444' };
   if (P.short) { x.translate(0, 4); x.scale(1.06, 0.94); }   /* невысокий: лицо шире, плечи ближе к краю */
 
@@ -8257,7 +8939,7 @@ function drawToolIcon(c, x, y, id, on) {
 const Input = {
   down: Object.create(null), hit: Object.create(null),
   mx: 0, my: 0, mdown: false, mclick: false, dx: 0, dy: 0, locked: false, wheel: 0, rdrag: false,
-  blockKeys: { ArrowUp:1, ArrowDown:1, ArrowLeft:1, ArrowRight:1, Space:1, Tab:1, KeyE:1, KeyF:1, KeyM:1, KeyQ:1, KeyR:1, KeyC:1 },
+  blockKeys: { ArrowUp:1, ArrowDown:1, ArrowLeft:1, ArrowRight:1, Space:1, Tab:1, KeyE:1, KeyF:1, KeyM:1, KeyQ:1, KeyR:1, KeyC:1, KeyT:1 },
   init() {
     window.addEventListener('keydown', e => {
       if (e.repeat) { if (this.blockKeys[e.code]) e.preventDefault(); return; }
@@ -8306,7 +8988,8 @@ const Input = {
 const K = {
   up: ['KeyW','ArrowUp'], down: ['KeyS','ArrowDown'], left: ['KeyA','ArrowLeft'], right: ['KeyD','ArrowRight'],
   sprint: ['ShiftLeft','ShiftRight'], act: ['KeyE'], brake: ['Space'], tool: ['KeyF'],
-  map: ['KeyM'], pause: ['Escape'], radio: ['KeyQ'], phone: ['KeyR'], partner: ['KeyC']
+  map: ['KeyM'], pause: ['Escape'], radio: ['KeyQ'], phone: ['KeyR'], partner: ['KeyC'],
+  myphone: ['KeyT']
 };
 function requestLock() {
   try {
@@ -8351,6 +9034,8 @@ const S = {
   partner: { cooldown: 0, eta: 0, active: 0, forgot: false }, partnerBonus: false,
   stats: { earned: 0, crashes: 0, fixed: 0, sober: 0, bestQ: 0, fines: 0, dist: 0 },
   flags: {}, upgrades: {}, autosave: 0, phoneRing: 0, tutorial: null,
+  phone: { calls: {} },                       /* счётчик звонков за смену: Егоров устаёт отвечать */
+  egg: { stage: 'none', ring: 0, burnt: 0 },  /* личная история Олега про периметр */
   ended: null, free: false, freeCount: 0, quality: '', dynamic: true, camFollow: true,
   cam: { yaw: Math.PI * 0.5, pitch: 0.34, dist: 6.2, x: 0, y: 2, z: 0, tx: 0, ty: 1.4, tz: 0, manual: 0 }
 };
@@ -8360,7 +9045,8 @@ function newPlayer() {
     health: 100, stamina: 100, drunk: 0, money: 350, rep: 0,
     phase: 0, dodge: 0, dodgeCd: 0, hurt: 0, invuln: 0,
     tools: ['screw'], tool: 0, lampOn: false, swing: 0, swingCd: 0,
-    gait: 'oleg', seed: 0.5, time: 0, sp: 0, acc: 0, act: '', actK: 0, idle: 0, idleP: 1, lkY: 0, lkP: 0
+    gait: 'oleg', seed: 0.5, time: 0, sp: 0, acc: 0, act: '', actK: 0, idle: 0, idleP: 1, lkY: 0, lkP: 0,
+    say: 0, line: ''
   };
 }
 function newBike() { return { x: 15, z: 52, yaw: 0, speed: 0, cond: 100, wheel: 0, parked: true, chain: 0, lean: 0, steer: 0 }; }
@@ -8729,8 +9415,17 @@ function bubble3(x, y, z, text, color) {
   const c = HUD2.c;
   const scale = clamp(12 / p[2] + 0.55, 0.6, 1.15);
   c.save();
-  c.font = '700 ' + Math.round(13 * scale) + 'px "Trebuchet MS",sans-serif';
-  const w = Math.min(250, c.measureText(text).width + 16);
+  /* Длинную реплику ужимаем по размеру шрифта, а не обрезаем рамкой: раньше
+     всё, что не влезало в 250 пикселей, просто выезжало за пузырь. */
+  let f = Math.round(13 * scale);
+  c.font = '700 ' + f + 'px "Trebuchet MS",sans-serif';
+  let tw = c.measureText(text).width;
+  if (tw + 16 > 250) {
+    f = Math.max(9, Math.floor(f * 250 / (tw + 16)));
+    c.font = '700 ' + f + 'px "Trebuchet MS",sans-serif';
+    tw = c.measureText(text).width;
+  }
+  const w = Math.min(250, tw + 16);
   const h = 22 * scale;
   c.globalAlpha = clamp((42 - p[2]) / 12, 0, 1);
   c.fillStyle = 'rgba(12,7,24,.86)';
@@ -8811,9 +9506,11 @@ function spawnTraffic() {
 }
 function spawnDogs() {
   S.dogs.length = 0;
-  const spots = [[55,56],[81,54],[125,62],[51,109],[144,107],[31,134]];
-  for (const [x, z] of spots) S.dogs.push({ x, z, hx: x, hz: z, vx: 0, vz: 0, yaw: 0, state: 'wander', t: rnd(0,3), bite: 0, scare: 0, bark: rnd(2,8), phase: 0,
-    wag: 0, barkK: 0, pant: 0, hy: 0, hp: 0 });
+  /* Третье число — характер: злая собака кусается, остальные только лают и
+     виляют хвостом. Кусачих на район две из шести. */
+  const spots = [[55,56,0],[81,54,1],[125,62,0],[51,109,0],[144,107,1],[31,134,0]];
+  for (const [x, z, cross] of spots) S.dogs.push({ x, z, hx: x, hz: z, vx: 0, vz: 0, yaw: 0, state: 'wander', t: rnd(0,3), bite: 0, scare: 0, bark: rnd(2,8), phase: 0,
+    wag: 0, barkK: 0, pant: 0, hy: 0, hp: 0, cross: !!cross, warn: 0, growl: 0 });
 }
 const HOOL_LINES = {
   beggar: ['Слышь, монтажник, мелочь есть? На проезд.', 'Дай полтинник — я тебе опору покараулю.', 'Тут проход платный, я сам вчера узнал.'],
@@ -8841,7 +9538,11 @@ function spawnGrans() {
   for (const [x, z] of spots) S.grans.push({ x, z, say: 0, line: '', yaw: Math.PI, phase: 0, gait: 'gran', seed: Math.random() });
 }
 const PED_LINES = ['Молодой человек, тут вообще-то люди ходят.', 'Опять провода тянут…', 'А интернет когда починят?',
-  'Осторожнее, я с пакетами!', 'Камера смотрит? А то у меня велосипед увели.', 'Здрасьте. До свидания.', 'Вы из ЖЭКа? Нет? Жаль.'];
+  'Осторожнее, я с пакетами!', 'Камера смотрит? А то у меня велосипед увели.', 'Здрасьте. До свидания.', 'Вы из ЖЭКа? Нет? Жаль.',
+  /* телефон есть у всех, и половина двора вечно с кем-то разговаривает */
+  '…да не ору я! Это ты орёшь!', '…алло? Алло! Ничего не слышно, я во дворе.',
+  '…сказали, придут. Сказали — придут, я жду.', '…Егорову звонила. Он сказал, у него ТикТок.',
+  '…передай Косте, что он опять уехал.'];
 /* разные характеры в толпе — двор перестаёт ходить строем */
 const PED_GAITS = ['norm', 'norm', 'norm', 'vanya', 'kostya', 'boris', 'gran'];
 function spawnPeds() {
@@ -9002,17 +9703,28 @@ function updateDogs(dt) {
     if (d.scare > 0) {
       const a = Math.atan2(d.x - p.x, d.z - p.z);
       d.vx = Math.sin(a) * 5; d.vz = Math.cos(a) * 5;
-    } else if (dp < 14 && dist(d.hx, d.hz, d.x, d.z) < 40 && !Dlg.open) {
+    } else if (dp < (d.cross ? 11 : 8) && dist(d.hx, d.hz, d.x, d.z) < 40 && !Dlg.open) {
+      /* Подбегает и лает, но у самых ног тормозит. Раньше собака упиралась в
+         игрока вплотную на скорости 5.2 и кусала каждые полторы секунды —
+         от неё нельзя было ни уйти, ни отделаться. */
       const a = Math.atan2(p.x - d.x, p.z - d.z);
-      const spd = p.onBike ? 6.2 : 5.2;
+      const spd = (p.onBike ? 5.4 : 4.4) * clamp((dp - 1.1) / 1.2, 0, 1);
       d.vx = Math.sin(a) * spd; d.vz = Math.cos(a) * spd;
-      if (d.bark <= 0) { d.bark = rnd(1.2, 3); d.barkK = 1; if (dp < 26) Audio2.bark(); }
-      if (dp < 1.4 && d.bite <= 0 && p.invuln <= 0) {
-        d.bite = 1.6; hurt(6, 'Собака оказалась принципиальной.');
-        p.stamina = clamp(p.stamina - 9, 0, 100);
+      if (d.bark <= 0) { d.bark = rnd(1.8, 4.5); d.barkK = 1; if (dp < 26) Audio2.bark(); }
+      /* Кусает только злая и только после рычания: секунда с лишним, чтобы
+         отойти или замахнуться инструментом. Дальше — четверть минуты покоя. */
+      d.warn = dp < 1.8 ? (d.warn || 0) + dt : 0;
+      if (!d.warn) d.growl = 0;
+      else if (d.cross && d.warn > 0.25 && !d.growl && d.bite <= 0) {
+        d.growl = 1; floater(d.x, 0.95, d.z, 'Ррр…', '#ffd23f');
+      }
+      if (d.cross && dp < 1.05 && d.warn > 1.2 && d.bite <= 0 && p.invuln <= 0) {
+        d.bite = 14; d.warn = 0; hurt(4, 'Собака оказалась принципиальной.');
+        p.stamina = clamp(p.stamina - 5, 0, 100);
         floater(p.x, 1.9, p.z, 'Ай!', '#ff4d5e'); Audio2.bark(); addHeat(2);
       }
     } else {
+      d.warn = 0; d.growl = 0;
       if (d.t <= 0) {
         d.t = rnd(1.4, 3.6);
         const far = dist(d.hx, d.hz, d.x, d.z) > 14;
@@ -9027,7 +9739,7 @@ function updateDogs(dt) {
     /* хвост, лай, одышка и взгляд — настроение видно без слов */
     d.barkK = Math.max(0, (d.barkK || 0) - dt * 2.4);
     d.pant = lerp(d.pant || 0, Math.hypot(d.vx, d.vz) > 2 ? 1 : 0, 1 - Math.exp(-1.5 * dt));
-    d.wag = lerp(d.wag || 0, d.scare > 0 ? 0 : clamp((14 - dp) / 10, 0, 1), 1 - Math.exp(-3 * dt));
+    d.wag = lerp(d.wag || 0, (d.scare > 0 || (d.cross && dp < 6)) ? 0 : clamp((14 - dp) / 10, 0, 1), 1 - Math.exp(-3 * dt));
     const rel = ((Math.atan2(p.x - d.x, p.z - d.z) - d.yaw + Math.PI) % TAU + TAU) % TAU - Math.PI;
     const seen = dp < 16 ? 1 : 0;
     d.hy = angLerp(d.hy || 0, clamp(rel, -0.9, 0.9) * seen, 1 - Math.exp(-5 * dt));
@@ -9223,6 +9935,11 @@ function updatePartner(dt) {
   if (P.active > 0) { P.active -= dt; if (P.active <= 0) { S.partnerBonus = false; S.npcs = S.npcs.filter(n => n.kind !== 'sanya'); } }
   for (const n of S.npcs) {
     n.say = Math.max(0, n.say - dt);
+    /* Бригада не молчит: пока стоят рядом, каждый роняет своё. */
+    if (n.say <= 0 && n.leave <= 0 && !Dlg.open && CREW_LINES[n.kind] &&
+        dist2(n.x, n.z, S.player.x, S.player.z) < 26 * 26 && Math.random() < 0.09 * dt) {
+      n.say = 3.4; n.line = pick(CREW_LINES[n.kind]);
+    }
     if (n.leave > 0) {                                /* расходятся; Костя, как обычно, первым */
       n.leave -= dt;
       n.vx = Math.sin(n.yaw) * 2.9; n.vz = Math.cos(n.yaw) * 2.9;
@@ -10039,6 +10756,8 @@ function currentInteraction() {
       }
     }
   }
+  if (S.egg.stage === 'go' && slow && near(EGG.dev.x, EGG.dev.z, 3.4))
+    return { label: 'вскрыть прибор периметра', fn: () => eggOpenDevice() };
   for (const poi of POIS) if (near(poi.x, poi.z, poi.r) && slow) return { label: poi.act, fn: () => openPoi(poi.id) };
   if (!p.onBike && near(S.bike.x, S.bike.z, 3.2)) return { label: 'сесть на велосипед', fn: () => tryMountBike() };
   if (p.onBike) return { label: 'слезть с велосипеда', fn: () => tryMountBike() };
@@ -10165,6 +10884,12 @@ function drawDynamicGeom() {
   }
   /* установленные камеры на опорах */
   const gl2 = GL.gl, PP = R3.main;
+  /* Периметральный прибор появляется вместе с историей и остаётся стоять
+     после неё — уже с копотью. */
+  if (S.egg.stage !== 'none' && VEH.aznet && vis(EGG.dev.x, EGG.dev.z, 90)) {
+    m4compose(EGG_MAT, EGG.dev.x, EGG.dev.y, EGG.dev.z, 0, 0, 0, 1);
+    drawMesh(VEH.aznet, TX.paint, EGG_MAT, S.egg.burnt ? { tint: [0.42, 0.38, 0.36, 1] } : null);
+  }
   for (const pole of POLES) {
     if (!pole.installed || !vis(pole.x, pole.z, 70)) continue;
     m4compose(BONES[0], pole.x - 0.7, (pole.lamp ? 7.2 : 6.2) - 0.5, pole.z, 0, (pole.camYaw || 0) + Math.PI, 0, 1);
@@ -10183,24 +10908,31 @@ function drawDog3(d) {
   /* корпус пружинит на бегу и приседает на лае */
   m4compose(BONES[0], d.x, surfY(d.x, d.z) + 0.42 + Math.sin(ph * 2) * 0.03 * sp - be * 0.02, d.z,
     -sp * 0.06 + Math.sin(ph * 2) * 0.04 * sp, d.yaw, Math.sin(ph) * 0.05 * sp, 1);
-  /* голова: смотрит на цель, задирается на лае, опускается на бегу */
-  m4mul(BONES[1], BONES[0], m4compose(SCRATCH[6], 0, 0.02, 0.30,
+  /* голова: смотрит на цель, задирается на лае, опускается на бегу.
+     Сустав вынесен на конец шеи — раньше он стоял в холке, и череп уезжал
+     внутрь груди: наружу торчала одна морда, а шеи не было вовсе. */
+  m4mul(BONES[1], BONES[0], m4compose(SCRATCH[6], 0, 0.088, 0.272,
     -0.10 * sp - be * 0.45 + (d.hp || 0), d.hy || 0, Math.sin(S.t * 1.7 + d.x) * 0.05 * (1 - sp), 1));
   /* челюсть: лай и одышка после пробежки */
-  m4mul(BONES[2], BONES[1], m4compose(SCRATCH[6], 0, 0.005, 0.055,
+  m4mul(BONES[2], BONES[1], m4compose(SCRATCH[6], 0, -0.030, 0.100,
     be * 0.55 + (d.pant || 0) * (0.10 + Math.sin(S.t * 9) * 0.06), 0, 0, 1));
   /* Лапы рысью: диагонали работают вместе. Плечо машет, а сустав ниже (у
      передних запястье, у задних скакательный) подламывается назад в фазе
-     выноса — без него нога так и остаётся палкой. */
-  for (const [b, lb, ox, oz, off, kn] of [[3, 8, -0.085, 0.17, 0, 0.85], [4, 9, 0.085, 0.17, Math.PI, 0.85],
-                                          [5, 10, -0.085, -0.20, Math.PI, 1.30], [6, 11, 0.085, -0.20, 0, 1.30]]) {
-    m4mul(BONES[b], BONES[0], m4compose(SCRATCH[6], ox, -0.10, oz, -Math.sin(ph + off) * amp, 0, 0, 1));
-    const bend = 0.06 + (0.5 - 0.5 * Math.cos(ph + off)) * amp * kn;
+     выноса — без него нога так и остаётся палкой. sh0 и kn0 — постоянный
+     излом стойки: передние почти прямые, задние зигзагом, бедро вперёд и
+     голень назад. На четырёх прямых ногах собака стояла столом. */
+  for (const [b, lb, ox, oy, oz, off, kn, sh0, kn0] of [
+        [3, 8, -0.060, -0.100, 0.152, 0, 0.85, 0.00, 0.10],
+        [4, 9, 0.060, -0.100, 0.152, Math.PI, 0.85, 0.00, 0.10],
+        [5, 10, -0.076, -0.107, -0.168, Math.PI, 1.30, -0.22, 0.40],
+        [6, 11, 0.076, -0.107, -0.168, 0, 1.30, -0.22, 0.40]]) {
+    m4mul(BONES[b], BONES[0], m4compose(SCRATCH[6], ox, oy, oz, sh0 - Math.sin(ph + off) * amp, 0, 0, 1));
+    const bend = kn0 + (0.5 - 0.5 * Math.cos(ph + off)) * amp * kn;
     m4mul(BONES[lb], BONES[b], m4compose(SCRATCH[6], 0, -0.175, 0, bend, 0, 0, 1));
   }
   /* хвост: виляет тем шире, чем добрее настроение, и поджимается со страху */
   const wg = clamp(d.wag || 0, 0, 1);
-  m4mul(BONES[7], BONES[0], m4compose(SCRATCH[6], 0, 0.02, -0.36,
+  m4mul(BONES[7], BONES[0], m4compose(SCRATCH[6], 0, -0.008, -0.292,
     0.15 + wg * 0.55 - (d.scare > 0 ? 1.1 : 0), Math.sin(S.t * (6 + wg * 10)) * (0.12 + wg * 0.55), 0, 1));
   for (let i = 0; i < 12; i++) BONEBUF.set(BONES[i], i * 16);
   gl.uniformMatrix4fv(P.u.uBones, false, BONEBUF);
@@ -10246,8 +10978,18 @@ function drawGlows() {
     }
     if (p.lampOn) drawGlow([p.x + Math.sin(p.yaw) * 0.5, 1.35, p.z + Math.cos(p.yaw) * 0.5], G.torch[0], LC.torch, G.torch[1], G.torch[2]);
   }
-  /* маркер цели */
-  const t = S.mission && S.mission.target;
+  /* Лампа прибора: emis в шейдере включается только ночью, поэтому днём
+     подсвечиваем отдельно — иначе щиток не найти на фоне забора. */
+  if (S.egg.stage !== 'none' && dist2(EGG.dev.x, EGG.dev.z, S.cam.x, S.cam.z) < 60 * 60) {
+    if (S.egg.burnt) {
+      drawGlow([EGG.dev.x, EGG.dev.y + 0.30, EGG.dev.z + 0.12], 0.9, [.35, .32, .30], 0.30, 2.2);
+    } else {
+      const pulse = 0.55 + 0.45 * Math.sin(S.t * 2.4);
+      drawGlow([EGG.dev.x - 0.14, EGG.dev.y + 0.16, EGG.dev.z + 0.14], 0.30, [1, .22, .2], 0.75 * pulse, 2.4);
+    }
+  }
+  /* маркер цели: у заявки свой, у личной истории — свой */
+  const t = (S.mission && S.mission.target) || (S.egg.stage === 'go' ? EGG.mark : null);
   if (t) {
     const G = QCFG.glow, pulse = 0.55 + 0.45 * Math.sin(S.t * 3);
     for (let i = 0; i < 5; i++)
@@ -10267,6 +11009,9 @@ function drawOverlay2D() {
   c.clearRect(0, 0, HUD2.w, HUD2.h);
   if (S.screen !== 'play' && S.screen !== 'pause') return;
   const p = S.player;
+  /* Олег всегда в середине кадра и близко к камере, поэтому его реплику вешаем
+     ниже прочих: на 2.3 м она уезжала под бегущую строку радио. */
+  if (p.say > 0 && p.line) bubble3(p.x, 1.95, p.z, p.line, 'rgba(255,138,31,.82)');
   for (const q of S.peds) if (q.say > 0 && dist2(q.x, q.z, p.x, p.z) < 30 * 30) bubble3(q.x, 2.1, q.z, q.line);
   for (const h of S.hools) if (h.say > 0 && dist2(h.x, h.z, p.x, p.z) < 30 * 30) bubble3(h.x, 2.1, h.z, h.line, 'rgba(138,43,226,.8)');
   for (const g of S.grans) if (g.say > 0) bubble3(g.x, 2.1, g.z, g.line, 'rgba(75,227,107,.8)');
@@ -10295,7 +11040,7 @@ function drawOverlay2D() {
     c.restore();
   }
   /* указатель на цель */
-  const t = M && M.target;
+  const t = (M && M.target) || (S.egg.stage === 'go' ? EGG.mark : null);
   if (t) {
     const d = dist(t.x, t.z, p.x, p.z);
     const pr = project(t.x, 3.2, t.z);
@@ -11183,6 +11928,7 @@ function screenControls(back) {
     '<kbd>1 … 8</kbd><span>выбрать инструмент в сумке</span>' +
     '<kbd>M</kbd><span>карта района</span>' +
     '<kbd>R</kbd><span>рабочий телефон: журнал заявок</span>' +
+    '<kbd>T</kbd><span>личный телефон: позвонить бригаде, Тамаре, в скорую</span>' +
     '<kbd>Q</kbd><span>переключить радиостанцию</span>' +
     '<kbd>C</kbd><span>вызвать напарника Саню</span>' +
     '<kbd>Esc</kbd><span>пауза / отпустить курсор</span>' +
@@ -11287,6 +12033,39 @@ function screenJournal(back) {
     '<i>Штрафов от ЧОП</i><b>' + S.stats.fines + '</b>' +
     '<i>Накатано</i><b>' + Math.round(S.stats.dist) + ' м</b></div>' +
     '<div class="btns"><button class="btn c" id="bBack">Закрыть (R / Esc)</button></div>', 'journal');
+  wire('bBack', back || closeSheet);
+}
+function screenPhone(back) {
+  const book = PHONE.book('oleg');
+  const bat = phoneBattery(), sig = phoneSignal();
+  const bars = [3, 5, 7, 9].map((h, i) =>
+    '<s class="' + (i < sig ? 'on' : '') + '" style="height:' + h + 'px"></s>').join('');
+  const rows = book.map((w, i) => {
+    const c = CHARS[w] || { name: w, c: '#25e8dc' };
+    const nm = PHONE.short[w] || c.name;
+    const off = w === 'egorov' && (S.phone.calls[w] || 0) > 3;
+    return '<div class="phRow' + (off ? ' off' : '') + '">' +
+      '<span class="phAv" style="background:' + c.c + '">' + nm.charAt(0) + '</span>' +
+      '<span class="phWho"><b>' + nm + '</b><span>' + (i + 1) + ' · ' + (PHONE.model[w] || '') +
+      (off ? ' · сбрасывает' : '') + '</span></span>' +
+      '<button class="phDial" id="call_' + w + '" title="Позвонить">✆</button></div>';
+  }).join('');
+  showSheet('<h2>Личный телефон</h2><div class="sub">Олег · записная книжка</div>' +
+    '<div class="phone"><div class="phScreen">' +
+      '<div class="phNotch"><i></i></div>' +
+      '<div class="phBar"><span>' + clockStr() + '</span><span class="sp"></span>' +
+        '<span class="phSig">' + bars + '</span><span>' + (sig > 1 ? 'LTE' : 'E') + '</span>' +
+        '<span class="phBat' + (bat < 20 ? ' dead' : bat < 40 ? ' low' : '') +
+          '"><i style="width:' + bat + '%"></i></span><span>' + bat + '</span></div>' +
+      '<div class="phTitle">Контакты</div>' +
+      '<div class="phList">' + rows + '</div>' +
+      '<div class="phFoot">' + PHONE.model.oleg + ' · мышью или цифрами 1–' + Math.min(9, book.length) + '</div>' +
+    '</div></div>' +
+    '<div class="note">Телефон есть у каждого в районе, и в книжке у каждого записаны все остальные — ' +
+    'свой номер себе не пишут. Тамара, скорая и ПНД стоят у всех без исключения. ' +
+    'В промзоне связь пропадает, и звонок иногда не проходит.</div>' +
+    '<div class="btns"><button class="btn c" id="bBack">Закрыть (T / Esc)</button></div>', 'phone');
+  for (const w of book) wire('call_' + w, () => callContact(w));
   wire('bBack', back || closeSheet);
 }
 const SHOP_ITEMS = [
@@ -11593,7 +12372,8 @@ function resetWorld(fresh) {
   S.partner = { cooldown: 0, eta: 0, active: 0, forgot: false }; S.partnerBonus = false;
   S.clock = START_HOUR * 3600; S.day = 1; S.ended = null; S.phoneRing = 0; S.autosave = 0;
   S.stats = { earned: 0, crashes: 0, fixed: 0, sober: 0, bestQ: 0, fines: 0, dist: 0 };
-  S.flags = {}; S.upgrades = {};
+  S.flags = {}; S.upgrades = {}; S.phone = { calls: {} };
+  S.egg = { stage: 'none', ring: 0, burnt: 0 };
   spawnTraffic(); spawnDogs(); spawnHools(); spawnGrans(); spawnPeds();
   for (const p of POLES) p.installed = false;
   for (const k of KIOSKS) k.broken = false;
@@ -11683,12 +12463,24 @@ function updateWorld(dt) {
   p.drunk = clamp(p.drunk - BAL.soberRate * dt, 0, 100);
   if (wasDrunk > 0 && p.drunk <= 0) toast('Голова прояснилась. Работать можно', 'good', 2400);
   if (p.drunk > 60 && Math.random() < 0.35 * dt) floater(p.x, 2.2, p.z, pick(['…', 'Оп', 'Куда руль?']), '#8a2be2');
+  /* Бубнит себе под нос, стоя на месте. Чем пьянее, тем чаще и тем убеждённее
+     он не пьёт. */
+  p.say = Math.max(0, p.say - dt);
+  if (p.say <= 0 && !Dlg.open && !p.onBike &&
+      Math.random() < (0.09 + p.drunk * 0.002) * dt) {
+    p.say = 3.4; p.line = pick(CREW_LINES.oleg);
+  }
   if (p.drunk > 45) addHeat(0.5 * dt);            /* внимание района растёт само, молча */
   if (p.onBike) moveBike(dt); else movePlayerOnFoot(dt);
   updateCars(dt); updateDogs(dt); updateHools(dt); updatePeds(dt); updatePartner(dt); updateHeat(dt);
   updateGrans(dt);
   updateMission(dt);
   if (!S.mission && S.phoneRing > 0 && !Dlg.open) { S.phoneRing -= dt; if (S.phoneRing <= 0) offerMission(S.missionIndex); }
+  /* Личная история: если заявки нет и Олег просто ходит, Ваня звонит сам. */
+  if (!S.flags.aznetDone && S.egg.stage === 'none' && !S.mission && !Dlg.open) {
+    S.egg.ring += dt;
+    if (S.egg.ring > 70) eggRing();
+  }
   S.autosave += dt;
   if (S.autosave > 20) { S.autosave = 0; saveGame(true); }
   if (S.tutorial && !S.tutorial.done) updateTutorial(dt);
@@ -11708,9 +12500,18 @@ function handleKeys() {
   if (Dlg.open) return;
   if (S.screen === 'map' && Input.anyHit(K.map)) { closeSheet(); return; }
   if (S.screen === 'journal' && Input.anyHit(K.phone)) { closeSheet(); return; }
+  if (S.screen === 'phone') {
+    if (Input.anyHit(K.myphone)) { closeSheet(); return; }
+    /* цифрами звоним по порядку из книжки — как на кнопочном */
+    const book = PHONE.book('oleg');
+    for (let i = 0; i < book.length && i < 9; i++)
+      if (Input.pressed('Digit' + (i + 1))) { callContact(book[i]); return; }
+    return;
+  }
   if (S.screen !== 'play') return;
   if (Input.anyHit(K.map)) { screenMap(); return; }
   if (Input.anyHit(K.phone)) { screenJournal(); return; }
+  if (Input.anyHit(K.myphone)) { screenPhone(); return; }
   if (Input.anyHit(K.radio)) { toast('Радио: ' + Audio2.nextStation(), 'info', 1600); Radio.timer = 0; }
   if (Input.anyHit(K.partner)) callPartner();
   if (Input.anyHit(K.act)) handleAction();
