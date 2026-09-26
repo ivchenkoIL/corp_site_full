@@ -108,7 +108,7 @@ nav.toc li.t1 { font-weight: 700; margin-top: .6em; color: #14213d; }
 nav.toc li.t3 { padding-left: 1.2em; color: #444; }
 nav.toc li a { display: flex; align-items: flex-end; gap: .3em; }
 nav.toc li a .tt { flex: 0 1 auto; }
-nav.toc li a::after { content: ''; flex: 1 1 auto; border-bottom: .6pt dotted #aab; order: 1; min-width: 1em; transform: translateY(-.25em); }
+nav.toc li a::after { content: '. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .'; flex: 1 1 0; order: 1; min-width: 1em; overflow: hidden; white-space: nowrap; color: #aab; font-size: .85em; }
 nav.toc li a .pg { order: 2; flex: 0 0 auto; font-variant-numeric: tabular-nums; color: #555; }
 """
 doc = ('<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>%s</title><style>%s</style></head>'

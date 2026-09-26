@@ -18,4 +18,5 @@ for i in 1 2 3 4; do
   if cmp -s pages.json pages2.json; then echo "оглавление стабильно после прохода $i"; break; fi
   cp pages2.json pages.json
 done
-cp k.pdf "$O"; rm -f k.html k.pdf pages.json pages2.json
+python3 -W ignore finalize.py k.pdf k.html pages.json "$O"
+rm -f k.html k.pdf pages.json pages2.json

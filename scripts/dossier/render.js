@@ -8,7 +8,7 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
   await page.evaluate(() => document.fonts.ready);
   await page.pdf({
     path: out, format: 'A4', printBackground: true, preferCSSPageSize: true,
-    outline: true, tagged: true, displayHeaderFooter: true,
+    outline: false, tagged: false, displayHeaderFooter: true,
     headerTemplate: '<div></div>',
     footerTemplate: '<div style="width:100%;font-family:DejaVu Sans,sans-serif;font-size:7.5pt;color:#888;' +
       'padding:0 19mm;display:flex;justify-content:space-between;">' +
