@@ -84,6 +84,13 @@ export async function start(backend, { base, quality }) {
       location.reload();
     }
   }, true);
+  /* Оговорка старой игры говорит, что вся графика нарисована кодом. В новой
+     это уже не так — поправляем текст, где бы экран его ни вывел. */
+  const NOTE_OLD = 'Вся графика, модели, текстуры и звуки созданы для этой игры программно.';
+  const NOTE_NEW = 'Модели персонажей и машин сгенерированы для этой игры, небо, текстуры и реквизит — Poly Haven (CC0), звуки синтезируются программно.';
+  new MutationObserver(() => {
+    for (const el of document.querySelectorAll('.disclaimer')) if (el.textContent.includes(NOTE_OLD)) el.textContent = el.textContent.replace(NOTE_OLD, NOTE_NEW);
+  }).observe(document.body, { childList: true, subtree: true });
   window.__game = { S, backend, Dlg, ready: Promise.resolve(true) };
   Loader.hide();
   screenMenu();
