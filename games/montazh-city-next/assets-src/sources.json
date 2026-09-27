@@ -1,0 +1,54 @@
+{
+  "_readme": "Что скачивает tools/fetch-assets.mjs. Всё с Poly Haven — лицензия CC0 (https://polyhaven.com/license). Сырые файлы кладутся в assets-src/polyhaven/ (в git не идут), упакованные — в public/assets/.",
+  "polyhaven": {
+    "hdris": {
+      "kloofendal_38d_partly_cloudy_puresky": [
+        "1k",
+        "4k"
+      ]
+    },
+    "textures": {
+      "asphalt_02": "2k",
+      "concrete_pavers": "2k",
+      "brown_mud_leaves_01": "1k",
+      "sparse_grass": "1k",
+      "yellow_plaster": "1k",
+      "dirty_concrete": "1k",
+      "concrete_floor_worn_001": "1k",
+      "green_metal_rust": "1k",
+      "corrugated_iron_02": "1k",
+      "red_brick_03": "1k",
+      "concrete_wall_006": "1k",
+      "worn_plaster_wall": "1k",
+      "tree_bark_03": "1k",
+      "concrete_slab_wall": "1k"
+    },
+    "models": {
+      "security_light": "1k",
+      "utility_box_02": "1k",
+      "security_camera_01": "1k",
+      "security_camera_02": "1k",
+      "exterior_aircon_unit": "1k",
+      "metal_trash_can": "1k",
+      "wooden_crate_01": "1k",
+      "cardboard_box_01": "1k",
+      "water_manhole_cover": "1k",
+      "shrub_02": "1k",
+      "grass_medium_01": "1k",
+      "grass_medium_02": "1k",
+      "dandelion_01": "1k",
+      "nettle_plant": "1k",
+      "weed_plant_02": "1k",
+      "celandine_01": "1k",
+      "plastic_monobloc_chair_01": "1k",
+      "old_tyre": "1k",
+      "ladder_sectioned_01": "1k",
+      "metal_toolbox": "1k",
+      "plastic_crate_01": "1k",
+      "covered_car": "1k",
+      "concrete_road_barrier": "1k",
+      "modular_electricity_poles": "1k",
+      "modular_chainlink_fence": "1k"
+    }
+  }
+}

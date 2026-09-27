@@ -1,0 +1,191 @@
+{
+ "id": "char.oleg",
+ "height": 1.78,
+ "skeleton": "mixamo",
+ "joints": {
+  "Hips": [
+   0,
+   0.797,
+   -0.003
+  ],
+  "Spine": [
+   0,
+   0.934,
+   -0.057
+  ],
+  "Spine1": [
+   0,
+   1.1,
+   -0.06
+  ],
+  "Spine2": [
+   0,
+   1.28,
+   -0.067
+  ],
+  "Neck": [
+   0,
+   1.518,
+   -0.004
+  ],
+  "Head": [
+   0,
+   1.607,
+   -0.001
+  ],
+  "HeadTop_End": [
+   0,
+   1.78,
+   -0.001
+  ],
+  "LeftShoulder": [
+   0.05,
+   1.423,
+   -0.023
+  ],
+  "LeftArm": [
+   0.158,
+   1.477,
+   -0.064
+  ],
+  "LeftForeArm": [
+   0.337,
+   1.204,
+   -0.022
+  ],
+  "LeftHand": [
+   0.479,
+   1.026,
+   0.056
+  ],
+  "LeftHandMiddle1": [
+   0.509,
+   0.946,
+   0.087
+  ],
+  "RightShoulder": [
+   -0.05,
+   1.423,
+   -0.023
+  ],
+  "RightArm": [
+   -0.166,
+   1.477,
+   -0.065
+  ],
+  "RightForeArm": [
+   -0.345,
+   1.204,
+   -0.023
+  ],
+  "RightHand": [
+   -0.488,
+   1.027,
+   0.057
+  ],
+  "RightHandMiddle1": [
+   -0.519,
+   0.943,
+   0.092
+  ],
+  "LeftUpLeg": [
+   0.113,
+   0.758,
+   -0.003
+  ],
+  "LeftLeg": [
+   0.137,
+   0.437,
+   -0.007
+  ],
+  "LeftFoot": [
+   0.158,
+   0.093,
+   -0.036
+  ],
+  "LeftToeBase": [
+   0.158,
+   0.032,
+   0.092
+  ],
+  "LeftToe_End": [
+   0.158,
+   0.032,
+   0.171
+  ],
+  "RightUpLeg": [
+   -0.127,
+   0.758,
+   -0.003
+  ],
+  "RightLeg": [
+   -0.147,
+   0.437,
+   -0.007
+  ],
+  "RightFoot": [
+   -0.181,
+   0.093,
+   -0.037
+  ],
+  "RightToeBase": [
+   -0.181,
+   0.032,
+   0.092
+  ],
+  "RightToe_End": [
+   -0.181,
+   0.032,
+   0.171
+  ]
+ },
+ "clips": {
+  "idle": {
+   "duration": 2.5,
+   "speed": 0,
+   "source": "Xbot.glb:idle"
+  },
+  "walk": {
+   "duration": 0.9667,
+   "speed": 1.341,
+   "source": "Xbot.glb:walk"
+  },
+  "run": {
+   "duration": 0.7,
+   "speed": 2.761,
+   "source": "Xbot.glb:run"
+  },
+  "talkNo": {
+   "duration": 2.5667,
+   "speed": 0,
+   "source": "Xbot.glb:headShake"
+  },
+  "talkYes": {
+   "duration": 1.8333,
+   "speed": 0,
+   "source": "Xbot.glb:agree"
+  },
+  "idle2": {
+   "duration": 1.9667,
+   "speed": 0,
+   "source": "Soldier.glb:Idle"
+  },
+  "walk2": {
+   "duration": 1.0333,
+   "speed": 0,
+   "source": "Soldier.glb:Walk"
+  },
+  "run2": {
+   "duration": 0.7,
+   "speed": 0,
+   "source": "Soldier.glb:Run"
+  }
+ },
+ "triangles": 40000,
+ "lod1": {
+  "triangles": 8800,
+  "from": 15
+ },
+ "generatedBy": "tools/assets/rig-character.mjs",
+ "source": "Krea 2 Large (портрет) → Hunyuan3D-2.1 через Krea (модель), см. docs/ASSETS.md"
+}

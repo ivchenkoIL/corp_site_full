@@ -1,0 +1,1241 @@
+{
+ "security_light": {
+  "file": "security_light.glb",
+  "source": "https://polyhaven.com/a/security_light",
+  "license": "CC0",
+  "min": [
+   -0.162,
+   -0.359,
+   -0.031
+  ],
+  "max": [
+   0.161,
+   0.172,
+   0.386
+  ],
+  "triangles": 4668,
+  "nodes": [
+   {
+    "name": "security_light",
+    "min": [
+     -0.162,
+     -0.24,
+     -0.031
+    ],
+    "max": [
+     0.161,
+     0.172,
+     0.386
+    ]
+   },
+   {
+    "name": "security_light_glass",
+    "min": [
+     -0.15,
+     -0.359,
+     0.072
+    ],
+    "max": [
+     0.152,
+     -0.166,
+     0.374
+    ]
+   }
+  ],
+  "kb": 282
+ },
+ "utility_box_02": {
+  "file": "utility_box_02.glb",
+  "source": "https://polyhaven.com/a/utility_box_02",
+  "license": "CC0",
+  "min": [
+   -0.46,
+   0,
+   -0.21
+  ],
+  "max": [
+   0.46,
+   1.12,
+   0.222
+  ],
+  "triangles": 6268,
+  "kb": 456
+ },
+ "security_camera_01": {
+  "file": "security_camera_01.glb",
+  "source": "https://polyhaven.com/a/security_camera_01",
+  "license": "CC0",
+  "min": [
+   -0.085,
+   -0.025,
+   -0.303
+  ],
+  "max": [
+   0.085,
+   0.261,
+   0.25
+  ],
+  "triangles": 13571,
+  "kb": 451
+ },
+ "security_camera_02": {
+  "file": "security_camera_02.glb",
+  "source": "https://polyhaven.com/a/security_camera_02",
+  "license": "CC0",
+  "min": [
+   -0.07,
+   -0.045,
+   0
+  ],
+  "max": [
+   0.07,
+   0.164,
+   0.394
+  ],
+  "triangles": 12477,
+  "nodes": [
+   {
+    "name": "security_camera_02_mount",
+    "min": [
+     -0.027,
+     -0.045,
+     0
+    ],
+    "max": [
+     0.027,
+     0.045,
+     0.171
+    ]
+   },
+   {
+    "name": "security_camera_02",
+    "min": [
+     -0.07,
+     0.014,
+     0.049
+    ],
+    "max": [
+     0.07,
+     0.164,
+     0.394
+    ]
+   }
+  ],
+  "kb": 460
+ },
+ "exterior_aircon_unit": {
+  "file": "exterior_aircon_unit.glb",
+  "source": "https://polyhaven.com/a/exterior_aircon_unit",
+  "license": "CC0",
+  "min": [
+   -0.893,
+   -0.32,
+   -0.216
+  ],
+  "max": [
+   0.907,
+   0.608,
+   0.158
+  ],
+  "triangles": 18986,
+  "nodes": [
+   {
+    "name": "exterior_aircon_unit",
+    "min": [
+     -0.893,
+     -0.32,
+     -0.216
+    ],
+    "max": [
+     -0.093,
+     0.608,
+     0.158
+    ]
+   },
+   {
+    "name": "exterior_aircon_unit_rusted",
+    "min": [
+     0.107,
+     -0.32,
+     -0.216
+    ],
+    "max": [
+     0.907,
+     0.608,
+     0.158
+    ]
+   }
+  ],
+  "kb": 750
+ },
+ "metal_trash_can": {
+  "file": "metal_trash_can.glb",
+  "source": "https://polyhaven.com/a/metal_trash_can",
+  "license": "CC0",
+  "min": [
+   -0.953,
+   0,
+   -0.278
+  ],
+  "max": [
+   0.825,
+   0.906,
+   0.278
+  ],
+  "triangles": 13960,
+  "nodes": [
+   {
+    "name": "metal_trash_can_handle_left",
+    "min": [
+     0.174,
+     0.642,
+     -0.093
+    ],
+    "max": [
+     0.247,
+     0.732,
+     0.093
+    ]
+   },
+   {
+    "name": "metal_trash_can_lid",
+    "min": [
+     0.047,
+     0.008,
+     -0.278
+    ],
+    "max": [
+     0.231,
+     0.548,
+     0.278
+    ]
+   },
+   {
+    "name": "metal_trash_can",
+    "min": [
+     0.193,
+     0,
+     -0.276
+    ],
+    "max": [
+     0.807,
+     0.906,
+     0.276
+    ]
+   },
+   {
+    "name": "metal_trash_can_handle_right",
+    "min": [
+     0.753,
+     0.642,
+     -0.093
+    ],
+    "max": [
+     0.825,
+     0.732,
+     0.093
+    ]
+   },
+   {
+    "name": "metal_trash_can_rust",
+    "min": [
+     -0.805,
+     0,
+     -0.274
+    ],
+    "max": [
+     -0.193,
+     0.906,
+     0.274
+    ]
+   },
+   {
+    "name": "metal_trash_can_rust_handle_left",
+    "min": [
+     -0.825,
+     0.642,
+     -0.093
+    ],
+    "max": [
+     -0.753,
+     0.742,
+     0.093
+    ]
+   },
+   {
+    "name": "metal_trash_can_rust_handle_right",
+    "min": [
+     -0.236,
+     0.557,
+     -0.093
+    ],
+    "max": [
+     -0.179,
+     0.658,
+     0.093
+    ]
+   },
+   {
+    "name": "metal_trash_can_rust_lid",
+    "min": [
+     -0.953,
+     0.008,
+     -0.269
+    ],
+    "max": [
+     -0.769,
+     0.548,
+     0.275
+    ]
+   }
+  ],
+  "kb": 691
+ },
+ "wooden_crate_01": {
+  "file": "wooden_crate_01.glb",
+  "source": "https://polyhaven.com/a/wooden_crate_01",
+  "license": "CC0",
+  "min": [
+   -0.413,
+   -0.008,
+   -0.196
+  ],
+  "max": [
+   0.413,
+   0.342,
+   0.213
+  ],
+  "triangles": 6576,
+  "nodes": [
+   {
+    "name": "wooden_crate_01_lid",
+    "min": [
+     -0.354,
+     0.299,
+     -0.196
+    ],
+    "max": [
+     0.354,
+     0.342,
+     0.196
+    ]
+   },
+   {
+    "name": "wooden_crate_01",
+    "min": [
+     -0.413,
+     -0.008,
+     -0.195
+    ],
+    "max": [
+     0.413,
+     0.314,
+     0.213
+    ]
+   },
+   {
+    "name": "wooden_crate_01_latch",
+    "min": [
+     -0.016,
+     0.239,
+     0.131
+    ],
+    "max": [
+     0.01,
+     0.336,
+     0.207
+    ]
+   }
+  ],
+  "kb": 295
+ },
+ "cardboard_box_01": {
+  "file": "cardboard_box_01.glb",
+  "source": "https://polyhaven.com/a/cardboard_box_01",
+  "license": "CC0",
+  "min": [
+   -0.193,
+   -0.007,
+   -0.225
+  ],
+  "max": [
+   0.195,
+   0.335,
+   0.291
+  ],
+  "triangles": 16952,
+  "kb": 479
+ },
+ "water_manhole_cover": {
+  "file": "water_manhole_cover.glb",
+  "source": "https://polyhaven.com/a/water_manhole_cover",
+  "license": "CC0",
+  "min": [
+   -0.345,
+   -0.029,
+   -0.345
+  ],
+  "max": [
+   0.345,
+   0.039,
+   0.345
+  ],
+  "triangles": 6301,
+  "nodes": [
+   {
+    "name": "water_manhole_cover_frame",
+    "min": [
+     -0.345,
+     -0.029,
+     -0.345
+    ],
+    "max": [
+     0.345,
+     0.039,
+     0.345
+    ]
+   },
+   {
+    "name": "water_manhole_cover",
+    "min": [
+     -0.305,
+     0.014,
+     -0.3
+    ],
+    "max": [
+     0.305,
+     0.039,
+     0.3
+    ]
+   }
+  ],
+  "kb": 332
+ },
+ "shrub_02": {
+  "file": "shrub_02.glb",
+  "source": "https://polyhaven.com/a/shrub_02",
+  "license": "CC0",
+  "min": [
+   -2.092,
+   -0.025,
+   -1.13
+  ],
+  "max": [
+   3.962,
+   1.677,
+   1.155
+  ],
+  "triangles": 27254,
+  "nodes": [
+   {
+    "name": "shrub_02_a",
+    "min": [
+     -2.092,
+     -0.012,
+     -0.883
+    ],
+    "max": [
+     -0.78,
+     1.677,
+     0.758
+    ]
+   },
+   {
+    "name": "shrub_02_b",
+    "min": [
+     -0.55,
+     -0.008,
+     -0.516
+    ],
+    "max": [
+     0.56,
+     1.498,
+     0.764
+    ]
+   },
+   {
+    "name": "shrub_02_c",
+    "min": [
+     0.827,
+     -0.022,
+     -1.13
+    ],
+    "max": [
+     2.594,
+     1.293,
+     1.155
+    ]
+   },
+   {
+    "name": "shrub_02_d",
+    "min": [
+     2.881,
+     -0.025,
+     -0.654
+    ],
+    "max": [
+     3.962,
+     1.204,
+     0.444
+    ]
+   }
+  ],
+  "kb": 819
+ },
+ "grass_medium_01": {
+  "file": "grass_medium_01.glb",
+  "source": "https://polyhaven.com/a/grass_medium_01",
+  "license": "CC0",
+  "min": [
+   -0.876,
+   -0.006,
+   -0.088
+  ],
+  "max": [
+   1.686,
+   0.317,
+   0.113
+  ],
+  "triangles": 3030,
+  "nodes": [
+   {
+    "name": "grass_medium_01_small_a_LOD0",
+    "min": [
+     -0.08,
+     -0.002,
+     -0.083
+    ],
+    "max": [
+     0.105,
+     0.138,
+     0.08
+    ]
+   },
+   {
+    "name": "grass_medium_01_mid_b_LOD0",
+    "min": [
+     -0.876,
+     -0.003,
+     -0.088
+    ],
+    "max": [
+     -0.689,
+     0.174,
+     0.113
+    ]
+   },
+   {
+    "name": "grass_medium_01_tall_b_LOD0",
+    "min": [
+     1.116,
+     -0.002,
+     -0.06
+    ],
+    "max": [
+     1.266,
+     0.284,
+     0.074
+    ]
+   },
+   {
+    "name": "grass_medium_01_tall_a_LOD0",
+    "min": [
+     0.72,
+     -0.006,
+     -0.075
+    ],
+    "max": [
+     0.881,
+     0.317,
+     0.084
+    ]
+   },
+   {
+    "name": "grass_medium_01_tall_c_LOD0",
+    "min": [
+     1.533,
+     -0.006,
+     -0.051
+    ],
+    "max": [
+     1.686,
+     0.231,
+     0.078
+    ]
+   }
+  ],
+  "kb": 296
+ },
+ "grass_medium_02": {
+  "file": "grass_medium_02.glb",
+  "source": "https://polyhaven.com/a/grass_medium_02",
+  "license": "CC0",
+  "min": [
+   -0.056,
+   -0.006,
+   -0.175
+  ],
+  "max": [
+   1.255,
+   0.4,
+   0.258
+  ],
+  "triangles": 3593,
+  "nodes": [
+   {
+    "name": "grass_medium_02_a",
+    "min": [
+     -0.056,
+     -0.003,
+     -0.057
+    ],
+    "max": [
+     0.064,
+     0.154,
+     0.063
+    ]
+   },
+   {
+    "name": "grass_medium_02_c",
+    "min": [
+     0.349,
+     -0.006,
+     -0.161
+    ],
+    "max": [
+     0.611,
+     0.226,
+     0.089
+    ]
+   },
+   {
+    "name": "grass_medium_02_e",
+    "min": [
+     0.899,
+     -0.003,
+     -0.175
+    ],
+    "max": [
+     1.255,
+     0.4,
+     0.258
+    ]
+   }
+  ],
+  "kb": 158
+ },
+ "dandelion_01": {
+  "file": "dandelion_01.glb",
+  "source": "https://polyhaven.com/a/dandelion_01",
+  "license": "CC0",
+  "min": [
+   -4.12,
+   -0.008,
+   -0.09
+  ],
+  "max": [
+   -1.909,
+   0.099,
+   0.116
+  ],
+  "triangles": 7864,
+  "nodes": [
+   {
+    "name": "dandelion_01_c_LOD0",
+    "min": [
+     -2.079,
+     -0.002,
+     -0.088
+    ],
+    "max": [
+     -1.909,
+     0.099,
+     0.079
+    ]
+   },
+   {
+    "name": "dandelion_01_d_LOD0",
+    "min": [
+     -3.052,
+     -0.002,
+     -0.088
+    ],
+    "max": [
+     -2.93,
+     0.054,
+     0.056
+    ]
+   },
+   {
+    "name": "dandelion_01_e_LOD0",
+    "min": [
+     -4.12,
+     -0.008,
+     -0.09
+    ],
+    "max": [
+     -3.906,
+     0.039,
+     0.116
+    ]
+   }
+  ],
+  "kb": 317
+ },
+ "nettle_plant": {
+  "file": "nettle_plant.glb",
+  "source": "https://polyhaven.com/a/nettle_plant",
+  "license": "CC0",
+  "min": [
+   0.97,
+   -0.001,
+   -0.018
+  ],
+  "max": [
+   1.03,
+   0.021,
+   0.02
+  ],
+  "triangles": 1088,
+  "kb": 136
+ },
+ "weed_plant_02": {
+  "file": "weed_plant_02.glb",
+  "source": "https://polyhaven.com/a/weed_plant_02",
+  "license": "CC0",
+  "min": [
+   0.425,
+   -0.002,
+   -0.111
+  ],
+  "max": [
+   1.577,
+   0.067,
+   0.087
+  ],
+  "triangles": 5967,
+  "nodes": [
+   {
+    "name": "weed_plant_02_b_LOD0",
+    "min": [
+     0.425,
+     -0.001,
+     -0.111
+    ],
+    "max": [
+     0.612,
+     0.067,
+     0.087
+    ]
+   },
+   {
+    "name": "weed_plant_02_c_LOD0",
+    "min": [
+     0.938,
+     -0.002,
+     -0.068
+    ],
+    "max": [
+     1.08,
+     0.053,
+     0.076
+    ]
+   },
+   {
+    "name": "weed_plant_02_d_LOD0",
+    "min": [
+     1.423,
+     0,
+     -0.062
+    ],
+    "max": [
+     1.577,
+     0.039,
+     0.046
+    ]
+   }
+  ],
+  "kb": 285
+ },
+ "celandine_01": {
+  "file": "celandine_01.glb",
+  "source": "https://polyhaven.com/a/celandine_01",
+  "license": "CC0",
+  "min": [
+   -1.145,
+   -0.007,
+   -0.159
+  ],
+  "max": [
+   1.095,
+   0.179,
+   0.148
+  ],
+  "triangles": 5964,
+  "nodes": [
+   {
+    "name": "celandine_01_a_LOD0",
+    "min": [
+     -1.145,
+     -0.007,
+     -0.123
+    ],
+    "max": [
+     -0.869,
+     0.179,
+     0.105
+    ]
+   },
+   {
+    "name": "celandine_01_b_LOD0",
+    "min": [
+     -0.634,
+     -0.005,
+     -0.159
+    ],
+    "max": [
+     -0.383,
+     0.139,
+     0.148
+    ]
+   },
+   {
+    "name": "celandine_01_c_LOD0",
+    "min": [
+     -0.12,
+     -0.004,
+     -0.105
+    ],
+    "max": [
+     0.137,
+     0.172,
+     0.082
+    ]
+   },
+   {
+    "name": "celandine_01_e_LOD0",
+    "min": [
+     0.906,
+     -0.004,
+     -0.131
+    ],
+    "max": [
+     1.095,
+     0.12,
+     0.086
+    ]
+   }
+  ],
+  "kb": 288
+ },
+ "plastic_monobloc_chair_01": {
+  "file": "plastic_monobloc_chair_01.glb",
+  "source": "https://polyhaven.com/a/plastic_monobloc_chair_01",
+  "license": "CC0",
+  "min": [
+   -0.321,
+   0,
+   -0.336
+  ],
+  "max": [
+   0.321,
+   0.88,
+   0.292
+  ],
+  "triangles": 3356,
+  "kb": 239
+ },
+ "old_tyre": {
+  "file": "old_tyre.glb",
+  "source": "https://polyhaven.com/a/old_tyre",
+  "license": "CC0",
+  "min": [
+   -0.3,
+   -0.3,
+   -0.083
+  ],
+  "max": [
+   0.3,
+   0.3,
+   0.082
+  ],
+  "triangles": 2880,
+  "kb": 206
+ },
+ "ladder_sectioned_01": {
+  "file": "ladder_sectioned_01.glb",
+  "source": "https://polyhaven.com/a/ladder_sectioned_01",
+  "license": "CC0",
+  "min": [
+   -0.301,
+   0,
+   -0.096
+  ],
+  "max": [
+   0.361,
+   2.134,
+   0.081
+  ],
+  "triangles": 29140,
+  "nodes": [
+   {
+    "name": "ladder_section_01",
+    "min": [
+     -0.301,
+     0,
+     -0.096
+    ],
+    "max": [
+     0.361,
+     2.134,
+     0.002
+    ]
+   },
+   {
+    "name": "ladder_section_02",
+    "min": [
+     -0.122,
+     0.011,
+     -0.056
+    ],
+    "max": [
+     0.182,
+     2.133,
+     0.042
+    ]
+   },
+   {
+    "name": "ladder_section_03",
+    "min": [
+     -0.1,
+     0.012,
+     -0.013
+    ],
+    "max": [
+     0.159,
+     2.134,
+     0.081
+    ]
+   },
+   {
+    "name": "ladder_ribbon",
+    "min": [
+     -0.157,
+     0.357,
+     -0.039
+    ],
+    "max": [
+     0.216,
+     1.113,
+     0.078
+    ]
+   }
+  ],
+  "kb": 981
+ },
+ "metal_toolbox": {
+  "file": "metal_toolbox.glb",
+  "source": "https://polyhaven.com/a/metal_toolbox",
+  "license": "CC0",
+  "min": [
+   -0.2,
+   0,
+   -0.157
+  ],
+  "max": [
+   0.2,
+   0.305,
+   0.114
+  ],
+  "triangles": 14228,
+  "nodes": [
+   {
+    "name": "metal_toolbox",
+    "min": [
+     -0.2,
+     0,
+     -0.106
+    ],
+    "max": [
+     0.2,
+     0.122,
+     0.114
+    ]
+   },
+   {
+    "name": "metal_toolbox_tray",
+    "min": [
+     -0.193,
+     0.101,
+     -0.093
+    ],
+    "max": [
+     0.193,
+     0.188,
+     0.093
+    ]
+   },
+   {
+    "name": "metal_toolbox_handle",
+    "min": [
+     -0.088,
+     0.207,
+     -0.157
+    ],
+    "max": [
+     0.088,
+     0.255,
+     -0.116
+    ]
+   },
+   {
+    "name": "metal_toolbox_handle_latch_l",
+    "min": [
+     -0.129,
+     0.276,
+     -0.001
+    ],
+    "max": [
+     -0.105,
+     0.305,
+     0.043
+    ]
+   },
+   {
+    "name": "metal_toolbox_handle_latch_r",
+    "min": [
+     0.107,
+     0.276,
+     -0.001
+    ],
+    "max": [
+     0.131,
+     0.305,
+     0.043
+    ]
+   },
+   {
+    "name": "metal_toolbox_lid",
+    "min": [
+     -0.2,
+     0.117,
+     -0.138
+    ],
+    "max": [
+     0.2,
+     0.304,
+     0.012
+    ]
+   }
+  ],
+  "kb": 578
+ },
+ "plastic_crate_01": {
+  "file": "plastic_crate_01.glb",
+  "source": "https://polyhaven.com/a/plastic_crate_01",
+  "license": "CC0",
+  "min": [
+   -0.149,
+   0,
+   -0.204
+  ],
+  "max": [
+   0.149,
+   0.264,
+   0.204
+  ],
+  "triangles": 18320,
+  "kb": 950
+ },
+ "covered_car": {
+  "file": "covered_car.glb",
+  "source": "https://polyhaven.com/a/covered_car",
+  "license": "CC0",
+  "min": [
+   -0.847,
+   0,
+   -2.166
+  ],
+  "max": [
+   0.942,
+   1.411,
+   2.214
+  ],
+  "triangles": 12592,
+  "nodes": [
+   {
+    "name": "covered_car_wheel_01",
+    "min": [
+     0.677,
+     0.001,
+     0.981
+    ],
+    "max": [
+     0.838,
+     0.599,
+     1.58
+    ]
+   },
+   {
+    "name": "covered_car_wheel_02",
+    "min": [
+     -0.763,
+     0,
+     0.981
+    ],
+    "max": [
+     -0.602,
+     0.6,
+     1.581
+    ]
+   },
+   {
+    "name": "covered_car_wheel_03",
+    "min": [
+     -0.753,
+     0,
+     -1.599
+    ],
+    "max": [
+     -0.592,
+     0.6,
+     -0.999
+    ]
+   },
+   {
+    "name": "covered_car_wheel_04",
+    "min": [
+     0.667,
+     0,
+     -1.599
+    ],
+    "max": [
+     0.828,
+     0.6,
+     -0.999
+    ]
+   },
+   {
+    "name": "covered_car",
+    "min": [
+     -0.847,
+     0.126,
+     -2.166
+    ],
+    "max": [
+     0.942,
+     1.411,
+     2.214
+    ]
+   }
+  ],
+  "kb": 657
+ },
+ "concrete_road_barrier": {
+  "file": "concrete_road_barrier.glb",
+  "source": "https://polyhaven.com/a/concrete_road_barrier",
+  "license": "CC0",
+  "min": [
+   -0.775,
+   -0.008,
+   -0.295
+  ],
+  "max": [
+   0.771,
+   0.823,
+   0.344
+  ],
+  "triangles": 60928,
+  "kb": 1897
+ },
+ "modular_electricity_poles": {
+  "file": "modular_electricity_poles.glb",
+  "source": "https://polyhaven.com/a/modular_electricity_poles",
+  "license": "CC0",
+  "min": [
+   2.1,
+   1.581,
+   -0.142
+  ],
+  "max": [
+   3.3,
+   3.43,
+   0.426
+  ],
+  "triangles": 8478,
+  "nodes": [
+   {
+    "name": "insulators_large",
+    "min": [
+     2.215,
+     1.581,
+     0.083
+    ],
+    "max": [
+     3.185,
+     1.941,
+     0.426
+    ]
+   },
+   {
+    "name": "support_large_01",
+    "min": [
+     2.1,
+     3.038,
+     -0.142
+    ],
+    "max": [
+     3.3,
+     3.43,
+     0.141
+    ]
+   }
+  ],
+  "kb": 988
+ },
+ "modular_chainlink_fence": {
+  "file": "modular_chainlink_fence.glb",
+  "source": "https://polyhaven.com/a/modular_chainlink_fence",
+  "license": "CC0",
+  "min": [
+   -2.962,
+   0,
+   -1.075
+  ],
+  "max": [
+   -0.925,
+   2.523,
+   0.025
+  ],
+  "triangles": 4162,
+  "nodes": [
+   {
+    "name": "modular_chainlink_fence",
+    "min": [
+     -2.962,
+     0.06,
+     -0.024
+    ],
+    "max": [
+     -2.028,
+     2.43,
+     0.025
+    ]
+   },
+   {
+    "name": "modular_chainlink_fence_post",
+    "min": [
+     -1.075,
+     0,
+     -1.075
+    ],
+    "max": [
+     -0.925,
+     2.523,
+     -0.925
+    ]
+   }
+  ],
+  "kb": 445
+ }
+}

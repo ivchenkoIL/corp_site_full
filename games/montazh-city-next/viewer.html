@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Просмотр ассетов</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #20242a; overflow: hidden; font: 13px/1.4 system-ui, sans-serif; color: #e8e8e8; }
+  canvas { width: 100%; height: 100%; display: block; outline: none; }
+  #ui { position: fixed; left: 12px; top: 10px; background: #0008; padding: 8px 10px; border-radius: 6px; }
+  #ui select, #ui button { font: inherit; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui"><select id="model"></select> <select id="anim"></select> <button id="bones">Кости</button> <span id="info"></span></div>
+<script type="module" src="./src/viewer/main.js"></script>
+</body>
+</html>

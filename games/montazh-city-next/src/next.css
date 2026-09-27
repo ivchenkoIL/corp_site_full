@@ -1,0 +1,5 @@
+/* Поправки интерфейса старой игры под новый движок */
+#grade, #scan { display: none !important; }
+#gl { touch-action: none; outline: none; }
+.bootfail { max-width: 640px; text-align: center; font: 600 14px/1.5 var(--ui, system-ui); color: #f7ecff; text-transform: none; letter-spacing: 0; }
+.bootfail b { display: block; font: 900 20px var(--head, system-ui); color: #ff2d95; margin-bottom: 10px; }

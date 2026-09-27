@@ -1,0 +1,18 @@
+{
+  "id": "char.oleg",
+  "name": "oleg",
+  "source": "Krea 2 Large (портрет) → Hunyuan3D-2.1 через Krea (модель), см. docs/ASSETS.md",
+  "input": "oleg_hy21_v1.glb",
+  "output": "../../public/assets/characters/oleg.glb",
+  "views": "oleg_rig_views.png",
+  "height": 1.78,
+  "texBase": 2048,
+  "texMR": 1024,
+  "roughRemap": [0.42, 0.58],
+  "smooth": 24,
+  "joints": {},
+  "animations": [
+    { "file": "../anim/Xbot.glb", "clips": { "idle": "idle", "walk": "walk", "run": "run", "headShake": "talkNo", "agree": "talkYes" } },
+    { "file": "../anim/Soldier.glb", "clips": { "Idle": "idle2", "Walk": "walk2", "Run": "run2" } }
+  ]
+}

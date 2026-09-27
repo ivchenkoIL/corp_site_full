@@ -1,0 +1,45 @@
+{
+ "id": "veh.sedan",
+ "length": 4.2,
+ "wheels": [
+  {
+   "id": "FL",
+   "center": [
+    0.712,
+    0.304,
+    1.211
+   ],
+   "r": 0.304
+  },
+  {
+   "id": "FR",
+   "center": [
+    -0.711,
+    0.3,
+    1.235
+   ],
+   "r": 0.3
+  },
+  {
+   "id": "RL",
+   "center": [
+    0.713,
+    0.296,
+    -1.211
+   ],
+   "r": 0.296
+  },
+  {
+   "id": "RR",
+   "center": [
+    -0.707,
+    0.284,
+    -1.203
+   ],
+   "r": 0.284
+  }
+ ],
+ "paintMask": "lada_paint.webp",
+ "triangles": 40000,
+ "source": "Krea 2 Large (эскиз) → Hunyuan3D-2.1 через Krea; см. docs/ASSETS.md"
+}

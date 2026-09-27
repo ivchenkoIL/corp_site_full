@@ -1,0 +1,25 @@
+{
+ "id": "kloofendal_38d_partly_cloudy_puresky",
+ "source": "https://polyhaven.com/a/kloofendal_38d_partly_cloudy_puresky",
+ "license": "CC0",
+ "sky": "sky_kloofendal_38d_partly_cloudy_puresky.jpg",
+ "skyCoverage": 0.56,
+ "skyExposure": 0.32466,
+ "ibl": "ibl_kloofendal_38d_partly_cloudy_puresky.hdr",
+ "sunUV": [
+  0.59982,
+  0.28915
+ ],
+ "sunDir": [
+  0.63844,
+  0.61502,
+  0.46275
+ ],
+ "sunElevationDeg": 37.95,
+ "horizon": [
+  0.4018,
+  0.4313,
+  0.4552
+ ],
+ "peak": 45286.3
+}

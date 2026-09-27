@@ -1,0 +1,74 @@
+<!-- СГЕНЕРИРОВАНО tools/split-legacy.mjs: разметка интерфейса старой игры -->
+<div id="stage">
+  <canvas id="gl"></canvas>
+  <canvas id="hud2d" style="position:absolute;inset:0;width:100%;height:100%;z-index:3;pointer-events:none"></canvas>
+  <div id="grade"></div>
+  <div id="scan"></div>
+  <div id="crosshair"></div>
+
+  <div id="hud">
+    <div id="hudTL" class="panel">
+      <div class="row"><span class="lab">Здоровье</span><span class="bar hp"><i id="barHp"></i><b id="numHp">100</b></span></div>
+      <div class="row"><span class="lab">Силы</span><span class="bar st"><i id="barSt"></i><b id="numSt">100</b></span></div>
+      <div class="row"><span class="lab">Велик</span><span class="bar bk"><i id="barBk"></i><b id="numBk">100</b></span></div>
+      <div class="row" id="rowDrunk" style="display:none"><span class="lab">Хмель</span><span class="bar dr"><i id="barDr"></i><b id="numDr">0</b></span></div>
+      <div class="row" id="rowQual" style="display:none"><span class="lab">Монтаж</span><span class="bar qa"><i id="barQa"></i><b id="numQa">0</b></span></div>
+    </div>
+    <div id="hudTR" class="panel">
+      <div class="money" id="numMoney">0 ₽</div>
+      <div class="rep" id="numRep">Репутация: 0 — стажёр</div>
+      <div id="clock">17:00</div>
+      <div id="daypart">закат</div>
+      <div id="eyes" title="Уровень внимания"><span>👁</span><span>👁</span><span>👁</span><span>👁</span><span>👁</span></div>
+    </div>
+    <div id="hudBL" class="panel">
+      <div id="taskTitle">Смена не начата</div>
+      <div id="taskStep">—</div>
+      <div id="taskHint"></div>
+      <div id="taskTimer">00:00</div>
+    </div>
+    <div id="hudBR" class="panel">
+      <div id="mmLabel">Район «Заводская Слобода»</div>
+      <canvas id="minimap" width="180" height="140"></canvas>
+    </div>
+    <div id="hudBC"></div>
+  </div>
+
+  <div id="radio"><div class="panel">
+    <span id="stationName">РАДИО ЗАКАТ</span>
+    <span id="tickWrap"><span id="tick"></span></span>
+    <span id="radioKey">Q</span>
+  </div></div>
+
+  <div id="toasts"></div>
+  <div id="prompt"><div class="panel"><span id="promptText"></span></div></div>
+
+  <div id="dialog"><div class="panel">
+    <canvas id="portrait" width="88" height="88"></canvas>
+    <div id="dlgBody">
+      <div id="dlgName">ТАМАРА</div>
+      <div id="dlgText"></div>
+      <div id="dlgOpts"></div>
+      <div id="dlgNext">Space / E — далее</div>
+    </div>
+  </div></div>
+
+  <div id="mini">
+    <canvas id="miniCanvas"></canvas>
+    <div id="miniTop">
+      <span id="miniTitle">МОНТАЖ</span>
+      <span id="miniPhase">этап 1</span>
+      <span id="miniQ" class="panel" style="pointer-events:none">
+        <div class="row" style="margin:0"><span class="lab">Качество</span><span class="bar qa"><i id="miniQBar"></i><b id="miniQNum">0</b></span></div>
+      </span>
+    </div>
+    <div id="miniBottom" class="panel">
+      <span id="miniHint">—</span>
+      <span id="miniBtns"></span>
+    </div>
+  </div>
+
+  <div id="screens"><div class="sheet" id="sheet"></div></div>
+  <div id="errbox"><b>Что-то отвалилось (как обычно)</b><span id="errtext"></span></div>
+  <div id="loading"><span id="loadTitle">Собираем район…</span><small id="loadStep">генерируем текстуры</small><div id="loadBar"><i></i></div></div>
+</div>

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-game/
+dist-legacy/
+parity-shots/
+# сырые загрузки Poly Haven — скачиваются заново: npm run assets
+assets-src/polyhaven/
+# исходники из генератора и доноры анимаций: большие, лежат локально, откуда взяты — docs/ASSETS.md
+assets-src/**/*.glb
+assets-src/**/*_rig_views.png
+assets-src/**/*_preview.png
