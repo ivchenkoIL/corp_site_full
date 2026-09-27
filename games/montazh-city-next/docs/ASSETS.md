@@ -4,8 +4,11 @@
 статус каждого ассета записаны в [`src/assets/manifest.js`](../src/assets/manifest.js).
 Там же перечислено, чего пока нет и чем это временно заменено.
 
-Итого около 41 МБ: персонажи 18.5, реквизит 13, текстуры 11, небо 0.8,
-машина 1.8.
+Итого около 34 МБ: персонажи 11, реквизит 11, текстуры 11, машина 1.2,
+небо 0.7. Геометрию всех GLB ужимает `npm run optimize`
+(`tools/assets/optimize-glb.mjs`): координаты, нормали и UV хранятся целыми
+числами (KHR_mesh_quantization), индексы — 16-битными. Вид при этом не
+меняется, а вес падает на треть.
 
 ## 1. Poly Haven — всё CC0
 
@@ -67,6 +70,7 @@ node tools/assets/pack-props.mjs            # модели в GLB с WebP-тек
 
 ```bash
 node tools/assets/rig-character.mjs --cfg assets-src/oleg/rig.json   # то же для любого персонажа
+node tools/assets/optimize-glb.mjs --only=oleg                         # затем ужать геометрию
 ```
 
 **Машина** — «семёрка», сделанная тем же путём (портрет → Hunyuan3D-2.1).

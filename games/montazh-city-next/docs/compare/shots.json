@@ -1,0 +1,42 @@
+[
+ {
+  "id": "office",
+  "title": "Контора «Монтаж-Сервис»",
+  "old": "office-old.jpg",
+  "new": "office-new.jpg",
+  "errorsOld": [],
+  "errorsNew": []
+ },
+ {
+  "id": "yard",
+  "title": "Двор конторы",
+  "old": "yard-old.jpg",
+  "new": "yard-new.jpg",
+  "errorsOld": [],
+  "errorsNew": []
+ },
+ {
+  "id": "courtyard",
+  "title": "Двор «Три Колена»",
+  "old": "courtyard-old.jpg",
+  "new": "courtyard-new.jpg",
+  "errorsOld": [],
+  "errorsNew": []
+ },
+ {
+  "id": "street",
+  "title": "Северная магистраль",
+  "old": "street-old.jpg",
+  "new": "street-new.jpg",
+  "errorsOld": [],
+  "errorsNew": []
+ },
+ {
+  "id": "crossing",
+  "title": "Перекрёсток у складов",
+  "old": "crossing-old.jpg",
+  "new": "crossing-new.jpg",
+  "errorsOld": [],
+  "errorsNew": []
+ }
+]

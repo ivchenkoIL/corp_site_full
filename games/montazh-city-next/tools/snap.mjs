@@ -27,8 +27,13 @@ page.on('pageerror', e => errors.push('pageerror: ' + (e && e.message || e)));
 page.on('console', m => { if (m.type() === 'error' || (argv.log && m.type() === 'log')) errors.push(m.type() + ': ' + m.text()); });
 await page.goto(argv.url, { waitUntil: 'load', timeout: 120000 });
 const ready = argv.ready || '(window.__viewer && window.__viewer.ready) || (window.__game && window.__game.ready)';
-try { await page.waitForFunction('!!(' + ready + ')', null, { timeout: 120000 }); await page.evaluate('Promise.resolve(' + ready + ')'); }
-catch (e) { errors.push('не дождался готовности: ' + e.message.split('\n')[0]); }
+/* опрос вместо waitForFunction: тот строит функцию из строки внутри страницы,
+   а под строгой CSP (как у артефактов) это запрещено */
+try {
+  const t0 = Date.now();
+  while (!(await page.evaluate('!!(' + ready + ')'))) { if (Date.now() - t0 > 120000) throw new Error('таймаут'); await page.waitForTimeout(250); }
+  await page.evaluate('Promise.resolve(' + ready + ')');
+} catch (e) { errors.push('не дождался готовности: ' + e.message.split('\n')[0]); }
 for (const js of (argv.eval ? argv.eval.split(';;') : [])) { try { const r = await page.evaluate(js); if (r !== undefined) console.log('eval → ' + JSON.stringify(r)); } catch (e) { errors.push('eval: ' + e.message.split('\n')[0]); } }
 /* --keys "KeyW:1500,ShiftLeft+KeyW:2000,KeyE:100" — зажать клавиши на время */
 for (const item of (argv.keys ? argv.keys.split(',') : [])) {

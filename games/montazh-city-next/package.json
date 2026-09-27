@@ -11,7 +11,11 @@
     "build:legacy": "vite build --config vite.legacy.config.js",
     "assets": "node tools/fetch-assets.mjs",
     "check:legacy": "node tools/legacy-parity.mjs",
-    "shots": "node tools/shots.mjs"
+    "build:game": "vite build --config vite.game.config.js",
+    "pack:artifact": "vite build --config vite.game.config.js && node tools/pack-artifact.mjs",
+    "optimize": "node tools/assets/optimize-glb.mjs",
+    "compare": "node tools/compare-shots.mjs",
+    "snap": "node tools/snap.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "^9.28.0",

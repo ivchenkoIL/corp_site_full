@@ -25,8 +25,10 @@ npm run dev          # http://localhost:5178/ — игра, /viewer.html — п�
 | Команда | Что получается |
 | --- | --- |
 | `npm run build` | `dist/`: игра и просмотрщик моделей, код разбит на части |
-| `npx vite build --config vite.game.config.js` | `dist-game/`: только игра, весь код одним файлом. Эту сборку выкладываем |
+| `npm run build:game` | `dist-game/`: только игра, весь код одним файлом. Эту сборку выкладываем на хостинг |
+| `npm run pack:artifact` | `dist-artifact/`: та же сборка для артефакта Claude. GLB и HDR лежат рядом текстом (base64), потому что артефакт их не раздаёт |
 | `npm run build:legacy` | `dist-legacy/legacy.html`: старая игра из модулей, один офлайн-файл, как исходный монолит |
+| `npm run compare` | `docs/compare/`: снимки «было / стало» в пяти точках района. Нужен запущенный `npm run dev` |
 
 ## Как устроено
 
@@ -48,6 +50,8 @@ tools/
   fetch-assets.mjs   загрузка ассетов Poly Haven по assets-src/sources.json (npm run assets)
   assets/            подготовка ассетов: риг персонажей, машина, текстуры, реквизит
   snap.mjs           снимок страницы в Chromium, с нажатием клавиш и замером
+  compare-shots.mjs  «было / стало»: одни и те же точки в старой и новой версии
+  pack-artifact.mjs  упаковка сборки для артефакта Claude
 ```
 
 ## Монолит и модули

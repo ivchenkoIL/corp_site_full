@@ -13,6 +13,7 @@ import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { Vector3, Quaternion, Matrix } from '@babylonjs/core/Maths/math.vector';
 import { Batch, rng } from './geo.js';
 import '@babylonjs/loaders/glTF';
+import { glbSource } from './source.js';
 
 export class PropLib {
   constructor(scene, base, shadows) {
@@ -22,7 +23,7 @@ export class PropLib {
   async init() { this.catalog = await (await fetch(this.base + 'props/catalog.json')).json(); }
   load(id) {
     if (!this.loading.has(id)) this.loading.set(id, (async () => {
-      const c = await LoadAssetContainerAsync(this.base + 'props/' + id + '.glb', this.scene);
+      const c = await LoadAssetContainerAsync(await glbSource(this.base + 'props/' + id + '.glb'), this.scene, { pluginExtension: '.glb' });
       c.addAllToScene();
       const parts = [];
       for (const m of c.meshes) {

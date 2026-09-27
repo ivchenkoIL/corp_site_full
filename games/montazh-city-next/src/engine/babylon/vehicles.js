@@ -17,6 +17,7 @@ import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { Batch } from './geo.js';
 import '@babylonjs/loaders/glTF';
+import { glbSource } from './source.js';
 
 /* --- краска по маске ---------------------------------------------------- */
 class PaintPlugin extends MaterialPluginBase {
@@ -46,7 +47,7 @@ class PaintPlugin extends MaterialPluginBase {
 export class CarModel {
   static async load(scene, url, metaUrl, maskUrl) {
     const m = new CarModel();
-    m.container = await LoadAssetContainerAsync(url, scene);
+    m.container = await LoadAssetContainerAsync(await glbSource(url), scene, { pluginExtension: '.glb' });
     m.meta = await (await fetch(metaUrl)).json();
     m.mask = new Texture(maskUrl, scene, { noMipmap: false, invertY: false });
     m.mats = new Map();

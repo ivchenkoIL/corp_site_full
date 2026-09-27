@@ -16,6 +16,7 @@ import { LoadAssetContainerAsync } from '@babylonjs/core/Loading/sceneLoader';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { Quaternion, Vector3 } from '@babylonjs/core/Maths/math.vector';
 import '@babylonjs/loaders/glTF';
+import { glbSource } from './source.js';
 
 const PARENT = {
   Hips: null, Spine: 'Hips', Spine1: 'Spine', Spine2: 'Spine1', Neck: 'Spine2', Head: 'Neck', HeadTop_End: 'Head',
@@ -72,7 +73,7 @@ const smooth = (a, b, k) => a + (b - a) * k;
 export class CharacterModel {
   static async load(scene, url, metaUrl) {
     const m = new CharacterModel();
-    m.container = await LoadAssetContainerAsync(url, scene);
+    m.container = await LoadAssetContainerAsync(await glbSource(url), scene, { pluginExtension: '.glb' });
     m.meta = metaUrl ? await (await fetch(metaUrl)).json() : { clips: {} };
     m.clips = {};
     for (const g of m.container.animationGroups) {

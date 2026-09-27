@@ -9,3 +9,4 @@ assets-src/polyhaven/
 assets-src/**/*.glb
 assets-src/**/*_rig_views.png
 assets-src/**/*_preview.png
+dist-artifact/

@@ -23,6 +23,7 @@ import { SSAO2RenderingPipeline } from '@babylonjs/core/PostProcesses/RenderPipe
 import '@babylonjs/core/Rendering/prePassRendererSceneComponent';
 import '@babylonjs/core/Rendering/geometryBufferRendererSceneComponent';
 import { ImageProcessingConfiguration } from '@babylonjs/core/Materials/imageProcessingConfiguration';
+import { hdrUrl } from './source.js';
 
 Effect.ShadersStore.mcSkyVertexShader = `
 precision highp float;
@@ -72,7 +73,7 @@ export async function createEnvironment(scene, camera, base, envId, Q) {
   const sun = new Vector3(c * sd[0] + s * sd[2], sd[1], -s * sd[0] + c * sd[2]).normalize();
 
   /* --- освещение из панорамы --- */
-  const ibl = new HDRCubeTexture(base + 'env/' + meta.ibl, scene, Q.iblSize || 256, false, true, false, true);
+  const ibl = new HDRCubeTexture(await hdrUrl(base + 'env/' + meta.ibl), scene, Q.iblSize || 256, false, true, false, true);
   ibl.rotationY = -rot;
   scene.environmentTexture = ibl;
   scene.environmentIntensity = Q.envIntensity ?? 1.0;
