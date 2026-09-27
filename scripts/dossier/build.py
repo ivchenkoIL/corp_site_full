@@ -105,7 +105,8 @@ nav.toc h2.toch { border: 0; font-size: 16pt; margin-top: 0; }
 nav.toc ul { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 8mm; font-size: 8.8pt; line-height: 1.3; }
 nav.toc li { margin: 0 0 .18em; text-align: left; break-inside: avoid; }
 nav.toc li.t1 { font-weight: 700; margin-top: .6em; color: #14213d; }
-nav.toc li.t3 { padding-left: 1.2em; color: #444; }
+nav.toc li.t2 { padding-left: .7em; }
+nav.toc li.t3 { padding-left: 1.9em; color: #444; }
 nav.toc li a { display: flex; align-items: flex-end; gap: .3em; }
 nav.toc li a .tt { flex: 0 1 auto; }
 nav.toc li a::after { content: '. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .'; flex: 1 1 0; order: 1; min-width: 1em; overflow: hidden; white-space: nowrap; color: #aab; font-size: .85em; }
